@@ -1,20 +1,27 @@
 // The player's HD ZIP remains local. Only matching backgrounds are decoded on demand.
 // The Rust PPU matcher decides which assets are actually shown: previews alone never count.
+// HD pack imagery is 4x but the iPhone Enhanced output is 2x.
+// Downsample once locally instead of keeping 4x bytes in WASM.
 export async function decodeBackground(assets, name) {
   const raw = await assets.readImage(name);
   const type = name.toLowerCase().endsWith('.png') ? 'image/png' : 'image/webp';
   const bitmap = await createImageBitmap(new Blob([raw], {type}));
   try {
-    if (bitmap.width * bitmap.height * 4 > 24 * 1024 * 1024)
+    const bytes = bitmap.width * bitmap.height * 4;
+    if (!Number.isSafeInteger(bytes) || bytes > 24*1024*1024)
       throw Error('HD 背景圖片太大');
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d', {willReadFrequently: true});
+    if (bitmap.width<2 || bitmap.height<2 || bitmap.width%2 || bitmap.height%2)
+      throw Error('HD 背景圖片尺寸不是偶數');
+    const canvas=document.createElement('canvas');
+    canvas.width=bitmap.width/2;
+    canvas.height=bitmap.height/2;
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
     if (!ctx) throw Error('Safari 無法建立 HD 圖片解碼畫布');
-    ctx.drawImage(bitmap, 0, 0);
-    return {width: bitmap.width, height: bitmap.height,
-      rgba: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data};
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    return {width:canvas.width,height:canvas.height,
+      rgba:ctx.getImageData(0,0,canvas.width,canvas.height).data};
   } finally {
     bitmap.close?.();
   }
@@ -28,8 +35,10 @@ export class LiveHdArt {
     this.catalog = [];
     this.game = null;
     this.generation = 0;
-    this.loading = new Set();
-    this.failed = new Set();
+    this.loading = new Map();
+    this.failed = new Map();
+    this.sceneKey = '';
+    this.pulses = 0;
   }
 
   setCatalog(catalog, assets) {
@@ -38,6 +47,7 @@ export class LiveHdArt {
     this.generation++;
     this.loading.clear();
     this.failed.clear();
+    this.sceneKey = '';
     if (this.game) this.game.set_background_index(JSON.stringify(this.catalog));
     this.status(this.assets
       ? '已讀取 HD 背景索引；等待 PPU 實際場景匹配。'
@@ -49,6 +59,7 @@ export class LiveHdArt {
     this.game = game;
     this.loading.clear();
     this.failed.clear();
+    this.sceneKey = '';
     if (this.assets) game.set_background_index(JSON.stringify(this.catalog));
   }
 
@@ -57,6 +68,7 @@ export class LiveHdArt {
     this.game = null;
     this.loading.clear();
     this.failed.clear();
+    this.sceneKey = '';
   }
 
   pulse() {
@@ -69,6 +81,13 @@ export class LiveHdArt {
     let matches;
     try { matches = JSON.parse(game.background_matches()); }
     catch (e) { this.status('HD 背景狀態讀取失敗：' + e.message); return; }
+    this.pulses++;
+    // Stale loading failures should not follow a different PPU scene.
+    const scene=matches.map(m=>m.index+':'+m.art).sort().join('|');
+    if(scene!==this.sceneKey){
+      this.sceneKey=scene;
+      this.failed.clear();
+    }
     const ready = matches.filter(m => m.ready).length;
     const painted = game.hd_art_pixels?.() ?? 0;
     this.status(matches.length
@@ -76,7 +95,9 @@ export class LiveHdArt {
         + ' 個；目前實際替換 ' + painted + ' 個遊戲像素（其餘維持原版）。'
       : 'HD 素材就緒；此場景未符合背景索引，維持原版畫面。');
     for (const match of matches) {
-      if (!match.ready && !this.loading.has(match.index) && !this.failed.has(match.index)) {
+      const failure=this.failed.get(match.index);
+      if (!match.ready && !this.loading.has(match.index) &&
+          (!failure || (failure.retries<2 && this.pulses>=failure.after))) {
         void this.load(match, game);
       }
     }
@@ -85,18 +106,29 @@ export class LiveHdArt {
   async load(match, target) {
     const generation = this.generation;
     const assets = this.assets;
-    this.loading.add(match.index);
+    const token={generation,scene:this.sceneKey};
+    this.loading.set(match.index,token);
     try {
       const img = await this.decoder(assets, match.art);
       if (this.generation !== generation || this.game !== target) return;
-      target.set_background_art(match.index, img.width, img.height, img.rgba);
+      // The scene may have switched while Safari was decoding the file.
+      const current=JSON.parse(target.background_matches());
+      if (!current.some(item=>item.index===match.index &&
+          item.art===match.art && !item.ready)) return;
+      target.set_background_art(match.index,img.width,img.height,img.rgba);
+      this.failed.delete(match.index);
     } catch (e) {
-      if (this.generation === generation) {
-        this.failed.add(match.index);
-        this.status('HD 背景 ' + match.id + ' 無法套用：' + (e?.message || String(e)));
+      if (this.generation === generation && this.game === target) {
+        const message=e?.message || String(e);
+        if (/背景已切換|過時圖片/.test(message)) return;
+        const retries=(this.failed.get(match.index)?.retries || 0)+1;
+        this.failed.set(match.index,{retries,after:this.pulses+3*retries});
+        this.status('HD 背景 '+match.id+' 讀取失敗'+
+          (retries<2?'，稍後重試':'（此場景暫停重試）')+'：'+message);
       }
     } finally {
-      this.loading.delete(match.index);
+      // A retired ZIP request must not clear another request with same index.
+      if (this.loading.get(match.index)===token) this.loading.delete(match.index);
     }
   }
 }

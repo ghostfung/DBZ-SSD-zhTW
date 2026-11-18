@@ -33,6 +33,7 @@ struct Layer {
 
 struct Picture {
     width: usize,
+    scale: usize,
     rgba: Vec<u8>,
 }
 
@@ -82,8 +83,9 @@ impl LiveBackgrounds {
             return;
         }
         if !log.complete || !log.vram_writes.is_empty() {
+            // Hide HD during unverified VRAM transition frames, but keep
+            // decoded art for the next clean PPU hash revalidation.
             self.active.clear();
-            self.pictures.clear();
             return;
         }
         let mut hashes: HashMap<(u8, u8, u16, u16, u8, [u16; 2]), u64> = HashMap::new();
@@ -165,16 +167,22 @@ impl LiveBackgrounds {
         }
         let e = &self.layers[index];
         let (w, _) = layer_size(e.size, false);
-        let expected_width = w * 4;
-        let expected_height = usize::from(e.rows[1] - e.rows[0]) * 8 * 4;
-        let bytes = width.checked_mul(height).and_then(|px| px.checked_mul(4))
+        let base_height=usize::from(e.rows[1]-e.rows[0])*8;
+        let image_scale=if width==w*SCALE && height==base_height*SCALE {
+            SCALE
+        } else if width==w*4 && height==base_height*4 {
+            4
+        } else {
+            return Err(format!("HD 圖片尺寸不符：{}（{}×{}）",e.id,width,height));
+        };
+        let bytes=width.checked_mul(height).and_then(|px| px.checked_mul(4))
             .ok_or_else(|| "HD 圖片尺寸過大".to_string())?;
-        if width != expected_width || height != expected_height
-            || bytes > MAX_ART_BYTES || rgba.len() != bytes
-        {
-            return Err(format!("HD 圖片尺寸不符：{}（{}×{}）", e.id, width, height));
+        if bytes>MAX_ART_BYTES || rgba.len()!=bytes {
+            return Err(format!("HD 圖片資料過大或長度不符：{}",e.id));
         }
-        self.pictures.insert(index, Picture { width, rgba: rgba.to_vec() });
+        self.pictures.insert(index,Picture {
+            width,scale:image_scale,rgba:rgba.to_vec(),
+        });
         Ok(())
     }
 
@@ -230,13 +238,17 @@ impl LiveBackgrounds {
                     if gy < first_row || gy >= usize::from(e.rows[1]) * 8 {
                         continue;
                     }
-                    let ax = gx * 4;
-                    let ay = (gy - first_row) * 4;
+                    let ax = gx * img.scale;
+                    let ay = (gy - first_row) * img.scale;
+                    let step = img.scale / SCALE;
+                    let offset = step - 1;
                     let mut covered = false;
                     for sy in 0..SCALE {
                         for sx in 0..SCALE {
-                            // The shared art is 4x; Enhanced mode is 2x.
-                            let src = ((ay + sy * 2 + 1) * img.width + ax + sx * 2 + 1) * 4;
+                            // Native 2x pixels copy 1:1; legacy 4x images
+                            // retain previous center-point sampling.
+                            let src = ((ay + sy*step + offset)*img.width
+                                + ax + sx*step + offset)*4;
                             let dst = ((y * SCALE + sy) * width + x * SCALE + sx) * 4;
                             let alpha = u32::from(img.rgba[src + 3]);
                             if alpha == 0 { continue; }
@@ -264,7 +276,8 @@ impl LiveBackgrounds {
 
 #[cfg(test)]
 mod tests {
-    use super::LiveBackgrounds;
+    use super::{layer_size, LiveBackgrounds};
+    use ssd_oracle::FrameLog;
 
     #[test]
     fn malformed_and_unbounded_catalogues_are_rejected() {
@@ -272,5 +285,54 @@ mod tests {
         assert!(live.load_catalog("[{}]").is_err());
         assert!(live.load_catalog("[]").is_ok());
         assert!(live.matches_json() == "[]");
+    }
+
+    #[test]
+    fn native_2x_pixels_and_legacy_4x_pictures_are_both_supported() {
+        let mut live = LiveBackgrounds::default();
+        let index = r#"[{
+            "id":"test","key":"1","bg":1,"mode":1,"mapBase":0,
+            "charBase":0,"size":0,"rows":[0,1],"art":"bg/test.webp",
+            "available":true
+        }]"#;
+        assert_eq!(live.load_catalog(index).unwrap(), 1);
+        live.active.push(0);
+        let (w, _) = layer_size(0, false);
+        let h = 8;
+        let small = vec![127_u8; w * 2 * h * 2 * 4];
+        live.add_picture(0, w * 2, h * 2, &small).unwrap();
+        assert_eq!(live.pictures.get(&0).unwrap().scale, 2);
+        assert_eq!(live.pictures.get(&0).unwrap().rgba.len(), small.len());
+        let old = vec![255_u8; w * 4 * h * 4 * 4];
+        live.add_picture(0, w * 4, h * 4, &old).unwrap();
+        assert_eq!(live.pictures.get(&0).unwrap().scale, 4);
+        assert!(live.add_picture(0, w * 2 + 1, h * 2, &small).is_err());
+        assert_eq!(live.pictures.get(&0).unwrap().scale, 4,
+            "bad art must not overwrite the existing valid picture");
+    }
+
+    #[test]
+    fn incomplete_ppu_frame_hides_hd_without_evicting_decoded_pixels() {
+        let mut live = LiveBackgrounds::default();
+        let index = r#"[{
+            "id":"test","key":"1","bg":1,"mode":1,"mapBase":0,
+            "charBase":0,"size":0,"rows":[0,1],"art":"bg/test.webp",
+            "available":true
+        }]"#;
+        live.load_catalog(index).unwrap();
+        live.active.push(0);
+        let (w, _) = layer_size(0, false);
+        let rgba = vec![255_u8; w * 2 * 8 * 2 * 4];
+        live.add_picture(0, w * 2, 16, &rgba).unwrap();
+        let log = FrameLog {
+            complete: false, height: 0, h_hi_res: false, v_hi_res: false,
+            entries: Vec::new(), cgram_start: Vec::new(),
+            cgram_writes: Vec::new(), vram: Vec::new(),
+            vram_writes: Vec::new(), oam_low: Vec::new(),
+            oam_high: Vec::new(), oam_writes: Vec::new(),
+        };
+        live.refresh(&log);
+        assert!(live.active.is_empty());
+        assert!(live.pictures.contains_key(&0));
     }
 }

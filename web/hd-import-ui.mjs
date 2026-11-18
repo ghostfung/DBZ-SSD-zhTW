@@ -135,7 +135,7 @@ async function previewLocalImage(name){
     $('hd-preview-image').src=previewObjectUrl;
     $('hd-preview-name').textContent='由本機 ZIP 按需解壓：'+name+
       ' ('+(data.byteLength/1024).toFixed(0)+' KiB；本次分頁圖片快取 '+
-      (library.cacheBytes/1048576).toFixed(1)+'／16 MiB)。尚未套用到遊戲渲染。';
+      (library.cacheBytes/1048576).toFixed(1)+'／16 MiB)。此處僅為預覽，實際背景需 PPU 匹配後才會套用。';
     $('hd-preview-panel').hidden=false;
   }catch(error){
     status('本機 HD 圖片讀取失敗：'+(error?.message||String(error)));
@@ -150,8 +150,8 @@ $('hd-preview-selected').addEventListener('click',()=>previewLocalImage($('hd-as
 function explanation(result){
   return `官方 ${result.version} HD 美術包已通過 SHA-256 驗證。
 ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLocaleString('en-US')} 個項目、${result.imageCount.toLocaleString('en-US')} 張 PNG/WebP。
-官方原始素材 ZIP 沒有 hdpack.toml／index.bin 是預期情況；後續仍需建立遊戲渲染索引。
-驗證只在 iPhone 本機進行。HD 美術套用尚未接入遊戲渲染。 `;
+官方原始素材 ZIP 沒有 hdpack.toml／index.bin 是預期情況；已支援背景匹配，人物與特效 HD 尚未完整整合。
+驗證只在 iPhone 本機進行；匹配的背景將在載入後套用。`;
 }
 
 $('hd-zip').addEventListener('change',()=>{
@@ -259,7 +259,7 @@ void (async()=>{
       persisted=true;
       prepareLocalReader(cached.file,verified);
       busyMode(false);
-      status('已自動恢復上次儲存在 iPhone 的官方 '+OFFICIAL_PACK.version+' HD 素材包（'+(cached.file.size/1048576).toFixed(1)+' MiB，'+zip.count.toLocaleString('en-US')+' 個檔案）。\n可直接預覽 HD 圖片，無須重新選擇 ZIP。上次匯入時已驗證 SHA-256；本次僅核對大小和 ZIP 目錄。\n完整 HD 美術套用尚未完成。');
+      status('已自動恢復上次儲存在 iPhone 的官方 '+OFFICIAL_PACK.version+' HD 素材包（'+(cached.file.size/1048576).toFixed(1)+' MiB，'+zip.count.toLocaleString('en-US')+' 個檔案）。\n可直接預覽 HD 圖片，無須重新選擇 ZIP。上次匯入時已驗證 SHA-256；本次僅核對大小和 ZIP 目錄。\n已支援匹配背景；人物、選單 HD 美術尚未完整整合。');
     } else {
       status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；只驗證並不會自動保存。');
     }
