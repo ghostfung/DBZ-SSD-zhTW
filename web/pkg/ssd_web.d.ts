@@ -39,6 +39,11 @@ export class WebGame {
      */
     menu_translations(): string;
     /**
+     * True only when the original Rust translator painted the *current*
+     * Enhanced picture; the browser must not add heuristic text overlays.
+     */
+    native_translation_active(): boolean;
+    /**
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      */
     constructor(rom: Uint8Array, ips: Uint8Array);
@@ -93,6 +98,7 @@ export interface InitOutput {
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
     readonly webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_menu_translations: (a: number) => [number, number];
+    readonly webgame_native_translation_active: (a: number) => number;
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];

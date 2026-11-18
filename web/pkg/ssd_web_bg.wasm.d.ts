@@ -15,6 +15,7 @@ export const webgame_height: (a: number) => number;
 export const webgame_load_state: (a: number, b: number, c: number) => [number, number];
 export const webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
 export const webgame_menu_translations: (a: number) => [number, number];
+export const webgame_native_translation_active: (a: number) => number;
 export const webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
 export const webgame_save_state: (a: number) => [number, number];
 export const webgame_set_audio_rate: (a: number, b: number) => [number, number];

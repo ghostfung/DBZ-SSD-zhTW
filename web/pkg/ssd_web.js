@@ -158,6 +158,15 @@ export class WebGame {
         }
     }
     /**
+     * True only when the original Rust translator painted the *current*
+     * Enhanced picture; the browser must not add heuristic text overlays.
+     * @returns {boolean}
+     */
+    native_translation_active() {
+        const ret = wasm.webgame_native_translation_active(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      * @param {Uint8Array} rom
      * @param {Uint8Array} ips
