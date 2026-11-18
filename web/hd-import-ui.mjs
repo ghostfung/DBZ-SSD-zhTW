@@ -2,6 +2,7 @@
 import {inspectZip,extractZipEntry,verifyOfficialPack,OFFICIAL_PACK} from './hd-pack.mjs';
 import {opfsAvailable,saveVerifiedHdPack,readSavedHdPack,clearSavedHdPack} from './hd-storage.mjs';
 import {LocalHdAssets} from './hd-local-assets.mjs';
+import {readBackgroundCatalog} from './hd-background-index.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -11,6 +12,7 @@ let persisted=false;
 let previewObjectUrl=null;
 let sampleEntry=null;
 let library=null;
+let bgCatalog=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -33,6 +35,7 @@ function busyMode(value){
   $('hd-asset-search').disabled=value||!library;
   $('hd-asset-list').disabled=value||!library;
   $('hd-preview-selected').disabled=value||!library||!$('hd-asset-list').value;
+  $('hd-bg-preview').disabled=value||!selectedBackground()?.available;
 }
 function progress(phase,done,total){
   const value=total?Math.round(done/total*100):0;
@@ -58,12 +61,60 @@ function refreshAssetList(){
     ? '顯示符合搜尋條件的前 '+matches.length+' 張。ZIP 不會整包解壓；只有預覽時才讀取個別圖片。'
     : '沒有符合的圖片，請嘗試其他名稱。';
 }
+function selectedBackground(){
+  const index=Number($('hd-bg-list').value);
+  return bgCatalog?.items[index]??null;
+}
+function updateBackgroundSelection(){
+  const item=selectedBackground();
+  $('hd-bg-preview').disabled=busy||!item?.available;
+  $('hd-bg-details').textContent=item
+    ? '鍵值 '+item.key+'｜BG'+(item.bg+1)+'｜模式 '+item.mode+
+      '｜map '+item.mapBase.toString(16).toUpperCase()+
+      '｜tiles '+item.charBase.toString(16).toUpperCase()+
+      '｜列 '+item.rows.join('–')+'｜圖片 '+item.art+
+      (item.available?'':'（ZIP 內沒有這張圖片）')
+    : '尚未選取背景圖層。';
+}
+$('hd-bg-list').addEventListener('change',updateBackgroundSelection);
+$('hd-bg-preview').addEventListener('click',()=>previewLocalImage(selectedBackground()?.art));
+async function loadBackgroundIndex(source){
+  $('hd-bg-catalog').hidden=false;
+  $('hd-bg-count').textContent='正在從玩家本機 ZIP 讀取 bg/index.json…';
+  $('hd-bg-list').replaceChildren();
+  $('hd-bg-preview').disabled=true;
+  bgCatalog=null;
+  try{
+    const catalogue=await readBackgroundCatalog(source);
+    if(library!==source)return; // User selected a different ZIP while reading.
+    bgCatalog=catalogue;
+    const items=catalogue.items;
+    const select=$('hd-bg-list');
+    for(let i=0;i<Math.min(items.length,50);i++){
+      const item=items[i];
+      const option=document.createElement('option');
+      option.value=String(i);
+      option.textContent=item.id+' · BG'+(item.bg+1)+' · '+item.key.slice(-8);
+      select.appendChild(option);
+    }
+    if(select.options.length)select.selectedIndex=0;
+    $('hd-bg-count').textContent='已解析 '+items.length+' 筆官方背景圖層匹配條件；'+
+      catalogue.missing.length+' 張圖片未找到。以下顯示前 50 筆。';
+    updateBackgroundSelection();
+  }catch(error){
+    if(library!==source)return;
+    $('hd-bg-count').textContent='場景索引無法讀取：'+(error?.message||String(error));
+    $('hd-bg-details').textContent='HD 單張圖片按需讀取仍可正常使用。';
+  }
+}
 function prepareLocalReader(file,info){
   library?.clearCache();
   library=new LocalHdAssets(file,info);
+  bgCatalog=null;
   $('hd-asset-search').value='';
   $('hd-asset-browser').hidden=false;
   refreshAssetList();
+  void loadBackgroundIndex(library);
   sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
     ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
 }
@@ -98,7 +149,7 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
   $('hd-asset-browser').hidden=true;
   sessionStatus('尚未啟用本次分頁的 HD 素材讀取。');
   $('hd-preview-btn').disabled=true;
