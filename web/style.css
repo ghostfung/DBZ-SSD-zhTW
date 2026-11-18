@@ -59,3 +59,8 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 .hd-storage-experimental summary{font-size:.77rem;cursor:pointer;font-weight:650}
 .hd-storage-experimental .hd-import-buttons{margin-top:10px}
 #hd-session-status{color:#c8e4c0;background:#152c26;border-radius:8px;padding:9px}
+
+.hd-catalog{display:grid;gap:9px;padding:12px;background:#122136;border:1px solid #496487;border-radius:10px}
+.hd-catalog select{width:100%;min-height:130px;background:#101a2a;color:#e7efff;border:1px solid #536987;border-radius:8px;padding:6px;font-size:.72rem}
+#hd-bg-preview{background:#36577c}
+#hd-bg-details{overflow-wrap:anywhere;line-height:1.55}
