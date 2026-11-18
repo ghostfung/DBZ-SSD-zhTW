@@ -187,8 +187,11 @@ pub struct Renderer {
     pub(crate) art: Option<Box<art::ArtState>>,
     /// The HD text font, when the pictures draw their text from it (see [`Renderer::set_font`]).
     font: Option<Arc<Font>>,
-    /// Capture ROM glyphs for browser-side Chinese UI without redrawing the English text.
+    /// Capture ROM glyphs without redrawing the English text before Chinese output.
     text_capture_only: bool,
+    /// The original translator renders all translated text AFTER local HD art is applied.
+    native_translation: Option<translate::Translator>,
+    native_text_frame: Option<Frame>,
     /// The text cells of the frame being drawn, noted while `text_on`.
     text: font::TextCapture,
     text_on: bool,
@@ -226,6 +229,8 @@ impl Renderer {
             art: None,
             font: None,
             text_capture_only: false,
+            native_translation: None,
+            native_text_frame: None,
             text: font::TextCapture::default(),
             text_on: false,
             lightning: None,
@@ -252,6 +257,61 @@ impl Renderer {
     /// draws it. The 1x frame of [`Renderer::render`] never has HD text.
     pub fn set_font(&mut self, font: Option<Arc<Font>>) {
         self.font = font;
+    }
+
+    /// Connect the upstream, stateful Traditional Chinese renderer.
+    /// Unlike a browser colour-box overlay, it can identify real text cells,
+    /// partial names, numeric columns, layered windows and page transitions.
+    pub fn set_native_translation(&mut self, overlay: Option<Arc<translate::Overlay>>) {
+        self.native_translation = overlay.map(translate::Translator::new);
+        self.native_text_frame = None;
+    }
+
+    /// The page named at the START of the SNES frame, as required by the
+    /// upstream stateful translation engine (not the next frame's WRAM).
+    pub fn set_translation_screen(
+        &mut self, screen: Option<ssd_catalogue::engine::OnScreen>,
+    ) {
+        if let Some(translator) = self.native_translation.as_mut() {
+            translator.screen = screen;
+        }
+    }
+
+    /// Render the upstream author's translation over the supplied 2x frame.
+    /// Call this only after locally matched HD background replacement.
+    /// This preserves sprites, HUD and all original PPU text-window semantics.
+    pub fn paint_native_translation(
+        &mut self,
+        log: &FrameLog,
+        rgba: &mut [u8],
+        width: usize,
+        height: usize,
+    ) -> bool {
+        let (Some(translator), Some(frame), Some(font)) = (
+            self.native_translation.as_mut(),
+            self.native_text_frame.as_ref(),
+            self.font.as_ref(),
+        ) else {
+            return false;
+        };
+        if width != frame.width * 2 || height != frame.height * 2
+            || rgba.len() != width.saturating_mul(height).saturating_mul(4)
+        {
+            return false;
+        }
+        let mut target = translate::Target { rgba, width, scale: 2 };
+        let mut beneath = |_cells: &[(i32, i32)]| None;
+        translator.draw(
+            &mut target,
+            self.text.cells(),
+            frame,
+            log,
+            0,
+            &|glyph| font.character(glyph),
+            &mut beneath,
+            None,
+        );
+        true
     }
 
     /// Enable capture of glyph positions without the HD font replacement pass.

@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第六階段：RC1 內嵌繁中、有聲、Enhanced 2x；實驗性 PPU 即時匹配 HD 背景（僅局部場景）。完整 HD 美術、選單和 16:9 仍在開發。</p>
+    <p class="notice">第七階段：沿用原作者 Rust 繁中渲染器，對話、名字與多層選單採 PPU 原生文字格處理；HD 背景仍僅支援局部場景，16:9 仍在開發。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -57,7 +57,7 @@
         <progress id="hd-progress" max="100" value="0" hidden></progress>
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
         <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note"><strong>目前階段：</strong>可按需讀取 ZIP 並嘗試替換實際符合的戰鬥背景。角色、選單、色彩特效等仍未完成 HD 美術替換；維持 Enhanced 2x、繁中及聲音。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
+        <p class="hd-import-note"><strong>目前階段：</strong>可按需讀取 ZIP 並嘗試替換相符背景。繁體中文改為 Rust 原生渲染（不再用 JavaScript 蓋色塊）；完整 HD 美術、16:9 仍未完成。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
       </div>
       <button id="start" disabled>啟動本機遊戲</button>
       <output id="status" aria-live="polite">等待載入。</output>
@@ -66,7 +66,7 @@
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
       <div class="preview-bar">
-        <label class="check-option"><input id="inframe" type="checkbox" checked/> 中文顯示於遊戲內</label>
+        <label class="check-option"><input id="inframe" type="checkbox" checked/> Classic 模式顯示繁中字幕（HD 2x 直接顯示中文）</label>
         <button id="hd-toggle" type="button">啟用 HD 2x</button>
         <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
         <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>

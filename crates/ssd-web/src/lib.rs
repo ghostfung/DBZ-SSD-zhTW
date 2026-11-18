@@ -1,9 +1,10 @@
 //! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
-//! The HD renderer and zh-TW translation engine are separate future milestones.
+//! HD art and the original Rust Traditional Chinese renderer share a single final picture.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
 use ssd_catalogue::engine::{on_screen, screen_names};
 use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
+use ssd_hd::translate::{ChineseFace, Overlay as TextOverlay};
 use std::collections::HashMap;
 use std::sync::Arc;
 use serde_json::json;
@@ -11,11 +12,12 @@ use wasm_bindgen::prelude::*;
 mod live_bg;
 use live_bg::LiveBackgrounds;
 
-fn tracked_renderer(font: Option<Arc<HdFont>>) -> HdRenderer {
+fn tracked_renderer(font: Option<Arc<HdFont>>, overlay: Option<Arc<TextOverlay>>) -> HdRenderer {
     let mut renderer = HdRenderer::new();
     renderer.set_layer_tracking(true);
     renderer.set_font(font);
     renderer.set_text_capture_only(true);
+    renderer.set_native_translation(overlay);
     renderer
 }
 
@@ -38,6 +40,9 @@ pub struct WebGame {
     audio: AudioFrame,
     rom: Vec<u8>,
     translation: Option<Translation>,
+    native_overlay: Option<Arc<TextOverlay>>,
+    native_page_hint: Option<usize>,
+    native_painted: bool,
     text_font: Option<Arc<HdFont>>,
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
@@ -64,8 +69,9 @@ impl WebGame {
             .map_err(|err| JsValue::from_str(&format!("遊戲初始化失敗：{err}")))?;
         machine.set_audio_frequency(48_000);
         let text_font = HdFont::standard(&rom).ok().map(Arc::new);
-        let hd_renderer = tracked_renderer(text_font.clone());
+        let hd_renderer = tracked_renderer(text_font.clone(), None);
         Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None,
+            native_overlay: None, native_page_hint: None, native_painted: false,
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
@@ -84,8 +90,18 @@ impl WebGame {
 
     /// The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
     pub fn tick(&mut self, joypad_bits: u16) -> Result<(), JsValue> {
+        // The ROM's WRAM describes the page at the START of the rendered frame.
+        // Resolving the page after run_frame causes one-frame English flashes.
+        if self.hd_enabled && self.native_overlay.is_some() {
+            let screen = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
+            if let Some(ref page) = screen {
+                self.native_page_hint = Some(page.page);
+            }
+            self.hd_renderer.set_translation_screen(screen);
+        }
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
             .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
+        self.native_painted = false;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
                 match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
@@ -97,6 +113,13 @@ impl WebGame {
                         self.live_backgrounds.refresh(log);
                         self.hd_art_pixels = self.live_backgrounds.composite(
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
+                            self.hd_width as usize, self.hd_height as usize,
+                        );
+                        // The original native renderer owns every Chinese glyph.
+                        // It executes AFTER HD backgrounds but before JS displays
+                        // the frame, so English and Chinese cannot coexist.
+                        self.native_painted = self.hd_renderer.paint_native_translation(
+                            log, &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
                         self.hd_warning.clear();
@@ -129,7 +152,20 @@ impl WebGame {
             .map_err(|err| JsValue::from_str(&format!("繁體中文 TSV 無法讀取：{err}")))?;
         let count = table.len() as u32;
         self.menu_names = screen_names(&self.rom, &table);
+        // Bundle the author's OFL-licensed font in WASM; ROM, IPS, HD ZIP and
+        // fonts are never uploaded from the player's device.
+        const FONT_BYTES: &[u8] =
+            include_bytes!("../../../translations/zh-tw/fonts/LXGWWenKaiTC-Regular.ttf");
+        let face = ChineseFace::new(FONT_BYTES.to_vec())
+            .map_err(|error| JsValue::from_str(&format!("中文字型無法載入：{error}")))?;
+        self.native_overlay = Some(Arc::new(
+            TextOverlay::new(Arc::new(table.clone()), Arc::new(face))
+                .with_names(self.menu_names.clone()),
+        ));
         self.translation = Some(table);
+        self.native_page_hint = None;
+        self.native_painted = false;
+        self.hd_renderer.set_native_translation(self.native_overlay.clone());
         self.previous_page = None;
         Ok(count)
     }
@@ -150,6 +186,12 @@ impl WebGame {
         self.translation.as_ref().and_then(|table| table.text(key))
             .map(|entry| render(entry, |_| String::new()))
             .unwrap_or_default()
+    }
+
+    /// True only when the original Rust translator painted the *current*
+    /// Enhanced picture; the browser must not add heuristic text overlays.
+    pub fn native_translation_active(&self) -> bool {
+        self.hd_enabled && self.native_painted && self.hd_active()
     }
 
     /// Returns the original translator's keyed dialogue as JSON for testing.
@@ -215,7 +257,9 @@ impl WebGame {
         if self.hd_enabled == enabled { return; }
         self.hd_enabled = enabled;
         self.machine.set_line_log(enabled);
-        self.hd_renderer = tracked_renderer(self.text_font.clone());
+        self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
+        self.native_painted = false;
+        self.native_page_hint = None;
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -257,7 +301,9 @@ impl WebGame {
         self.audio.samples.clear();
         self.previous_page = None;
         self.hd_pixels.clear();
-        self.hd_renderer = tracked_renderer(self.text_font.clone());
+        self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
+        self.native_painted = false;
+        self.native_page_hint = None;
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))

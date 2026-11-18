@@ -194,6 +194,13 @@ impl Renderer {
         self.capturing = true;
         self.begin_text(options);
         let frame = self.render_log(log, None, false);
+        // Preserve the exact pre-filter PPU frame for the author's translation
+        // logic. The pixel colours and glyph cells must be from this SAME frame.
+        self.native_text_frame = if self.native_translation.is_some() {
+            frame.as_ref().ok().cloned()
+        } else {
+            None
+        };
         self.capturing = false;
         self.text_on = false;
         let capture = std::mem::take(&mut self.capture);

@@ -1,14 +1,11 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
-import {findDialogueBox,drawChineseInBox,maskPendingDialogue} from './chinese-overlay.mjs';
-import {assembleTextRuns,reconcileDialogue,drawMenuTranslations} from './screen-text.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let lastHdPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
-let observedRuns = [], menuNames = {};
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
@@ -66,15 +63,6 @@ $('start').addEventListener('click', async () => {
     const translationResponse = await fetch('./zh-tw.tsv');
     if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
     const translatedRows = game.load_translation(await translationResponse.text());
-    menuNames = JSON.parse(game.menu_translations());
-    // Use the author's existing Traditional Chinese names for original battle
-    // status tiles. These are drawn outside the message engine and may run
-    // directly into numerical HP values (e.g. "Piccolo77").
-    for (const [english,key] of [['Goku','string:0'],['Piccolo','string:2']]) {
-      const translated = game.translation_for_key(key);
-      if (translated && !menuNames[english]) menuNames[english] = translated;
-    }
-    observedRuns = [];
     $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
     translationKey = '';
     currentDialogue = null;
@@ -102,22 +90,17 @@ function drawFrame() {
   const rgba=game.frame_rgba();
   if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
-  const insideGame = Boolean($('inframe')?.checked);
-  // Even when the SNES message engine is between pages, the PPU can already
-  // display the next English glyphs. Inspect the frame independently of the
-  // translation key, then mask unresolved transition text before presenting it.
-  const dialogBox = insideGame ? findDialogueBox(rgba,w,h) : null;
-  const painted = Boolean(dialogBox && insideGame && currentDialogue &&
-    drawChineseInBox(ctx,rgba,w,h,currentDialogue,dialogBox,observedRuns));
-  if (insideGame && dialogBox && !painted) {
-    maskPendingDialogue(ctx,w,h,dialogBox,observedRuns,menuNames);
-  }
-  // Native SNES menu labels do not pass through the message engine. The
-  // PPU text capture lets us replace only words actually visible on screen.
-  drawMenuTranslations(ctx,w,h,observedRuns,menuNames,dialogBox);
-  if(embedded!==Boolean(painted)){
-    embedded=Boolean(painted);
-    $('translation-card').hidden=embedded || !currentDialogue;
+  const native = game.native_translation_active();
+  if (native) {
+    // The Rust renderer already paints Chinese in the final RGBA pixels.
+    // Do not run legacy Canvas guesses or draw overlapping English/Chinese.
+    embedded = true;
+    $('translation-card').hidden = true;
+  } else {
+    // Classic/unsupported mode has no PPU-driven Chinese text renderer yet.
+    // Keep a separate caption only; never erase menu/status pixels by colour.
+    embedded = false;
+    $('translation-card').hidden = !currentDialogue;
   }
   canvas.style.imageRendering=game.hd_active()?'auto':'pixelated';
 }
@@ -156,40 +139,32 @@ function requestFrame(now) {
 
 function updateTranslation() {
   const box = $('translation-card');
-  if(!game){
-    currentDialogue=null;
-    observedRuns=[];
-    box.hidden=true;
+  if (!game || game.native_translation_active()) {
+    currentDialogue = null;
+    box.hidden = true;
+    translationKey = '';
     return;
   }
-  try {
-    observedRuns=assembleTextRuns(JSON.parse(game.visible_text_cells()));
-  } catch(error) {
-    observedRuns=[];
-    console.warn('Unable to inspect current PPU text',error);
-  }
-  const serialized=game.current_dialogue();
-  const detected=serialized ? JSON.parse(serialized) : null;
-  // A stopped message key can survive in WRAM after the next English text
-  // has appeared. Resolve that mismatch using the actually rendered glyphs.
-  const msg=reconcileDialogue(detected,observedRuns,key=>game.translation_for_key(key));
-  if(!msg?.text){
-    currentDialogue=null;
-    embedded=false;
-    box.hidden=true;
-    translationKey='';
+  // Caption-only fallback: do not simulate the native battle/window renderer.
+  const serialized = game.current_dialogue();
+  const msg = serialized ? JSON.parse(serialized) : null;
+  currentDialogue = msg?.text ? msg : null;
+  if (!currentDialogue) {
+    box.hidden = true;
+    translationKey = '';
     return;
   }
-  currentDialogue=msg;
-  const signature=msg.key+'|'+msg.text;
-  if(translationKey!==signature){
-    $('translation-text').textContent=msg.text;
-    $('translation-key').textContent=msg.key;
-    translationKey=signature;
+  const signature = msg.key + '|' + msg.text;
+  if (translationKey !== signature) {
+    $('translation-text').textContent = msg.text;
+    $('translation-key').textContent = msg.key;
+    translationKey = signature;
   }
-  box.hidden=embedded;
+  box.hidden = !$('inframe').checked;
 }
 $('inframe').addEventListener('change', () => {
+  // Native translation always stays in-frame in HD mode; this checkbox now
+  // controls only whether a Classic-mode caption is displayed.
   embedded = false;
   if (game) updateTranslation();
 });
@@ -219,7 +194,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{liveHd.detach();observedRuns=[];menuNames={};running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
