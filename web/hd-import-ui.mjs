@@ -107,7 +107,10 @@ $('hd-cache').addEventListener('click',async()=>{
   busyMode(true);
   try {
     await saveVerifiedHdPack(activeFile,verified,{onProgress:(n,total)=>progress('正在存到 iPhone 本機 OPFS',n,total)});
-    status(explanation(verified)+'\n已儲存到此網站的本機私有空間，重新開啟可讀取。清除網站資料可能會刪除此備份。');
+    const confirmed=await readSavedHdPack();
+    if(!confirmed)throw Error('寫入後無法重新讀取 HD 素材包，請保留原始 ZIP');
+    persisted=true;
+    status(explanation(verified)+'\n本機儲存成功，已重新讀取驗證。重新開啟相同網站會自動辨識；請保留原始 ZIP 作備份。');
     $('hd-progress').value=100;
   }catch(e){$('hd-progress').hidden=true;status('本機儲存失敗：'+e.message+'。原始 ZIP 仍留在「檔案」App。');}
   finally{busyMode(false);}
@@ -117,7 +120,9 @@ $('hd-remove').addEventListener('click',async()=>{
   busyMode(true);
   try {
     await clearSavedHdPack();
-    status('本機快取已清除；你在「檔案」App 的原始 ZIP 不受影響。');
+    persisted=false; verified=null; activeFile=null; sampleEntry=null;
+    clearPreview();
+    status('本機快取已清除。請重新選擇 ZIP；「檔案」App 的原始檔案不受影響。');
     $('hd-progress').hidden=true;
   }catch(e){status('無法清除本機快取：'+e.message);}
   finally{busyMode(false);}
@@ -131,7 +136,15 @@ void (async()=>{
   try {
     const cached=await readSavedHdPack();
     if(cached) {
-      status(`已找到先前驗證並存於此網站的官方 ${OFFICIAL_PACK.version} HD 美術包（${(cached.file.size/1048576).toFixed(1)} MiB）。素材套用功能尚未完成。`);
+      const zip=await inspectZip(cached.file);
+      activeFile=cached.file;
+      verified={...OFFICIAL_PACK,count:zip.count,imageCount:zip.imageCount,manifest:zip.manifest,index:zip.index,entries:zip.entries};
+      sampleEntry=previewEntry(verified);
+      persisted=true;
+      busyMode(false);
+      status('已自動恢復上次儲存在 iPhone 的官方 '+OFFICIAL_PACK.version+' HD 素材包（'+(cached.file.size/1048576).toFixed(1)+' MiB，'+zip.count.toLocaleString('en-US')+' 個檔案）。\n可直接預覽 HD 圖片，無須重新選擇 ZIP。上次匯入時已驗證 SHA-256；本次僅核對大小和 ZIP 目錄。\n完整 HD 美術套用尚未完成。');
+    } else {
+      status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；只驗證並不會自動保存。');
     }
   }catch(e){status('讀取舊版 HD 快取失敗：'+e.message);}
 })();
