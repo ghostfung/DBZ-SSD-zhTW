@@ -891,9 +891,14 @@ mod tests {
 
     #[test]
     fn nearby_pages_support_portrait_dialogue_table_two() {
-        let rom = rom();
-        let current = on_screen(&rom, &wram(0x81, 2, 1, 0), None).unwrap();
+        // Test fixture initially only points table 3 at the fake story.
+        // Add table 2's pointer and select it in the mock WRAM.
+        let rom = rom_and(&[(d::STRING_TABLE_POINTERS + 6, &[0x00, 0x90, 0x07])]);
+        let mut ram = wram(0x81, 2, 1, 0);
+        ram[(d::MESSAGE_TABLE - 0x7E_0000) as usize] = 2;
+        let current = on_screen(&rom, &ram, None).unwrap();
         let candidates = story_pages_near(&rom, &current, 0);
+        assert_eq!(candidates.len(), 2);
         assert!(candidates.iter().all(|page| page.table == 2));
         assert!(candidates.iter().all(|page| page.key.starts_with("str2:")));
     }
