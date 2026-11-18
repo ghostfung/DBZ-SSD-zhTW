@@ -182,7 +182,8 @@ impl WebGame {
             "row": row,
             "page": page.page,
             "state": page.state,
-            "stopped": page.stopped
+            "stopped": page.stopped,
+            "portrait": page.portrait
         }).to_string()
     }
 

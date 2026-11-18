@@ -73,3 +73,47 @@ test('locate right-shifted battle message box, not only story windows at x=26',(
     assert.ok(box.bottom>=236);
   }
 });
+
+
+function mockPortraitFrame(scale=1) {
+  const width=W*scale,height=H*scale;
+  const rgba=new Uint8Array(width*height*4);
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+    const lx=x/scale,ly=y/scale;
+    const i=(y*width+x)*4;
+    let colour=[24,180,120];
+    if(lx>=18 && lx<=239 && ly>=151 && ly<=238) colour=[255,239,206];
+    // The portrait interrupts the upper-left part of the ivory background.
+    if(lx>=30 && lx<70 && ly>=157 && ly<=195) colour=[37,33,27];
+    for(const ty of [160,176,192]) {
+      if(lx>=75 && lx<=225 && ly>=ty && ly<ty+6 &&
+         Math.floor((lx-75)/8)%2===0) colour=[9,9,35];
+    }
+    rgba.set([...colour,255],i);
+  }
+  return rgba;
+}
+test('portrait dialogue covers the FIRST English line and preserves the avatar',()=>{
+  const actions=[];
+  const ctx={save(){},restore(){},scale(){},
+    measureText(v){return {width:[...v].length*11}},
+    fillRect(...a){actions.push(['rect',...a])},
+    fillText(...a){actions.push(['text',...a])},
+    beginPath(){},moveTo(){},lineTo(){},fill(){}};
+  for(const scale of [1,2]){
+    const frame=mockPortraitFrame(scale);
+    const box=findDialogueBox(frame,W*scale,H*scale);
+    assert.ok(box);
+    assert.ok(box.top<=155,'expected the upper ivory text band, got '+box.top);
+    assert.ok(box.bottom>=232);
+    actions.length=0;
+    const dialogue={text:'悟空，可別死啊！',portrait:true,progress:1,state:2};
+    const runs=[{x:75,y:160,text:"I'd offer"},{x:78,y:176,text:'but I am'}];
+    assert.equal(drawChineseInBox(ctx,frame,W*scale,H*scale,dialogue,box,runs),true);
+    const cover=actions.find(a=>a[0]==='rect');
+    const line=actions.find(a=>a[0]==='text');
+    assert.ok(cover[1]>=68,'portrait was covered: '+cover);
+    assert.ok(cover[2]<=156,'upper English was not cleared: '+cover);
+    assert.ok(line[3]<=165,'Chinese was positioned on a later row: '+line);
+  }
+});

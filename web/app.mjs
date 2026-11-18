@@ -6,7 +6,7 @@ import {LiveHdArt} from './hd-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
-let lastTranslationPoll = 0, lastHdPoll = 0, translationKey = '';
+let lastHdPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 let observedRuns = [], menuNames = {};
 const STEP = 1000/60.0988;
@@ -72,7 +72,6 @@ $('start').addEventListener('click', async () => {
     translationKey = '';
     currentDialogue = null;
     embedded = false;
-    lastTranslationPoll = 0;
     game.set_hd_mode(hdEnabled);
     liveHd.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
@@ -98,7 +97,7 @@ function drawFrame() {
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
   const dialogBox = currentDialogue ? findDialogueBox(rgba,w,h) : null;
   const painted = Boolean(dialogBox && $('inframe')?.checked && currentDialogue
-    && drawChineseInBox(ctx,rgba,w,h,currentDialogue,dialogBox));
+    && drawChineseInBox(ctx,rgba,w,h,currentDialogue,dialogBox,observedRuns));
   // Native SNES menu labels do not pass through the message engine. The
   // PPU text capture lets us replace only words actually visible on screen.
   drawMenuTranslations(ctx,w,h,observedRuns,menuNames,dialogBox);
@@ -116,12 +115,13 @@ function requestFrame(now) {
     accumulator += Math.min(now-lastTick, STEP*3);
     let n = 0;
     while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }
-    if (n) sound.enqueue(game.drain_audio());
-    drawFrame();
-    if (now - lastTranslationPoll >= 80) {
-      lastTranslationPoll = now;
+    if (n) {
+      sound.enqueue(game.drain_audio());
+      // Synchronise the message with the PPU from the same emulation frame.
+      // The former 80 ms timer displayed bare English before Chinese.
       updateTranslation();
     }
+    drawFrame();
     if (now - lastHdPoll >= 450) {
       lastHdPoll = now;
       liveHd.pulse();
