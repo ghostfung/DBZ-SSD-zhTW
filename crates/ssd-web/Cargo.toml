@@ -10,6 +10,8 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 ssd-rom = { path = "../ssd-rom" }
 ssd-oracle = { path = "../ssd-oracle" }
+ssd-catalogue = { workspace = true }
+serde_json = { workspace = true }
 bytemuck = { workspace = true }
 wasm-bindgen = "0.2"
 
