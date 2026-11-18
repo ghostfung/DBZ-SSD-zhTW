@@ -1,7 +1,7 @@
 //! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
 //! HD art and the original Rust Traditional Chinese renderer share a single final picture.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
-use ssd_catalogue::engine::{on_screen, screen_names, OnScreen};
+use ssd_catalogue::engine::{on_screen, screen_names, story_pages_near, OnScreen};
 use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
 use ssd_hd::translate::{ChineseFace, Overlay as TextOverlay};
@@ -59,6 +59,9 @@ pub struct WebGame {
     native_visible_fallback: bool,
     native_visible_score: usize,
     native_untranslated_visible: Option<String>,
+    story_candidates: Vec<OnScreen>,
+    story_candidates_for: Option<(u16, u16)>,
+    native_expected_english: String,
     text_font: Option<Arc<HdFont>>,
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
@@ -91,6 +94,8 @@ impl WebGame {
             native_page_key: None, native_late_page: false,
             recent_pages: Vec::new(), native_visible_fallback: false,
             native_visible_score: 0, native_untranslated_visible: None,
+            story_candidates: Vec::new(), story_candidates_for: None,
+            native_expected_english: String::new(),
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
@@ -163,33 +168,64 @@ impl WebGame {
                         // not background colour, OCR or hard-coded coordinates.
                         let direct = selected.as_ref()
                             .and_then(|page| self.hd_renderer.visible_translation_score(page));
-                        let mut best = direct.unwrap_or(0);
+                        let mut best_score = direct.unwrap_or(0);
+                        let mut best_translation = None;
+                        let mut best_untranslated = None;
                         if direct.is_none() {
                             let now = self.machine.frame_count() as u32;
-                            let mut fallback = None;
-                            for (seen, page) in self.recent_pages.iter().rev() {
-                                if now.saturating_sub(*seen) > 150
-                                    || selected.as_ref().is_some_and(|current|
-                                        current.key == page.key) { continue; }
+                            let reference = selected.as_ref().or_else(|| {
+                                self.recent_pages.last().map(|(_, page)| page)
+                            });
+                            // Parse nearby ROM story pages only once per story
+                            // string/window, never from a hard-coded English
+                            // sentence, UI colour or guessed pixel coordinate.
+                            if let Some(page) = reference.filter(|page| page.table == 3) {
+                                let location = (page.string, page.base);
+                                if self.story_candidates_for != Some(location) {
+                                    self.story_candidates =
+                                        story_pages_near(&self.rom, page, 2);
+                                    self.story_candidates_for = Some(location);
+                                }
+                            }
+                            let recent = self.recent_pages.iter()
+                                .rev()
+                                .filter(|(seen, _)| now.saturating_sub(*seen) <= 150)
+                                .map(|(_, page)| page);
+                            let nearby = self.story_candidates.iter();
+                            for page in recent.chain(nearby) {
+                                if selected.as_ref().is_some_and(|current|
+                                    current.key == page.key) { continue; }
                                 if let Some(score) = self.hd_renderer.visible_translation_score(page)
-                                    && score > best
+                                    && score > best_score
                                 {
-                                    if self.translation.as_ref()
-                                        .is_some_and(|table| table.text(&page.key).is_some())
+                                    best_score = score;
+                                    if self.translation.as_ref().is_some_and(|table|
+                                        table.text(&page.key).is_some())
                                     {
-                                        fallback = Some(page.clone());
-                                        best = score;
-                                    } else if self.native_untranslated_visible.is_none() {
-                                        self.native_untranslated_visible = Some(page.key.clone());
+                                        best_translation = Some(page.clone());
+                                        best_untranslated = None;
+                                    } else {
+                                        best_translation = None;
+                                        best_untranslated = Some(page.key.clone());
                                     }
                                 }
                             }
-                            if let Some(page) = fallback {
+                            if let Some(page) = best_translation {
                                 selected = Some(page);
                                 self.native_visible_fallback = true;
+                            } else if best_untranslated.is_some() {
+                                // Never paint the wrong Chinese text over a
+                                // positively identified, untranslated page.
+                                selected = None;
                             }
+                            self.native_untranslated_visible = best_untranslated;
                         }
-                        self.native_visible_score = best;
+                        self.native_visible_score = best_score;
+                        self.native_expected_english = selected.as_ref().map(|page| {
+                            page.english.iter().map(|line| {
+                                line.iter().map(|ch| ch.unwrap_or('·')).collect::<String>()
+                            }).collect::<Vec<_>>().join("|")
+                        }).unwrap_or_default();
                         self.native_page_key = selected.as_ref().map(|page| page.key.clone());
                         self.hd_renderer.set_translation_screen(selected);
                         // The original native renderer owns every Chinese glyph.
@@ -247,6 +283,9 @@ impl WebGame {
         self.native_visible_fallback = false;
         self.native_visible_score = 0;
         self.native_untranslated_visible = None;
+        self.story_candidates.clear();
+        self.story_candidates_for = None;
+        self.native_expected_english.clear();
         self.native_painted = false;
         self.hd_renderer.set_native_translation(self.native_overlay.clone());
         self.previous_page = None;
@@ -300,6 +339,7 @@ impl WebGame {
             "visible_page_fallback": self.native_visible_fallback,
             "visible_page_score": self.native_visible_score,
             "untranslated_visible_key": self.native_untranslated_visible,
+            "selected_expected_english": self.native_expected_english,
             "recent_page_keys": self.recent_pages.iter()
                 .map(|(_,page)| page.key.as_str()).collect::<Vec<_>>(),
             "start_key": self.native_page_key,
@@ -387,6 +427,9 @@ impl WebGame {
         self.native_visible_fallback = false;
         self.native_visible_score = 0;
         self.native_untranslated_visible = None;
+        self.story_candidates.clear();
+        self.story_candidates_for = None;
+        self.native_expected_english.clear();
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -437,6 +480,9 @@ impl WebGame {
         self.native_visible_fallback = false;
         self.native_visible_score = 0;
         self.native_untranslated_visible = None;
+        self.story_candidates.clear();
+        self.story_candidates_for = None;
+        self.native_expected_english.clear();
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))

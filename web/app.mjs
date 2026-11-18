@@ -17,7 +17,7 @@ function sampleTranslationDiagnostics() {
     const item = JSON.parse(game.translation_diagnostics());
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
-    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.glyphs]);
+    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.glyphs]);
     if (signature !== lastDiagSignature) {
       lastDiagSignature = signature;
       translationDiag.push(item);
@@ -81,7 +81,13 @@ $('start').addEventListener('click', async () => {
     // Translation remains on-device: the TSV loads from this site, never from the user's ROM.
     const translationResponse = await fetch('./zh-tw.tsv');
     if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
-    const translatedRows = game.load_translation(await translationResponse.text());
+    // Do not edit Ming Liu's licensed source TSV. Small, independently
+    // reviewed page alignments are appended only in this iPhone prototype.
+    const alignResponse = await fetch('./zh-tw-page-alignments.tsv');
+    if (!alignResponse.ok) throw Error('繁體中文分頁對齊檔未部署（HTTP '+alignResponse.status+'）。');
+    const primary = await translationResponse.text();
+    const alignments = await alignResponse.text();
+    const translatedRows = game.load_translation(primary.trimEnd() + '\n' + alignments.trim());
     $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
     translationKey = '';
     currentDialogue = null;

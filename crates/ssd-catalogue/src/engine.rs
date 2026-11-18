@@ -779,6 +779,58 @@ fn pages(
     None
 }
 
+/// The ROM-derived story pages near the message currently named by WRAM.
+/// A story cutscene can leave an earlier page visibly on the PPU after the
+/// registers have advanced to a different string. Unlike an OCR or box-colour
+/// heuristic, these candidates contain the actual English glyphs from the ROM,
+/// which the renderer must *also* locate on the current PPU before using one.
+///
+/// The pages are provisional: the caller should select only a uniquely visible
+/// page. Variable-length name or number slots cannot be reconstructed safely
+/// from an older message; those candidates are deliberately omitted.
+#[must_use]
+pub fn story_pages_near(
+    rom: &[u8], current: &OnScreen, radius: u16,
+) -> Vec<OnScreen> {
+    if current.table != 3 || radius > 4 {
+        return Vec::new();
+    }
+    let Ok(view) = RomView::new(rom) else { return Vec::new() };
+    let mut found = Vec::new();
+    for index in current.string.saturating_sub(radius)..=current.string.saturating_add(radius) {
+        let Some(start) = string_address(view, 3, index) else { continue };
+        let Some((pages, _)) = pages(
+            view, start, 1,
+            &|_| SLOT_CELLS,
+            &|_| Vec::new(),
+        ) else { continue };
+        for (number, page) in pages.into_iter().enumerate() {
+            // A template page copied from the current frame is used only for
+            // its PPU window base. Dynamic slot pages cannot be compared.
+            if page.english.iter().flatten().any(Option::is_none)
+                || !page.english.iter().flatten()
+                    .any(|ch| ch.is_some_and(|c| c.is_ascii_alphabetic()))
+            {
+                continue;
+            }
+            let mut candidate = current.clone();
+            candidate.string = index;
+            candidate.page = number;
+            candidate.key = page_key(&string_key(3, u32::from(index)), number);
+            candidate.lines = page.lines;
+            candidate.english = page.english;
+            candidate.portrait = page.portrait;
+            candidate.state = 1;
+            candidate.stopped = false;
+            candidate.line = 1;
+            candidate.cell = 0;
+            candidate.progress = 1.0;
+            found.push(candidate);
+        }
+    }
+    found
+}
+
 /// The page whose bytes hold the offset `at` (the engine counts it in a byte: a string longer than 256 bytes has
 /// several candidates, and the one at or after `hint` is taken).
 fn page_of(pages: &[Page], at: usize, hint: Option<usize>) -> Option<usize> {
@@ -835,6 +887,19 @@ mod tests {
             (0x07_9000, &[0x00, 0x91]),
             (0x07_9100, &[0x05, 0x07, 0xFF, 0x09, 0xFE, 0xFF, 0x0A, 0x0A, 0x0A, 0x0A, 0xFF, 0xFF]),
         ])
+    }
+
+    #[test]
+    fn story_nearby_candidates_preserve_rom_text_and_page_numbers() {
+        let rom = rom();
+        let current = on_screen(&rom, &wram(0x81, 3, 1, 0), None).unwrap();
+        let pages = story_pages_near(&rom, &current, 0);
+        assert_eq!(pages.len(), 2);
+        assert_eq!(pages[0].key, "str3:0x00");
+        assert_eq!(pages[1].key, "str3:0x00/p2");
+        assert_eq!(pages[0].english[0], [Some('a'), Some('b')]);
+        assert_eq!(pages[1].english[0], [Some('d'); 4]);
+        assert_eq!(pages[1].base, current.base);
     }
 
     #[test]
