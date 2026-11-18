@@ -52,6 +52,8 @@ jobs:
           rustc --version
       - name: Test JavaScript and ROM checks
         run: node --test tests/*.test.mjs
+      - name: Verify browser JavaScript syntax
+        run: node --check web/app.mjs && node --check web/chinese-overlay.mjs
       - name: Check web bridge, including SNES core (WASM)
         run: cargo check -p ssd-web --target wasm32-unknown-unknown
       - name: Install wasm-pack
