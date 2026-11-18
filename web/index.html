@@ -26,10 +26,12 @@
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
           <button id="hd-cache" type="button" disabled>儲存至本機</button>
+          <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
           <button id="hd-remove" type="button">清除 HD 本機快取</button>
         </div>
         <progress id="hd-progress" max="100" value="0" hidden></progress>
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
+        <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
         <p class="hd-import-note"><strong>目前階段：</strong>先驗證、檢查 ZIP 內容與 OPFS 儲存。HD 角色美術尚未套用在遊戲畫面；原有 Enhanced 2x 和繁中可繼續測試。</p>
       </div>
       <button id="start" disabled>啟動本機遊戲</button>
