@@ -12,6 +12,17 @@ export class WebGame {
         wasm.__wbg_webgame_free(ptr, 0);
     }
     /**
+     * Interleaved stereo PCM, f32 in [-1, 1]: L0, R0, L1, R1...
+     * This drains the host-side samples but never changes the emulated sound chip's state.
+     * @returns {Float32Array}
+     */
+    drain_audio() {
+        const ret = wasm.webgame_drain_audio(this.__wbg_ptr);
+        var v1 = getArrayF32FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v1;
+    }
+    /**
      * @returns {number}
      */
     frame_count() {
@@ -47,9 +58,7 @@ export class WebGame {
         }
     }
     /**
-     * Input is the user's local, legally obtained Japanese Rev 1 or Klepto 1.02 ROM.
-     * For Japanese Rev 1, supply the Klepto v1.02 .ips bytes as the second argument.
-     * Never transmits or embeds either file.
+     * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      * @param {Uint8Array} rom
      * @param {Uint8Array} ips
      */
@@ -67,7 +76,6 @@ export class WebGame {
         return this;
     }
     /**
-     * Save states are ROM/core-version validated when loaded.
      * @returns {Uint8Array}
      */
     save_state() {
@@ -77,7 +85,17 @@ export class WebGame {
         return v1;
     }
     /**
-     * The bit layout is given by `ssd_oracle::input::JOYPAD_BUTTONS`.
+     * AudioContext.sampleRate controls the emulator's PCM output rate.
+     * @param {number} hz
+     */
+    set_audio_rate(hz) {
+        const ret = wasm.webgame_set_audio_rate(this.__wbg_ptr, hz);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
      * @param {number} joypad_bits
      */
     tick(joypad_bits) {
@@ -139,9 +157,22 @@ function addToExternrefTable0(obj) {
     return idx;
 }
 
+function getArrayF32FromWasm0(ptr, len) {
+    ptr = ptr >>> 0;
+    return getFloat32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+
+let cachedFloat32ArrayMemory0 = null;
+function getFloat32ArrayMemory0() {
+    if (cachedFloat32ArrayMemory0 === null || cachedFloat32ArrayMemory0.byteLength === 0) {
+        cachedFloat32ArrayMemory0 = new Float32Array(wasm.memory.buffer);
+    }
+    return cachedFloat32ArrayMemory0;
 }
 
 function getStringFromWasm0(ptr, len) {
@@ -199,6 +230,7 @@ function __wbg_finalize_init(instance, module) {
     wasmInstance = instance;
     wasm = instance.exports;
     wasmModule = module;
+    cachedFloat32ArrayMemory0 = null;
     cachedUint8ArrayMemory0 = null;
     wasm.__wbindgen_start();
     return wasm;
