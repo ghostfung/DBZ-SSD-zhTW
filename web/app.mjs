@@ -1,8 +1,26 @@
 import {inspectRom} from './rom-check.mjs';
+import {SnesAudio} from './audio.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 const STEP = 1000/60.0988;
+const sound = new SnesAudio();
+
+function soundUi(message) {
+  $('sound').textContent = sound.enabled && sound.state === 'running' ? '靜音' : '啟用聲音';
+  $('sound-status').textContent = message || (sound.enabled && sound.state === 'running' ? `聲音已啟用 · ${sound.sampleRate} Hz` : '未啟用聲音');
+}
+
+function unlockAudio() {
+  // Calling resume() before the first await is required for Safari's user-gesture policy.
+  const promise = sound.enable();
+  promise.then(rate => {
+    if (game) game.set_audio_rate(rate);
+    soundUi(`聲音已啟用 · ${rate} Hz`);
+  }).catch(err => soundUi(`無法播放聲音：${err.message}`));
+  return promise;
+}
+
 const setStatus = msg => { $('status').textContent = msg; };
 const romInput = $('rom'), ipsInput = $('ips');
 
@@ -26,12 +44,16 @@ async function ensureEngine() {
 }
 
 $('start').addEventListener('click', async () => {
+  // Begin unlocking Safari audio synchronously on this tap (before loading files/WASM).
+  unlockAudio();
   try {
     $('start').disabled = true;
     const rom = new Uint8Array(await romInput.files[0].arrayBuffer());
     const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);
     const { WebGame } = await ensureEngine();
     game = new WebGame(rom, ips);
+    if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
+    soundUi();
     $('setup').hidden = true;
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
@@ -60,6 +82,7 @@ function requestFrame(now) {
     accumulator += Math.min(now-lastTick, STEP*3);
     let n = 0;
     while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }
+    if (n) sound.enqueue(game.drain_audio());
     drawFrame();
     $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
@@ -78,9 +101,25 @@ for(const btn of document.querySelectorAll('button[data-bit]')) {
   const release=e=>{active.delete(e.pointerId);if(!active.size){held&=~(1<<bit);btn.classList.remove('pressed');}};
   btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release);
 }
-const stop=()=>{running=false;cancelAnimationFrame(raf);game=null;held=0;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+$('sound').addEventListener('click', async () => {
+  try {
+    if (sound.enabled && sound.state === 'running') {
+      await sound.mute();
+      soundUi('已靜音');
+    } else {
+      await unlockAudio();
+    }
+  } catch (error) { soundUi(`播放失敗：${error.message}`); }
+});
+const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;}else if(!document.hidden&&game&&!running){running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);}});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
+  else if(!document.hidden&&game&&!running){
+    running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
+    if(sound.state !== 'running') soundUi('Safari 已暫停聲音，請按「啟用聲音」');
+  }
+});
 $('save').addEventListener('click',()=>{
   if(!game)return;
   const bytes=game.save_state();
@@ -89,7 +128,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));sound.reset();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
