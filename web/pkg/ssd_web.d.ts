@@ -5,6 +5,12 @@ export class WebGame {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * Returns the original translator's keyed dialogue as JSON for testing.
+     * This does not redraw the SNES picture: the companion browser UI displays
+     * a non-destructive Chinese subtitle until the HD overlay is ported.
+     */
+    current_dialogue(): string;
+    /**
      * Interleaved stereo PCM, f32 in [-1, 1]: L0, R0, L1, R1...
      * This drains the host-side samples but never changes the emulated sound chip's state.
      */
@@ -16,6 +22,10 @@ export class WebGame {
     frame_rgba(): Uint8Array;
     height(): number;
     load_state(state: Uint8Array): void;
+    /**
+     * Load the original RC1 zh-TW translation TSV in memory without altering the ROM.
+     */
+    load_translation(tsv: string): number;
     /**
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      */
@@ -37,11 +47,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_webgame_free: (a: number, b: number) => void;
+    readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_frame_count: (a: number) => number;
     readonly webgame_frame_rgba: (a: number) => [number, number];
     readonly webgame_height: (a: number) => number;
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
+    readonly webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
@@ -53,6 +65,7 @@ export interface InitOutput {
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __externref_table_dealloc: (a: number) => void;
+    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_start: () => void;
 }
 
