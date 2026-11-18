@@ -350,9 +350,10 @@ impl Renderer {
             &mut beneath,
             None,
         );
-        self.native_changed_samples = positions.iter().zip(before).filter(
-            |(&at, colour)| target.rgba[at..at+3] != colour[..]
-        ).count() as u32;
+        self.native_changed_samples = positions.iter().zip(before)
+            .map(|(&at, colour)| target.rgba[at..at+3] != colour[..])
+            .filter(|changed| *changed)
+            .count() as u32;
         true
     }
 
