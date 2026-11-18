@@ -36,6 +36,16 @@
           <button id="hd-preview-selected" type="button" disabled>預覽選取的 HD 圖片</button>
           <p id="hd-asset-info" class="hd-import-note"></p>
         </div>
+        <div id="hd-bg-catalog" class="hd-catalog" hidden>
+          <strong>官方背景場景索引</strong>
+          <p id="hd-bg-count" class="hd-import-note">正在讀取 bg/index.json...</p>
+          <label>背景索引（每項包含遊戲圖層鍵值）
+            <select id="hd-bg-list" size="5" aria-label="官方 HD 背景圖層索引"></select>
+          </label>
+          <p id="hd-bg-details" class="hd-import-note"></p>
+          <button id="hd-bg-preview" type="button" disabled>預覽這個索引對應的 HD 背景</button>
+          <p class="hd-import-note">這裡顯示官方素材與匹配條件，尚未表示目前遊戲畫面已匹配到該背景。下一階段才會接上 Rust PPU 圖層辨識。</p>
+        </div>
         <details class="hd-storage-experimental">
           <summary>實驗性本機永久快取（Safari 已發生寫入失敗）</summary>
           <p class="hd-import-note">只有想嘗試免重新選取 ZIP 時才使用。先前在 iPhone 約 200 MiB 時失敗，不能保證這個功能成功；即使不儲存，仍可從原始 ZIP 按需讀取素材。</p>
