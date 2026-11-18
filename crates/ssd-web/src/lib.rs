@@ -3,8 +3,7 @@
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
 use ssd_catalogue::engine::on_screen;
 use ssd_catalogue::translation::{render, Slot, Translation};
-use ssd_hd::{HdOptions, Renderer as HdRenderer};
-use ssd_hd::enhanced::Look;
+use ssd_hd::{HdOptions, Look, Renderer as HdRenderer};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 
