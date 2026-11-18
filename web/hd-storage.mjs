@@ -85,6 +85,10 @@ export async function saveVerifiedHdPack(file,verified,{onProgress=()=>{},signal
     throw Error('瀏覽器估算的剩餘儲存空間不足以保存 HD ZIP；請保留原始檔案。');
 
   const dir=await directory(true);
+  // If a previous v5.1 single-file save crashed, remove its orphan to recover storage.
+  let legacyCommitted=false;
+  try { await dir.getFileHandle(LEGACY_META); legacyCommitted=true; } catch {}
+  if(!legacyCommitted) await dir.removeEntry(LEGACY_FILE).catch(()=>{});
   // Never indicate success until all parts and their metadata are written.
   await dir.removeEntry(META).catch(()=>{});
   const parts=await dir.getDirectoryHandle(PARTS_DIR,{create:true});
