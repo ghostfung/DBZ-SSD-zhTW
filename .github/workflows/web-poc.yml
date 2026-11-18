@@ -6,6 +6,7 @@ on:
     paths:
       - 'crates/ssd-web/**'
       - 'crates/ssd-hd/**'
+      - 'crates/ssd-catalogue/**'
       - 'crates/ssd-oracle/**'
       - 'crates/ssd-game/**'
       - 'crates/ssd-rom/**'
@@ -18,6 +19,7 @@ on:
     paths:
       - 'crates/ssd-web/**'
       - 'crates/ssd-hd/**'
+      - 'crates/ssd-catalogue/**'
       - 'crates/ssd-oracle/**'
       - 'crates/ssd-game/**'
       - 'crates/ssd-rom/**'
