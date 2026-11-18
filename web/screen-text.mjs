@@ -68,7 +68,21 @@ export function drawMenuTranslations(ctx, width, height, runs, names={}, dialogu
   for(const run of runs) {
     const english=run.text.trim();
     if(english.length<2||english.length>40)continue;
-    const zh=names[english] || MENU_FALLBACK[english];
+    let key=english;
+    let zh=names[key] || MENU_FALLBACK[key];
+    if(!zh) {
+      // The game's battle HP table often writes a name and its number in
+      // adjacent 8px glyphs: "Piccolo77". Only replace the name's pixels.
+      // Require a purely numeric suffix to avoid translating sentence prefixes.
+      const prefix=Object.keys(names)
+        .filter(name=>name.length>=3 && english.startsWith(name) &&
+          /^\d+$/.test(english.slice(name.length)))
+        .sort((a,b)=>b.length-a.length)[0];
+      if(prefix) {
+        key=prefix;
+        zh=names[prefix];
+      }
+    }
     if(!zh || zh===english || /[{\r\n}]/.test(zh))continue;
     // The translated scripted dialogue is rendered separately by its own
     // message box handler. Never replace a random word inside that box.
@@ -77,7 +91,7 @@ export function drawMenuTranslations(ctx, width, height, runs, names={}, dialogu
     if(run.x<0||run.y<0||run.x+run.width>256||
        !Array.isArray(run.paper)||run.paper.length!==3||
        !Array.isArray(run.ink)||run.ink.length!==3)continue;
-    const available=run.width;
+    const available=key===english ? run.width : Math.min(run.width,[...key].length*8);
     ctx.font='bold 10px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
     const natural=ctx.measureText(zh).width;
     const size=Math.max(6,Math.min(10,10*available/Math.max(1,natural)));

@@ -1,6 +1,6 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
-import {findDialogueBox,drawChineseInBox} from './chinese-overlay.mjs';
+import {findDialogueBox,drawChineseInBox,maskPendingDialogue} from './chinese-overlay.mjs';
 import {assembleTextRuns,reconcileDialogue,drawMenuTranslations} from './screen-text.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 const $ = id => document.getElementById(id);
@@ -67,6 +67,13 @@ $('start').addEventListener('click', async () => {
     if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
     const translatedRows = game.load_translation(await translationResponse.text());
     menuNames = JSON.parse(game.menu_translations());
+    // Use the author's existing Traditional Chinese names for original battle
+    // status tiles. These are drawn outside the message engine and may run
+    // directly into numerical HP values (e.g. "Piccolo77").
+    for (const [english,key] of [['Goku','string:0'],['Piccolo','string:2']]) {
+      const translated = game.translation_for_key(key);
+      if (translated && !menuNames[english]) menuNames[english] = translated;
+    }
     observedRuns = [];
     $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
     translationKey = '';
@@ -95,9 +102,16 @@ function drawFrame() {
   const rgba=game.frame_rgba();
   if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
-  const dialogBox = currentDialogue ? findDialogueBox(rgba,w,h) : null;
-  const painted = Boolean(dialogBox && $('inframe')?.checked && currentDialogue
-    && drawChineseInBox(ctx,rgba,w,h,currentDialogue,dialogBox,observedRuns));
+  const insideGame = Boolean($('inframe')?.checked);
+  // Even when the SNES message engine is between pages, the PPU can already
+  // display the next English glyphs. Inspect the frame independently of the
+  // translation key, then mask unresolved transition text before presenting it.
+  const dialogBox = insideGame ? findDialogueBox(rgba,w,h) : null;
+  const painted = Boolean(dialogBox && insideGame && currentDialogue &&
+    drawChineseInBox(ctx,rgba,w,h,currentDialogue,dialogBox,observedRuns));
+  if (insideGame && dialogBox && !painted) {
+    maskPendingDialogue(ctx,w,h,dialogBox,observedRuns,menuNames);
+  }
   // Native SNES menu labels do not pass through the message engine. The
   // PPU text capture lets us replace only words actually visible on screen.
   drawMenuTranslations(ctx,w,h,observedRuns,menuNames,dialogBox);

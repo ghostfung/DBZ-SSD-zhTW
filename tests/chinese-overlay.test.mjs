@@ -117,3 +117,16 @@ test('portrait dialogue covers the FIRST English line and preserves the avatar',
     assert.ok(line[3]<=165,'Chinese was positioned on a later row: '+line);
   }
 });
+
+test('unresolved English is masked only inside the current dialogue, not over sprites', async()=>{
+  const actions=[];
+  const ctx={save(){},restore(){},scale(){},fillRect(...args){actions.push(args)}};
+  const {maskPendingDialogue}=await import('../web/chinese-overlay.mjs');
+  const box={left:18,right:239,top:151,bottom:237,fill:'rgb(255,239,206)',sx:2,sy:2};
+  const runs=[{x:77,y:160,text:'I'},{x:85,y:160,text:'would'},{x:80,y:176,text:'help'}];
+  assert.equal(maskPendingDialogue(ctx,512,478,box,runs,{}),true);
+  assert.ok(actions[0][0]>=70,'the avatar remains untouched');
+  assert.ok(actions[0][1]<=154,'top English row is cleared');
+  assert.equal(maskPendingDialogue(ctx,512,478,{...box,top:20,bottom:85},runs,{}),false);
+  assert.equal(maskPendingDialogue(ctx,512,478,box,[{x:50,y:161,text:'Menu'}],{Menu:'選單'}),false);
+});

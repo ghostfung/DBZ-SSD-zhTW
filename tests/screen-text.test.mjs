@@ -31,3 +31,14 @@ test('menus overlay Chinese within detected English glyph cells and not over dia
   assert.equal(drawMenuTranslations(ctx,512,478,runs,{'Atk.':'戰鬥','Item':'卡牌'},
     {left:20,right:205,top:160,bottom:200}),0);
 });
+
+test('battle name followed by HP digits translates the name without erasing the digits',()=>{
+ const actions=[];
+ const ctx={save(){},restore(){},scale(){},measureText(t){return {width:[...t].length*10}},
+   fillRect(...a){actions.push(['erase',...a])},fillText(...a){actions.push(['draw',...a])}};
+ const runs=assembleTextRuns(cells([[26,'Piccolo77']]));
+ assert.equal(drawMenuTranslations(ctx,512,478,runs,{Piccolo:'比克'}),1);
+ assert.ok(actions.some(x=>x[0]==='draw'&&x[1]==='比克'));
+ assert.equal(actions.find(x=>x[0]==='erase')[3],56,
+   'must cover only seven letters, leaving HP 77 visible');
+});

@@ -159,3 +159,28 @@ export function drawChineseInBox(ctx, image, width, height, dialogue, detectedBo
   ctx.restore();
   return true;
 }
+
+// While the SNES message engine changes pages, a few Latin glyphs can be
+// visible before WRAM yields the next translation key. Mask those *only* in a
+// detected dialogue window on the current frame; don't show English first.
+// Never touch the surrounding sprites, portrait, status panels or menu labels.
+export function maskPendingDialogue(ctx,width,height,box,runs=[],menuNames={}) {
+  if(!box || width<160 || height<100 || box.bottom<165 || box.right-box.left<90) return false;
+  const raw=(Array.isArray(runs)?runs:[]).filter(run=>
+    typeof run.text==='string' && /[A-Za-z]/.test(run.text) &&
+    Number.isFinite(run.x) && Number.isFinite(run.y) &&
+    run.x>=box.left+4 && run.x<box.right-6 &&
+    run.y>=box.top+3 && run.y<=box.bottom-4 &&
+    !menuNames[run.text.trim()]);
+  if(!raw.length)return false;
+  // The first visible text cell marks a safe left edge even with an avatar.
+  const left=Math.max(box.left+6,Math.min(...raw.map(run=>run.x))-3);
+  const right=box.right-6;
+  if(right-left<36)return false;
+  ctx.save();
+  ctx.scale(box.sx,box.sy);
+  ctx.fillStyle=box.fill;
+  ctx.fillRect(left,box.top+3,right-left,box.bottom-box.top-6);
+  ctx.restore();
+  return true;
+}
