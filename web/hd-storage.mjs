@@ -50,6 +50,31 @@ export class SegmentedBlob {
   }
 }
 
+/** Write a Blob as bounded OPFS files. Exported for small synthetic regression tests. */
+export async function writeSegmentedParts(parts,file,{chunkBytes=PART_SIZE,onProgress=()=>{},signal}={}){
+  const count=Math.ceil(file.size/chunkBytes);
+  for(let index=0;index<count;index++){
+    const start=index*chunkBytes;
+    const end=Math.min(file.size,start+chunkBytes);
+    try{
+      if(signal?.aborted)throw new DOMException('已取消儲存','AbortError');
+      const handle=await parts.getFileHandle(nameOf(index),{create:true});
+      const writer=await handle.createWritable({keepExistingData:false});
+      try{
+        await writer.write(file.slice(start,end));
+        await writer.close();
+      }catch(err){await writer.abort().catch(()=>{});throw err;}
+      const stored=await handle.getFile();
+      if(stored.size!==end-start)throw Error('分段寫入大小不符');
+      onProgress(end,file.size);
+      await yieldBrowser();
+    }catch(error){
+      throw Error('第 '+(index+1)+'／'+count+' 段寫入失敗：'+(error?.message||String(error)));
+    }
+  }
+  return count;
+}
+
 export async function saveVerifiedHdPack(file,verified,{onProgress=()=>{},signal}={}){
   if(verified?.sha256!==OFFICIAL_PACK.sha256||file.size!==OFFICIAL_PACK.bytes)
     throw Error('必須先完成官方 HD 美術包 SHA-256 驗證');
@@ -64,28 +89,8 @@ export async function saveVerifiedHdPack(file,verified,{onProgress=()=>{},signal
   await dir.removeEntry(META).catch(()=>{});
   const parts=await dir.getDirectoryHandle(PARTS_DIR,{create:true});
   const count=Math.ceil(file.size/PART_SIZE);
-  let index=0;
   try{
-    for(index=0;index<count;index++){
-      if(signal?.aborted)throw new DOMException('已取消儲存','AbortError');
-      const start=index*PART_SIZE;
-      const end=Math.min(file.size,start+PART_SIZE);
-      const handle=await parts.getFileHandle(nameOf(index),{create:true});
-      const writer=await handle.createWritable({keepExistingData:false});
-      try{
-        // Writing a Blob directly avoids allocating a second 2 MiB Uint8Array.
-        await writer.write(file.slice(start,end));
-        await writer.close();
-      }catch(err){
-        await writer.abort().catch(()=>{});
-        throw err;
-      }
-      const stored=await handle.getFile();
-      if(stored.size!==end-start)throw Error('分段寫入大小不符');
-      onProgress(end,file.size);
-      // Let Safari release file handles and render progress between parts.
-      await yieldBrowser();
-    }
+    await writeSegmentedParts(parts,file,{chunkBytes:PART_SIZE,onProgress,signal});
     await writeText(dir,META,JSON.stringify({
       version:VERSION,name:OFFICIAL_PACK.name,bytes:OFFICIAL_PACK.bytes,
       sha256:OFFICIAL_PACK.sha256,partSize:PART_SIZE,count,
@@ -99,7 +104,7 @@ export async function saveVerifiedHdPack(file,verified,{onProgress=()=>{},signal
   }catch(error){
     await dir.removeEntry(META).catch(()=>{});
     await dir.removeEntry(PARTS_DIR,{recursive:true}).catch(()=>{});
-    throw Error('HD 分段儲存於第 '+(index+1)+'／'+count+' 段失敗：'+(error?.message||String(error)));
+    throw Error('HD 素材包本機儲存失敗：'+(error?.message||String(error)));
   }
 }
 
