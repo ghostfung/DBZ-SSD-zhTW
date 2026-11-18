@@ -19,3 +19,12 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 
 .audio-status{font-size:.76rem;color:#b8d1f3;text-align:center;margin:9px 0 0;line-height:1.45}
 #sound{background:#275075;border-color:#547ea2}
+
+/* RC1 zh-TW dialogue verification: intentionally outside the SNES picture.
+   Avoid displaying this as a completed HD translation overlay. */
+.translation-card{margin:9px 0;border:1px solid #5a6b8c;border-left:3px solid #d6a95f;border-radius:10px;background:#172239;padding:10px 12px;min-height:75px}
+.translation-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:.7rem;color:#b9cee8}
+#translation-key{font: .64rem ui-monospace,monospace;color:#8092ad;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.translation-text{white-space:pre-line;font-size:1rem;line-height:1.5;color:#fff2d9;margin-top:6px;font-weight:600;letter-spacing:.01em}
+.translation-count{font-size:.68rem;color:#91a9c6;margin:4px 0 8px}
+.footer a{color:#a8c7ff}
