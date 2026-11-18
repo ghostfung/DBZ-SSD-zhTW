@@ -15,3 +15,7 @@ wasm-bindgen = "0.2"
 
 [lints]
 workspace = true
+
+# Enable secure browser JS randomness for the transitive SNES core dependencies.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.4", features = ["wasm_js"] }

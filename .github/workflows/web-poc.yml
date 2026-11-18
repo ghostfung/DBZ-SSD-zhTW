@@ -46,11 +46,7 @@ jobs:
           rustc --version
       - name: Test JavaScript and ROM checks
         run: node --test tests/rom-check.test.mjs
-      - name: Check SNES core WASM compatibility
-        run: cargo check -p ssd-oracle --target wasm32-unknown-unknown
-      - name: Check game module WASM compatibility
-        run: cargo check -p ssd-game --target wasm32-unknown-unknown
-      - name: Check browser bridge crate
+      - name: Check web bridge, including SNES core (WASM)
         run: cargo check -p ssd-web --target wasm32-unknown-unknown
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
