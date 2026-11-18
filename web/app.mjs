@@ -3,6 +3,7 @@ import {SnesAudio} from './audio.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
+let lastTranslationPoll = 0, translationKey = '';
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 
@@ -52,6 +53,13 @@ $('start').addEventListener('click', async () => {
     const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);
     const { WebGame } = await ensureEngine();
     game = new WebGame(rom, ips);
+    // Translation remains on-device: the TSV loads from this site, never from the user's ROM.
+    const translationResponse = await fetch('./zh-tw.tsv');
+    if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
+    const translatedRows = game.load_translation(await translationResponse.text());
+    $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
+    translationKey = '';
+    lastTranslationPoll = 0;
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
     $('setup').hidden = true;
@@ -84,6 +92,10 @@ function requestFrame(now) {
     while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }
     if (n) sound.enqueue(game.drain_audio());
     drawFrame();
+    if (now - lastTranslationPoll >= 80) {
+      lastTranslationPoll = now;
+      updateTranslation();
+    }
     $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
     if(now-countWindow>=1000){$('fps').textContent=`約 ${(countFrames*1000/(now-countWindow)).toFixed(1)} 模擬幀/秒`;countWindow=now;countFrames=0;}
@@ -92,6 +104,25 @@ function requestFrame(now) {
   } catch(e) { running=false; window.alert(`遊戲執行失敗：${e}`); }
 }
 
+function updateTranslation() {
+  const box = $('translation-card');
+  if (!game) { box.hidden = true; return; }
+  const serialized = game.current_dialogue();
+  if (!serialized) {
+    box.hidden = true;
+    translationKey = '';
+    return;
+  }
+  const msg = JSON.parse(serialized);
+  if (!msg?.text) { box.hidden = true; return; }
+  // Debug metadata is visible for verifying that the correct source page is translated.
+  if (translationKey !== msg.key || box.hidden) {
+    $('translation-text').textContent = msg.text;
+    $('translation-key').textContent = msg.key;
+    translationKey = msg.key;
+  }
+  box.hidden = false;
+}
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
 window.addEventListener('keyup',e=>{if(keyToBit[e.code]!==undefined){held&=~(1<<keyToBit[e.code]);e.preventDefault();}});
@@ -111,7 +142,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
@@ -128,7 +159,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));sound.reset();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
