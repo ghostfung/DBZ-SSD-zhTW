@@ -1,6 +1,7 @@
 // HD archive import UI. All reads are local File/OPFS, never fetch/POST player assets.
 import {inspectZip,extractZipEntry,verifyOfficialPack,OFFICIAL_PACK} from './hd-pack.mjs';
 import {opfsAvailable,saveVerifiedHdPack,readSavedHdPack,clearSavedHdPack} from './hd-storage.mjs';
+import {LocalHdAssets} from './hd-local-assets.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -9,6 +10,7 @@ let busy=false;
 let persisted=false;
 let previewObjectUrl=null;
 let sampleEntry=null;
+let library=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -19,6 +21,7 @@ function clearPreview(){
 }
 
 function status(message){$('hd-status').textContent=message;}
+function sessionStatus(message){$('hd-session-status').textContent=message;}
 function previewEntry(info){return info.entries.find(x=>/\.(png|webp)$/i.test(x.name)&&x.unpacked>=128&&x.unpacked<=2*1024*1024)??null;}
 function busyMode(value){
   busy=value;
@@ -27,6 +30,9 @@ function busyMode(value){
   $('hd-cache').disabled=value||!verified||!opfsAvailable()||persisted;
   $('hd-preview-btn').disabled=value||!sampleEntry||!verified;
   $('hd-remove').disabled=value;
+  $('hd-asset-search').disabled=value||!library;
+  $('hd-asset-list').disabled=value||!library;
+  $('hd-preview-selected').disabled=value||!library||!$('hd-asset-list').value;
 }
 function progress(phase,done,total){
   const value=total?Math.round(done/total*100):0;
@@ -42,7 +48,9 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;clearPreview();
+  $('hd-asset-browser').hidden=true;
+  sessionStatus('尚未啟用本次分頁的 HD 素材讀取。');
   $('hd-preview-btn').disabled=true;
   $('hd-progress').hidden=true;
   const file=$('hd-zip').files?.[0];
@@ -54,7 +62,8 @@ $('hd-verify').addEventListener('click',async()=>{
   const file=$('hd-zip').files?.[0];
   if(!file||busy)return;
   busyMode(true);
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;clearPreview();
+  $('hd-asset-browser').hidden=true;
   try {
     status('正在檢查 ZIP 結構...');
     // Import is deliberately strict: only the original signed GitHub asset digest is accepted.
@@ -74,7 +83,8 @@ $('hd-verify').addEventListener('click',async()=>{
     }
     verified=checked;activeFile=file;
     sampleEntry=previewEntry(checked);
-    status(explanation(checked)+extra+'\n目前只完成驗證，尚未保存。若要下次自動讀取，請按「儲存至本機」。');
+    prepareLocalReader(file,checked);
+    status(explanation(checked)+extra+'\n已可直接從本次選擇的 ZIP 按需讀取 HD 圖片，不需要儲存整包；重新開啟分頁可能要再選檔。');
     $('hd-progress').value=100;
   } catch(e){
     $('hd-progress').hidden=true;
