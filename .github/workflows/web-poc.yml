@@ -46,7 +46,7 @@ jobs:
           rustup target list --installed
           rustc --version
       - name: Test JavaScript and ROM checks
-        run: node --test tests/rom-check.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Check web bridge, including SNES core (WASM)
         run: cargo check -p ssd-web --target wasm32-unknown-unknown
       - name: Install wasm-pack
