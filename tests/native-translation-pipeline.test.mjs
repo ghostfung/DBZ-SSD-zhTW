@@ -17,12 +17,13 @@ test('iPhone uses the original author native translation overlay, not guessed me
 });
 
 test('native text is synchronized with PPU and drawn after local HD background art',()=>{
-  const screen = web.indexOf('self.hd_renderer.set_translation_screen(screen);');
+  const started = web.indexOf('started = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);');
   const tick = web.indexOf('self.machine.run_frame(joypad_from_bits(joypad_bits)');
+  const handoff = web.indexOf('self.hd_renderer.set_translation_screen(selected);');
   const art = web.indexOf('self.live_backgrounds.composite(');
   const chinese = web.indexOf('self.hd_renderer.paint_native_translation(');
-  assert.ok(screen>=0&&tick>=0&&screen<tick,
-    'text screen must come from the START of the emulated frame');
+  assert.ok(started>=0 && tick>started && handoff>tick && handoff<chinese,
+    'first select the frame-start page; then hand it to PPU with guarded late fallback');
   assert.ok(art>=0&&chinese>art,
     'Chinese must be the final pass above locally imported HD art');
   assert.match(hd,/self\.native_text_frame = if self\.native_translation\.is_some\(\)/);
