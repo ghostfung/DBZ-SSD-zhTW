@@ -53,7 +53,7 @@ jobs:
       - name: Test JavaScript and ROM checks
         run: node --test tests/*.test.mjs
       - name: Verify browser JavaScript syntax
-        run: node --check web/app.mjs && node --check web/chinese-overlay.mjs
+        run: node --check web/app.mjs && node --check web/chinese-overlay.mjs && node --check web/hd-pack.mjs && node --check web/hd-import-ui.mjs && node --check web/sha256-stream.mjs && node --check web/hd-storage.mjs
       - name: Check web bridge, including SNES core (WASM)
         run: cargo check -p ssd-web --target wasm32-unknown-unknown
       - name: Install wasm-pack
