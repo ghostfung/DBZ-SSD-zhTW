@@ -40,6 +40,56 @@ function progress(phase,done,total){
   $('hd-progress').value=value;
   status(`${phase}：${value}%（${(done/1048576).toFixed(0)} / ${(total/1048576).toFixed(0)} MiB）`);
 }
+function refreshAssetList(){
+  const select=$('hd-asset-list');
+  select.replaceChildren();
+  if(!library)return;
+  const term=$('hd-asset-search').value.trim();
+  const matches=library.search(term,{limit:40});
+  for(const item of matches){
+    const option=document.createElement('option');
+    option.value=item.name;
+    option.textContent=item.name+' ('+(item.bytes/1024).toFixed(0)+' KiB)';
+    select.appendChild(option);
+  }
+  if(select.options.length)select.selectedIndex=0;
+  $('hd-preview-selected').disabled=!select.value||busy;
+  $('hd-asset-info').textContent=matches.length
+    ? '顯示符合搜尋條件的前 '+matches.length+' 張。ZIP 不會整包解壓；只有預覽時才讀取個別圖片。'
+    : '沒有符合的圖片，請嘗試其他名稱。';
+}
+function prepareLocalReader(file,info){
+  library?.clearCache();
+  library=new LocalHdAssets(file,info);
+  $('hd-asset-search').value='';
+  $('hd-asset-browser').hidden=false;
+  refreshAssetList();
+  sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
+    ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
+}
+async function previewLocalImage(name){
+  if(!library||!name||busy)return;
+  busyMode(true);
+  try{
+    clearPreview();
+    const data=await library.readImage(name);
+    const png=name.toLowerCase().endsWith('.png');
+    previewObjectUrl=URL.createObjectURL(new Blob([data],{type:png?'image/png':'image/webp'}));
+    $('hd-preview-image').src=previewObjectUrl;
+    $('hd-preview-name').textContent='由本機 ZIP 按需解壓：'+name+
+      ' ('+(data.byteLength/1024).toFixed(0)+' KiB；本次分頁圖片快取 '+
+      (library.cacheBytes/1048576).toFixed(1)+'／16 MiB)。尚未套用到遊戲渲染。';
+    $('hd-preview-panel').hidden=false;
+  }catch(error){
+    status('本機 HD 圖片讀取失敗：'+(error?.message||String(error)));
+  }finally{busyMode(false);}
+}
+$('hd-asset-search').addEventListener('input',refreshAssetList);
+$('hd-asset-list').addEventListener('change',()=>{
+  $('hd-preview-selected').disabled=busy||!$('hd-asset-list').value;
+});
+$('hd-preview-selected').addEventListener('click',()=>previewLocalImage($('hd-asset-list').value));
+
 function explanation(result){
   return `官方 ${result.version} HD 美術包已通過 SHA-256 驗證。
 ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLocaleString('en-US')} 個項目、${result.imageCount.toLocaleString('en-US')} 張 PNG/WebP。
@@ -92,26 +142,7 @@ $('hd-verify').addEventListener('click',async()=>{
   } finally {busyMode(false);}
 });
 
-$('hd-preview-btn').addEventListener('click',async()=>{
-  if(!activeFile||!sampleEntry||!verified||busy)return;
-  busyMode(true);
-  try {
-    clearPreview();
-    const entry=sampleEntry;
-    const data=await extractZipEntry(activeFile,entry,{maxBytes:2*1024*1024});
-    const isPng=entry.name.toLowerCase().endsWith('.png');
-    const valid=isPng
-      ? data.length>24&&data[0]===137&&data[1]===80&&data[2]===78&&data[3]===71
-      : data.length>12&&String.fromCharCode(...data.subarray(0,4))==='RIFF'&&
-        String.fromCharCode(...data.subarray(8,12))==='WEBP';
-    if(!valid)throw Error('圖片檔案標頭不符合 PNG/WebP');
-    previewObjectUrl=URL.createObjectURL(new Blob([data],{type:isPng?'image/png':'image/webp'}));
-    $('hd-preview-image').src=previewObjectUrl;
-    $('hd-preview-name').textContent='已從手機本機 ZIP 解壓並校驗：'+entry.name+'（此為素材預覽，尚未套用到遊戲）';
-    $('hd-preview-panel').hidden=false;
-  }catch(e){status('HD 圖片測試失敗：'+e.message);}
-  finally{busyMode(false);}
-});
+$('hd-preview-btn').addEventListener('click',()=>previewLocalImage(sampleEntry?.name));
 $('hd-cache').addEventListener('click',async()=>{
   if(!verified||!activeFile||busy)return;
   busyMode(true);
@@ -132,7 +163,7 @@ $('hd-cache').addEventListener('click',async()=>{
         diagnostic='\\nSafari 回報剩餘空間約 '+(remaining/1048576).toFixed(0)+' MiB（僅供估算）。';
       }
     }catch{}
-    status('本機分段儲存失敗：'+e.message+diagnostic+'\\n原始 ZIP 仍在「檔案」App，可繼續正常遊玩目前的繁中 Enhanced 2x 版。');
+    status('瀏覽器整包快取未成功：'+e.message+diagnostic+'\\n無須再重試：本次分頁仍可直接從已驗證的本機 ZIP 按需讀取 HD 圖片。');
   }
   finally{busyMode(false);}
 });
@@ -162,6 +193,7 @@ void (async()=>{
       verified={...OFFICIAL_PACK,count:zip.count,imageCount:zip.imageCount,manifest:zip.manifest,index:zip.index,entries:zip.entries};
       sampleEntry=previewEntry(verified);
       persisted=true;
+      prepareLocalReader(cached.file,verified);
       busyMode(false);
       status('已自動恢復上次儲存在 iPhone 的官方 '+OFFICIAL_PACK.version+' HD 素材包（'+(cached.file.size/1048576).toFixed(1)+' MiB，'+zip.count.toLocaleString('en-US')+' 個檔案）。\n可直接預覽 HD 圖片，無須重新選擇 ZIP。上次匯入時已驗證 SHA-256；本次僅核對大小和 ZIP 目錄。\n完整 HD 美術套用尚未完成。');
     } else {
