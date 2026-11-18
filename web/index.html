@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第四階段：RC1 內嵌中文及 Enhanced 2x 已可運行；新增玩家自備 HD 美術包的本機驗證與儲存。完整美術替換、HD 選單與 16:9 畫面尚待接入。</p>
+    <p class="notice">第五階段：RC1 內嵌繁中、有聲、Enhanced 2x 正常運行；新增玩家自備 HD ZIP 的本機按需讀取。完整 HD 美術替換、選單和 16:9 仍在開發。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -22,17 +22,32 @@
         <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
           <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
         </label>
-        <p class="hd-import-note">約 462 MiB。先驗證 ZIP 的 SHA-256，再以 2 MiB 小檔分段儲存；避免 Safari 一次寫入 462 MiB。檔案不會上傳網站。</p>
+        <p class="hd-import-note">約 462 MiB。驗證後直接使用你選取的 ZIP，不用複製 462 MiB 到瀏覽器儲存區。素材全程只在本機讀取，不會上傳。</p>
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
-          <button id="hd-cache" type="button" disabled>儲存至本機</button>
           <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
-          <button id="hd-remove" type="button">清除 HD 本機快取</button>
         </div>
+        <p id="hd-session-status" class="hd-import-note" aria-live="polite">尚未啟用本次分頁的 HD 素材讀取。</p>
+        <div id="hd-asset-browser" hidden>
+          <label>HD 素材名稱搜尋（不需解壓整包）
+            <input id="hd-asset-search" type="search" placeholder="例如 bg/、battle/、goku" autocomplete="off"/>
+          </label>
+          <select id="hd-asset-list" size="4" aria-label="從本機 ZIP 尋找 HD 圖片"></select>
+          <button id="hd-preview-selected" type="button" disabled>預覽選取的 HD 圖片</button>
+          <p id="hd-asset-info" class="hd-import-note"></p>
+        </div>
+        <details class="hd-storage-experimental">
+          <summary>實驗性本機永久快取（Safari 已發生寫入失敗）</summary>
+          <p class="hd-import-note">只有想嘗試免重新選取 ZIP 時才使用。先前在 iPhone 約 200 MiB 時失敗，不能保證這個功能成功；即使不儲存，仍可從原始 ZIP 按需讀取素材。</p>
+          <div class="hd-import-buttons">
+            <button id="hd-cache" type="button" disabled>嘗試儲存整份 ZIP</button>
+            <button id="hd-remove" type="button">清除 HD 本機快取</button>
+          </div>
+        </details>
         <progress id="hd-progress" max="100" value="0" hidden></progress>
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
         <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note"><strong>目前階段：</strong>先驗證、檢查 ZIP 內容與 OPFS 儲存。HD 角色美術尚未套用在遊戲畫面；原有 Enhanced 2x 和繁中可繼續測試。</p>
+        <p class="hd-import-note"><strong>目前階段：</strong>HD ZIP 已可逐張按需讀取。真正遊戲場景美術替換仍在開發，現有 Enhanced 2x、繁中及聲音功能維持不變。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
       </div>
       <button id="start" disabled>啟動本機遊戲</button>
       <output id="status" aria-live="polite">等待載入。</output>
