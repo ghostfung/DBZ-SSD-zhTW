@@ -66,6 +66,11 @@ export class WebGame {
      */
     set_hd_mode(enabled: boolean): void;
     /**
+     * Whether a story dialogue frame contains untranslated PPU letters
+     * that should be deferred briefly before Safari presents it.
+     */
+    story_translation_pending(): boolean;
+    /**
      * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
      */
     tick(joypad_bits: number): void;
@@ -110,6 +115,7 @@ export interface InitOutput {
     readonly webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
+    readonly webgame_story_translation_pending: (a: number) => number;
     readonly webgame_tick: (a: number, b: number) => [number, number];
     readonly webgame_translation_diagnostics: (a: number) => [number, number];
     readonly webgame_translation_for_key: (a: number, b: number, c: number) => [number, number];

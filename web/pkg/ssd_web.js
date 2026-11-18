@@ -241,6 +241,15 @@ export class WebGame {
         wasm.webgame_set_hd_mode(this.__wbg_ptr, enabled);
     }
     /**
+     * Whether a story dialogue frame contains untranslated PPU letters
+     * that should be deferred briefly before Safari presents it.
+     * @returns {boolean}
+     */
+    story_translation_pending() {
+        const ret = wasm.webgame_story_translation_pending(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
      * @param {number} joypad_bits
      */

@@ -22,6 +22,7 @@ export const webgame_set_audio_rate: (a: number, b: number) => [number, number];
 export const webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
 export const webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
 export const webgame_set_hd_mode: (a: number, b: number) => void;
+export const webgame_story_translation_pending: (a: number) => number;
 export const webgame_tick: (a: number, b: number) => [number, number];
 export const webgame_translation_diagnostics: (a: number) => [number, number];
 export const webgame_translation_for_key: (a: number, b: number, c: number) => [number, number];
