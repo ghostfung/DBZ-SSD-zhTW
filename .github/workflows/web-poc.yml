@@ -64,6 +64,9 @@ jobs:
           set -euo pipefail
           test -s web/pkg/ssd_web_bg.wasm
           test -s web/pkg/ssd_web.js
+          test -s translations/zh-tw/zh-tw.tsv
+          cp translations/zh-tw/zh-tw.tsv web/zh-tw.tsv
+          test -s web/zh-tw.tsv
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Another edit may have landed while wasm was compiling; never publish an older build.
@@ -74,7 +77,7 @@ jobs:
             exit 0
           fi
           # Only generated browser runtime: ROMs, patches and HD packs must never be published.
-          git add -f web/pkg/
+          git add -f web/pkg/ web/zh-tw.tsv
           if git diff --cached --quiet; then
             echo 'WASM package unchanged; no commit needed.'
           else
