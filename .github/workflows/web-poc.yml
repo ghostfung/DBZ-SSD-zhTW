@@ -27,7 +27,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Only this isolated test branch publishes wasm output; it never writes to main.
+  contents: write
 
 jobs:
   wasm-build:
@@ -52,6 +53,22 @@ jobs:
         run: cargo install wasm-pack --locked
       - name: Build browser wasm
         run: wasm-pack build crates/ssd-web --target web --out-dir ../../web/pkg --release
+      - name: Publish compiled browser package to isolated test branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/iphone-web-poc'
+        run: |
+          set -euo pipefail
+          test -s web/pkg/ssd_web_bg.wasm
+          test -s web/pkg/ssd_web.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Only generated browser runtime: ROMs, patches and HD packs must never be published.
+          git add -f web/pkg/
+          if git diff --cached --quiet; then
+            echo 'WASM package unchanged; no commit needed.'
+          else
+            git commit -m "build(web-poc): publish tested WASM runtime [skip ci]"
+            git push origin HEAD:iphone-web-poc
+          fi
       - name: Upload playable-test shell (no ROM, no IPS, no HD assets)
         uses: actions/upload-artifact@v4
         with:
