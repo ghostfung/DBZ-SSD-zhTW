@@ -79,15 +79,38 @@ impl LiveBackgrounds {
     /// Check expensive VRAM content hashes once per 12 simulation frames, not every 60 Hz frame.
     pub fn refresh(&mut self, log: &FrameLog) {
         self.ticks = self.ticks.wrapping_add(1);
-        if self.ticks % 12 != 1 {
-            return;
-        }
+        // Check transition frames immediately, not only on the 12-frame
+        // cadence. Otherwise the previous HD scene can stay marked active
+        // while the game has already switched its PPU tilemap.
         if !log.complete || !log.vram_writes.is_empty() {
-            // Hide HD during unverified VRAM transition frames, but keep
-            // decoded art for the next clean PPU hash revalidation.
+            // Keep previously decoded pictures but never composite with an
+            // unverified or partially written VRAM frame.
             self.active.clear();
             return;
         }
+        let current_scene_visible = self.active.iter().any(|index| {
+            let layer = &self.layers[*index];
+            log.entries.iter().any(|line| {
+                let regs = &line.regs;
+                let bg = usize::from(layer.bg);
+                !regs.forced_blanking && regs.bg_mode == layer.mode
+                    && regs.main_bg[bg]
+                    && regs.bg_map_base[bg] == layer.map_base
+                    && regs.bg_char_base[bg] == layer.char_base
+                    && regs.bg_screen_size[bg] == layer.size
+                    && !regs.bg_large_tiles[bg]
+            })
+        });
+        if !self.active.is_empty() && !current_scene_visible {
+            self.active.clear();
+        }
+        // An active, loaded HD scene needs only a periodic VRAM hash check.
+        // During a transition or while artwork is missing, check at 15 Hz
+        // rather than 5 Hz; no per-frame 4096-entry hash scan.
+        let all_ready = !self.active.is_empty()
+            && self.active.iter().all(|index| self.pictures.contains_key(index));
+        let interval = if all_ready { 12 } else { 4 };
+        if self.ticks % interval != 1 { return; }
         let mut hashes: HashMap<(u8, u8, u16, u16, u8, [u16; 2]), u64> = HashMap::new();
         let mut chosen: Vec<(usize, u8)> = Vec::new();
         for (index, entry) in self.layers.iter().enumerate() {

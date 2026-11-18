@@ -2,15 +2,17 @@ import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
+import {HdFrameGate} from './hd-frame-gate.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
-let lastHdPoll = 0, translationKey = '';
+let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
 const storyFrameGate = new StoryFrameGate(10);
+const hdFrameGate = new HdFrameGate();
 
 let translationDiag = [], lastDiagSignature = '';
 function sampleTranslationDiagnostics() {
@@ -19,9 +21,11 @@ function sampleTranslationDiagnostics() {
     const item = JSON.parse(game.translation_diagnostics());
     item.presentation_holding = storyFrameGate.isHolding;
     item.presentation_held_frames = storyFrameGate.heldFramesTotal;
+    item.hd_presentation_holding = hdFrameGate.isHolding;
+    item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
-    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.glyphs]);
+    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.hd_presentation_holding,item.hd_presentation_held_frames,item.glyphs]);
     if (signature !== lastDiagSignature) {
       lastDiagSignature = signature;
       translationDiag.push(item);
@@ -34,6 +38,7 @@ function sampleTranslationDiagnostics() {
 
 document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
+  hdFrameGate.reset();
 });
 
 function soundUi(message) {
@@ -98,6 +103,7 @@ $('start').addEventListener('click', async () => {
     embedded = false;
     translationDiag = []; lastDiagSignature = '';
     storyFrameGate.reset();
+    hdFrameGate.reset();
     game.set_hd_mode(hdEnabled);
     liveHd.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
@@ -120,19 +126,36 @@ function drawFrame() {
   if (canvas.width!==w || canvas.height!==h) {
     canvas.width=w; canvas.height=h;
     storyFrameGate.reset();
+    hdFrameGate.reset();
   }
   // A fast advance can expose the next page's native English glyphs before
   // the Rust stateful Chinese renderer has filled that frame. Hold only the
   // *last presented picture* for up to ten simulated frames, not the game:
   // inputs, sound and emulated time continue without interruption.
-  const hold=storyFrameGate.shouldDefer(
-    game.frame_count(), game.story_translation_pending(), game.hd_active()
+  const pixels=game.hd_art_pixels();
+  const enhanced=game.hd_active();
+  const storyHold=storyFrameGate.shouldDefer(
+    game.frame_count(), game.story_translation_pending(), enhanced
   );
-  if (!hold) {
+  // A new PPU background can be matched a few frames before its local 2x
+  // picture finishes decoding. Keep the last HD picture temporarily instead
+  // of painting the raw SNES background. Never hold indefinitely.
+  let pendingArt=false;
+  if (enhanced && hdEnabled && liveHd.assets && pixels===0) {
+    try {
+      pendingArt=JSON.parse(game.background_matches()).some(m=>!m.ready);
+    } catch { /* Corrupt/absent catalogue: fail open to the original frame. */ }
+  }
+  const hdHold=hdFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveHd.assets),
+    pixels,pending:pendingArt
+  });
+  if (!storyHold && !hdHold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
     ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
     storyFrameGate.didPresent();
+    hdFrameGate.didPresent(pixels);
   }
   const native = game.native_translation_active();
   if (native) {
@@ -162,10 +185,17 @@ function requestFrame(now) {
       // The former 80 ms timer displayed bare English before Chinese.
       updateTranslation();
     }
-    drawFrame();
-    if (now - lastHdPoll >= 450) {
+    // Accelerate background catalogue polling only while a new HD layer is
+    // missing; 90 ms avoids waiting for the old 450 ms idle interval.
+    const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
+    const interval = hdPending ? 90 : 450;
+    if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
+    }
+    drawFrame();
+    if (now - lastDiagPoll >= 450) {
+      lastDiagPoll = now;
       sampleTranslationDiagnostics();
     }
     $('frames').textContent=`${game.frame_count()} 幀`;
@@ -219,6 +249,7 @@ $('hd-toggle').addEventListener('click', () => {
   $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
   if (game) game.set_hd_mode(hdEnabled);
   storyFrameGate.reset();
+  hdFrameGate.reset();
   liveHd.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
@@ -240,7 +271,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -272,7 +303,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });

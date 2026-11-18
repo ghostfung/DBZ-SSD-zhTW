@@ -27,6 +27,8 @@ export async function decodeBackground(assets, name) {
   }
 }
 
+const MAX_DECODED_HD_BYTES = 8 * 1024 * 1024;
+
 export class LiveHdArt {
   constructor(status, decoder=decodeBackground) {
     this.status = status;
@@ -39,6 +41,36 @@ export class LiveHdArt {
     this.failed = new Map();
     this.sceneKey = '';
     this.pulses = 0;
+    // Keep recent local 2x RGBA frames ready for A -> B -> A scene returns.
+    // Bound the cache to protect iPhone Safari's memory.
+    this.decoded = new Map();
+    this.decodedBytes = 0;
+  }
+
+  cachedArt(name) {
+    const img=this.decoded.get(name);
+    if (!img) return null;
+    this.decoded.delete(name);
+    this.decoded.set(name,img);
+    return img;
+  }
+
+  rememberArt(name,img) {
+    const bytes=img?.rgba?.byteLength || 0;
+    if (!bytes || bytes>MAX_DECODED_HD_BYTES) return;
+    const previous=this.decoded.get(name);
+    if(previous) {
+      this.decodedBytes-=previous.rgba.byteLength;
+      this.decoded.delete(name);
+    }
+    while(this.decodedBytes+bytes>MAX_DECODED_HD_BYTES && this.decoded.size) {
+      const oldest=this.decoded.keys().next().value;
+      const old=this.decoded.get(oldest);
+      this.decodedBytes-=old.rgba.byteLength;
+      this.decoded.delete(oldest);
+    }
+    this.decoded.set(name,img);
+    this.decodedBytes+=bytes;
   }
 
   setCatalog(catalog, assets) {
@@ -48,6 +80,9 @@ export class LiveHdArt {
     this.loading.clear();
     this.failed.clear();
     this.sceneKey = '';
+    // The ZIP may be a different file with identical internal image names.
+    this.decoded.clear();
+    this.decodedBytes = 0;
     if (this.game) this.game.set_background_index(JSON.stringify(this.catalog));
     this.status(this.assets
       ? '已讀取 HD 背景索引；等待 PPU 實際場景匹配。'
@@ -109,7 +144,12 @@ export class LiveHdArt {
     const token={generation,scene:this.sceneKey};
     this.loading.set(match.index,token);
     try {
-      const img = await this.decoder(assets, match.art);
+      let img=this.cachedArt(match.art);
+      if (!img) {
+        img=await this.decoder(assets,match.art);
+        if (this.generation !== generation || this.game !== target) return;
+        this.rememberArt(match.art,img);
+      }
       if (this.generation !== generation || this.game !== target) return;
       // The scene may have switched while Safari was decoding the file.
       const current=JSON.parse(target.background_matches());
