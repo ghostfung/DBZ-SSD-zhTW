@@ -1,0 +1,15 @@
+{
+  "name": "ssd-web",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "ssd_web_bg.wasm",
+    "ssd_web.js",
+    "ssd_web.d.ts"
+  ],
+  "main": "ssd_web.js",
+  "types": "ssd_web.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
