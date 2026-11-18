@@ -298,6 +298,28 @@ impl Renderer {
             seen.own >= 5 && seen.other == 0).then_some(seen.own)
     }
 
+    /// Count visible ROM ASCII glyphs on this story page's PPU text rows.
+    /// This is a read-only, bounded check for a transition frame that may
+    /// briefly show English before the stateful translator has placed Chinese.
+    /// It never treats a generic ivory UI/status panel as a dialogue box.
+    #[must_use]
+    pub fn story_ascii_cells(&self, page: &ssd_catalogue::engine::OnScreen) -> usize {
+        let Some(font) = self.font.as_ref() else { return 0 };
+        if page.table != 3 || page.english.is_empty() { return 0; }
+        let (column, row) = page.base_cell();
+        let left = i32::from(column) * 8 - 16;
+        let top = i32::from(row) * 8 - 1;
+        let rows = page.english.len().min(4);
+        self.text.cells().iter().filter(|cell| {
+            cell.mask != 0 && cell.half == 0 && cell.x >= left && cell.x < 256
+                && (0..rows).any(|line| {
+                    (cell.y - (top + line as i32 * 16)).abs() <= 2
+                })
+                && font.character(cell.glyph)
+                    .is_some_and(|letter| letter.is_ascii_alphanumeric())
+        }).take(3).count()
+    }
+
     /// Sample locations within real text cells that changed after native
     /// translation. Zero proves only that none of these samples changed,
     /// NOT that no translated glyph was painted elsewhere.

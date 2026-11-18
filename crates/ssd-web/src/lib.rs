@@ -62,6 +62,8 @@ pub struct WebGame {
     story_candidates: Vec<OnScreen>,
     story_candidates_for: Option<(u16, u16)>,
     native_expected_english: String,
+    native_story_text_pending: bool,
+    native_story_ascii_cells: usize,
     text_font: Option<Arc<HdFont>>,
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
@@ -96,6 +98,7 @@ impl WebGame {
             native_visible_score: 0, native_untranslated_visible: None,
             story_candidates: Vec::new(), story_candidates_for: None,
             native_expected_english: String::new(),
+            native_story_text_pending: false, native_story_ascii_cells: 0,
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
@@ -148,6 +151,8 @@ impl WebGame {
         }
         self.native_page_key = selected.as_ref().map(|page| page.key.clone());
         self.native_painted = false;
+        self.native_story_text_pending = false;
+        self.native_story_ascii_cells = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
                 match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
@@ -227,6 +232,16 @@ impl WebGame {
                             }).collect::<Vec<_>>().join("|")
                         }).unwrap_or_default();
                         self.native_page_key = selected.as_ref().map(|page| page.key.clone());
+                        // Determine whether the actual PPU has started writing
+                        // story letters. The preview should not expose these
+                        // letters before the native Chinese glyph pass is ready.
+                        // If the engine has advanced, use a recently observed
+                        // story page only to locate its text rows.
+                        self.native_story_ascii_cells = selected.as_ref()
+                            .filter(|page| page.table == 3)
+                            .or_else(|| self.recent_pages.iter().rev()
+                                .map(|(_, page)| page).find(|page| page.table == 3))
+                            .map_or(0, |page| self.hd_renderer.story_ascii_cells(page));
                         self.hd_renderer.set_translation_screen(selected);
                         // The original native renderer owns every Chinese glyph.
                         // It runs AFTER HD art. This boolean means the pass ran,
@@ -235,6 +250,13 @@ impl WebGame {
                             log, &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
+                        // This is a signal for the browser presentation gate;
+                        // never pause the emulator or suppress audio. A zero
+                        // glyph-sample count is not independently proof of
+                        // English, hence the required PPU story-text check.
+                        self.native_story_text_pending = self.native_painted
+                            && self.native_story_ascii_cells > 0
+                            && self.hd_renderer.native_changed_samples() == 0;
                         self.hd_warning.clear();
                     }
                     Err(error) => {
@@ -287,6 +309,8 @@ impl WebGame {
         self.story_candidates_for = None;
         self.native_expected_english.clear();
         self.native_painted = false;
+        self.native_story_text_pending = false;
+        self.native_story_ascii_cells = 0;
         self.hd_renderer.set_native_translation(self.native_overlay.clone());
         self.previous_page = None;
         Ok(count)
@@ -316,6 +340,12 @@ impl WebGame {
         self.hd_enabled && self.native_painted && self.hd_active()
     }
 
+    /// Whether a story dialogue frame contains untranslated PPU letters
+    /// that should be deferred briefly before Safari presents it.
+    pub fn story_translation_pending(&self) -> bool {
+        self.hd_enabled && self.native_story_text_pending && self.hd_active()
+    }
+
     /// A compact, local-only diagnostic for rare missed English pages.
     /// Contains no ROM/IPS/HD bytes and never sends data to a server.
     pub fn translation_diagnostics(&self) -> String {
@@ -336,6 +366,8 @@ impl WebGame {
             "hd_active": self.hd_active(),
             "translator_ran": self.native_painted,
             "changed_glyph_samples": self.hd_renderer.native_changed_samples(),
+            "story_translation_pending": self.story_translation_pending(),
+            "story_ascii_cells": self.native_story_ascii_cells,
             "visible_page_fallback": self.native_visible_fallback,
             "visible_page_score": self.native_visible_score,
             "untranslated_visible_key": self.native_untranslated_visible,
@@ -430,6 +462,8 @@ impl WebGame {
         self.story_candidates.clear();
         self.story_candidates_for = None;
         self.native_expected_english.clear();
+        self.native_story_text_pending = false;
+        self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -483,6 +517,8 @@ impl WebGame {
         self.story_candidates.clear();
         self.story_candidates_for = None;
         self.native_expected_english.clear();
+        self.native_story_text_pending = false;
+        self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
