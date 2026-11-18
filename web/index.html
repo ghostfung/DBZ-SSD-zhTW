@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第二階段：SNES Classic 有聲版＋RC1 繁體中文對話驗證。畫面仍是英文原版，HD 圖像與內嵌中文字尚未完成。</p>
+    <p class="notice">第三階段試驗：RC1 中文對話直接畫進原版視窗，及原作者的 Enhanced 2x 畫面。尚未加入完整 HD 美術素材包、HD 選單與 16:9 畫面。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -23,8 +23,13 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
+      <div class="preview-bar">
+        <label class="check-option"><input id="inframe" type="checkbox" checked/> 中文顯示於遊戲內</label>
+        <button id="hd-toggle" type="button">啟用 HD 2x</button>
+        <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
+      </div>
       <div id="translation-card" class="translation-card" hidden>
-        <div class="translation-heading"><strong>繁體中文對話測試</strong><span id="translation-key"></span></div>
+        <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>
         <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
       </div>
       <p id="translation-count" class="translation-count" aria-live="polite"></p>
