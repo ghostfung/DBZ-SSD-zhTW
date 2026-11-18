@@ -232,6 +232,7 @@ impl LiveBackgrounds {
                     }
                     let ax = gx * 4;
                     let ay = (gy - first_row) * 4;
+                    let mut covered = false;
                     for sy in 0..SCALE {
                         for sx in 0..SCALE {
                             // The shared art is 4x; Enhanced mode is 2x.
@@ -239,6 +240,7 @@ impl LiveBackgrounds {
                             let dst = ((y * SCALE + sy) * width + x * SCALE + sx) * 4;
                             let alpha = u32::from(img.rgba[src + 3]);
                             if alpha == 0 { continue; }
+                            covered = true;
                             for c in 0..3 {
                                 let mut colour = u32::from(img.rgba[src + c]);
                                 if regs.brightness < 15 {
@@ -250,7 +252,7 @@ impl LiveBackgrounds {
                             out[dst + 3] = 255;
                         }
                     }
-                    drawn += 1;
+                    if covered { drawn += 1; }
                     // One frontmost layer per original pixel.
                     break;
                 }

@@ -70,9 +70,10 @@ export class LiveHdArt {
     try { matches = JSON.parse(game.background_matches()); }
     catch (e) { this.status('HD 背景狀態讀取失敗：' + e.message); return; }
     const ready = matches.filter(m => m.ready).length;
+    const painted = game.hd_art_pixels?.() ?? 0;
     this.status(matches.length
-      ? 'PPU 符合 ' + matches.length + ' 個 HD 背景，已套用 ' + ready
-        + ' 個；其餘使用原版畫面。'
+      ? 'PPU 命中 ' + matches.length + ' 個背景，已載入 HD 美術 ' + ready
+        + ' 個；目前實際替換 ' + painted + ' 個遊戲像素（其餘維持原版）。'
       : 'HD 素材就緒；此場景未符合背景索引，維持原版畫面。');
     for (const match of matches) {
       if (!match.ready && !this.loading.has(match.index) && !this.failed.has(match.index)) {
