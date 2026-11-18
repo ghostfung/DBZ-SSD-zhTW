@@ -26,6 +26,11 @@ on:
       - '.github/workflows/web-poc.yml'
   workflow_dispatch:
 
+# Prevent simultaneous push builds from publishing stale browser binaries.
+concurrency:
+  group: dbz-web-poc-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   # Only this isolated test branch publishes wasm output; it never writes to main.
   contents: write
@@ -61,6 +66,13 @@ jobs:
           test -s web/pkg/ssd_web.js
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Another edit may have landed while wasm was compiling; never publish an older build.
+          git fetch --no-tags origin iphone-web-poc
+          latest="$(git rev-parse FETCH_HEAD)"
+          if [ "$GITHUB_SHA" != "$latest" ]; then
+            echo "Newer source commit found ($latest); skip stale package publishing."
+            exit 0
+          fi
           # Only generated browser runtime: ROMs, patches and HD packs must never be published.
           git add -f web/pkg/
           if git diff --cached --quiet; then
