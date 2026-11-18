@@ -61,5 +61,21 @@ export class LocalHdAssets {
     }
     return bytes;
   }
+  /** Read official small metadata JSON directly from the ZIP; CRC verified like images. */
+  async readJson(name,{maxBytes=2*1024*1024}={}){
+    if(!/^(?:bg|cards|class[123]|maps|mode7|variants)\/index\.json$/.test(name))
+      throw new Error('只允許讀取官方 HD 素材索引 JSON');
+    const entry=this.entries.get(name);
+    if(!entry)throw new Error('HD ZIP 找不到索引：'+name);
+    const bytes=await extractZipEntry(this.file,entry,{maxBytes});
+    let data;
+    try{
+      data=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+    }catch{throw new Error('HD 素材索引 JSON 無法解析：'+name);}
+    if(!data || typeof data!=='object' || Array.isArray(data))
+      throw new Error('HD 素材索引格式不正確');
+    return data;
+  }
+
   clearCache(){this.cache.clear();this.cacheBytes=0;}
 }
