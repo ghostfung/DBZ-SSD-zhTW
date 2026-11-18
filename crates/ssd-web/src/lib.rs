@@ -3,6 +3,8 @@
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
 use ssd_catalogue::engine::on_screen;
 use ssd_catalogue::translation::{render, Slot, Translation};
+use ssd_hd::{HdOptions, Renderer as HdRenderer};
+use ssd_hd::enhanced::Look;
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 
@@ -26,6 +28,12 @@ pub struct WebGame {
     rom: Vec<u8>,
     translation: Option<Translation>,
     previous_page: Option<usize>,
+    hd_enabled: bool,
+    hd_renderer: HdRenderer,
+    hd_pixels: Vec<u8>,
+    hd_width: u32,
+    hd_height: u32,
+    hd_warning: String,
 }
 
 #[wasm_bindgen]
@@ -40,7 +48,9 @@ impl WebGame {
         let mut machine = Machine::new(rom.clone(), Box::new(MemorySaveStore::default()))
             .map_err(|err| JsValue::from_str(&format!("遊戲初始化失敗：{err}")))?;
         machine.set_audio_frequency(48_000);
-        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None, previous_page: None })
+        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None, previous_page: None,
+            hd_enabled: false, hd_renderer: HdRenderer::new(), hd_pixels: Vec::new(),
+            hd_width: 0, hd_height: 0, hd_warning: String::new() })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -56,7 +66,29 @@ impl WebGame {
     /// The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
     pub fn tick(&mut self, joypad_bits: u16) -> Result<(), JsValue> {
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
-            .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))
+            .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
+        if self.hd_enabled {
+            if let Some(log) = self.machine.frame_log() {
+                match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
+                    Ok(picture) => {
+                        self.hd_width = picture.width;
+                        self.hd_height = picture.height;
+                        self.hd_pixels.clear();
+                        self.hd_pixels.extend_from_slice(&picture.rgba);
+                        self.hd_warning.clear();
+                    }
+                    Err(error) => {
+                        // Keep the game playable even when this frame cannot render in HD.
+                        self.hd_pixels.clear();
+                        self.hd_warning = error.to_string();
+                    }
+                }
+            } else {
+                self.hd_pixels.clear();
+                self.hd_warning = "等待完整 PPU 畫面紀錄".to_owned();
+            }
+        }
+        Ok(())
     }
 
     /// Interleaved stereo PCM, f32 in [-1, 1]: L0, R0, L1, R1...
@@ -109,16 +141,38 @@ impl WebGame {
         }).to_string()
     }
 
+    /// Use upstream Enhanced 2x renderer; HD art pack is not included.
+    /// Unsupported frames fall back to Classic without affecting emulator state.
+    pub fn set_hd_mode(&mut self, enabled: bool) {
+        if self.hd_enabled == enabled { return; }
+        self.hd_enabled = enabled;
+        self.machine.set_line_log(enabled);
+        self.hd_renderer = HdRenderer::new();
+        self.hd_pixels.clear();
+        self.hd_width = 0;
+        self.hd_height = 0;
+        self.hd_warning.clear();
+    }
+
+    pub fn hd_mode(&self) -> bool { self.hd_enabled }
+
+    pub fn hd_active(&self) -> bool { self.hd_enabled && !self.hd_pixels.is_empty() }
+
+    pub fn hd_warning(&self) -> String { self.hd_warning.clone() }
+
     pub fn width(&self) -> u32 {
+        if self.hd_active() { return self.hd_width; }
         self.machine.frame().size.width
     }
 
     pub fn height(&self) -> u32 {
+        if self.hd_active() { return self.hd_height; }
         self.machine.frame().size.height
     }
 
     /// RGBA8 pixels, copied across the wasm-to-JS boundary.
     pub fn frame_rgba(&self) -> Vec<u8> {
+        if self.hd_active() { return self.hd_pixels.clone(); }
         bytemuck::cast_slice(self.machine.frame().pixels).to_vec()
     }
 
@@ -133,6 +187,8 @@ impl WebGame {
     pub fn load_state(&mut self, state: &[u8]) -> Result<(), JsValue> {
         self.audio.samples.clear();
         self.previous_page = None;
+        self.hd_pixels.clear();
+        self.hd_renderer = HdRenderer::new();
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
     }
