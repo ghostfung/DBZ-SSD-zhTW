@@ -5,6 +5,10 @@ export class WebGame {
     free(): void;
     [Symbol.dispose](): void;
     /**
+     * Matches use the live PPU registers and VRAM content hash.
+     */
+    background_matches(): string;
+    /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
      * a non-destructive Chinese subtitle until the HD overlay is ported.
@@ -21,6 +25,7 @@ export class WebGame {
      */
     frame_rgba(): Uint8Array;
     hd_active(): boolean;
+    hd_art_pixels(): number;
     hd_mode(): boolean;
     hd_warning(): string;
     height(): number;
@@ -39,7 +44,15 @@ export class WebGame {
      */
     set_audio_rate(hz: number): void;
     /**
-     * Use upstream Enhanced 2x renderer; HD art pack is not included.
+     * Accept a single locally decoded PNG/WebP of the matched battle background.
+     */
+    set_background_art(index: number, width: number, height: number, rgba: Uint8Array): void;
+    /**
+     * Receive only the verified player's on-device background index (no media upload).
+     */
+    set_background_index(json: string): number;
+    /**
+     * Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
      * Unsupported frames fall back to Classic without affecting emulator state.
      */
     set_hd_mode(enabled: boolean): void;
@@ -55,11 +68,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_webgame_free: (a: number, b: number) => void;
+    readonly webgame_background_matches: (a: number) => [number, number];
     readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_frame_count: (a: number) => number;
     readonly webgame_frame_rgba: (a: number) => [number, number];
     readonly webgame_hd_active: (a: number) => number;
+    readonly webgame_hd_art_pixels: (a: number) => number;
     readonly webgame_hd_mode: (a: number) => number;
     readonly webgame_hd_warning: (a: number) => [number, number];
     readonly webgame_height: (a: number) => number;
@@ -68,6 +83,8 @@ export interface InitOutput {
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
+    readonly webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_tick: (a: number, b: number) => [number, number];
     readonly webgame_width: (a: number) => number;

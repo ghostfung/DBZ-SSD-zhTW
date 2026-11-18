@@ -2,11 +2,13 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_webgame_free: (a: number, b: number) => void;
+export const webgame_background_matches: (a: number) => [number, number];
 export const webgame_current_dialogue: (a: number) => [number, number];
 export const webgame_drain_audio: (a: number) => [number, number];
 export const webgame_frame_count: (a: number) => number;
 export const webgame_frame_rgba: (a: number) => [number, number];
 export const webgame_hd_active: (a: number) => number;
+export const webgame_hd_art_pixels: (a: number) => number;
 export const webgame_hd_mode: (a: number) => number;
 export const webgame_hd_warning: (a: number) => [number, number];
 export const webgame_height: (a: number) => number;
@@ -15,6 +17,8 @@ export const webgame_load_translation: (a: number, b: number, c: number) => [num
 export const webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
 export const webgame_save_state: (a: number) => [number, number];
 export const webgame_set_audio_rate: (a: number, b: number) => [number, number];
+export const webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+export const webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
 export const webgame_set_hd_mode: (a: number, b: number) => void;
 export const webgame_tick: (a: number, b: number) => [number, number];
 export const webgame_width: (a: number) => number;

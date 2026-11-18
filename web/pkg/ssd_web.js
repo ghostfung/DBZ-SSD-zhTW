@@ -12,6 +12,22 @@ export class WebGame {
         wasm.__wbg_webgame_free(ptr, 0);
     }
     /**
+     * Matches use the live PPU registers and VRAM content hash.
+     * @returns {string}
+     */
+    background_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_background_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
      * a non-destructive Chinese subtitle until the HD overlay is ported.
@@ -63,6 +79,13 @@ export class WebGame {
     hd_active() {
         const ret = wasm.webgame_hd_active(this.__wbg_ptr);
         return ret !== 0;
+    }
+    /**
+     * @returns {number}
+     */
+    hd_art_pixels() {
+        const ret = wasm.webgame_hd_art_pixels(this.__wbg_ptr);
+        return ret >>> 0;
     }
     /**
      * @returns {boolean}
@@ -156,7 +179,36 @@ export class WebGame {
         }
     }
     /**
-     * Use upstream Enhanced 2x renderer; HD art pack is not included.
+     * Accept a single locally decoded PNG/WebP of the matched battle background.
+     * @param {number} index
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_background_art(index, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_background_art(this.__wbg_ptr, index, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Receive only the verified player's on-device background index (no media upload).
+     * @param {string} json
+     * @returns {number}
+     */
+    set_background_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_background_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
      * Unsupported frames fall back to Classic without affecting emulator state.
      * @param {boolean} enabled
      */
