@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第八階段：已驗收原生 Rust 繁中顯示；匹配的官方 HD 背景由 4x 預先平滑縮至 2x，降低記憶體占用並改善切換場景時的重載問題。人物 HD 與 16:9 尚未完成。</p>
+    <p class="notice">第八階段：已驗收原生 Rust 繁中顯示；原生繁中與 HD 背景已驗收。開始實驗性戰鬥人物 HD，使用官方 class2 source_key 與 SNES OAM 像素逐項比對；招式特效、人物外擴輪廓與 16:9 尚未完成。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -46,6 +46,10 @@
           <button id="hd-bg-preview" type="button" disabled>預覽這個索引對應的 HD 背景</button>
           <p class="hd-import-note">此處只顯示官方素材索引。遊戲啟動並開啟 HD 2x 後，會由 Rust PPU 核對 VRAM 與圖層設定；只有相符背景才會嘗試套用。</p>
         </div>
+        <div class="hd-catalog">
+          <strong>戰鬥人物 HD 精靈（第一階段）</strong>
+          <p id="hd-fighter-count" class="hd-import-note">匯入後將讀取 class2/index.json。僅精確匹配的戰鬥人物會替換原始精靈像素；招式特效、人物輪廓擴大及場景物件仍待整合。</p>
+        </div>
         <details class="hd-storage-experimental">
           <summary>實驗性本機永久快取（Safari 已發生寫入失敗）</summary>
           <p class="hd-import-note">只有想嘗試免重新選取 ZIP 時才使用。先前在 iPhone 約 200 MiB 時失敗，不能保證這個功能成功；即使不儲存，仍可從原始 ZIP 按需讀取素材。</p>
@@ -70,6 +74,7 @@
         <button id="hd-toggle" type="button">啟用 HD 2x</button>
         <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
         <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
+        <p id="hd-fighter-info" class="hd-import-note" aria-live="polite">人物 HD 尚未載入。</p>
       </div>
       <div id="translation-card" class="translation-card" hidden>
         <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>

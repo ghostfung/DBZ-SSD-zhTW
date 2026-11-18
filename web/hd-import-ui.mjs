@@ -3,6 +3,7 @@ import {inspectZip,extractZipEntry,verifyOfficialPack,OFFICIAL_PACK} from './hd-
 import {opfsAvailable,saveVerifiedHdPack,readSavedHdPack,clearSavedHdPack} from './hd-storage.mjs';
 import {LocalHdAssets} from './hd-local-assets.mjs';
 import {readBackgroundCatalog} from './hd-background-index.mjs';
+import {readFighterCatalog} from './hd-fighter-index.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -13,6 +14,7 @@ let previewObjectUrl=null;
 let sampleEntry=null;
 let library=null;
 let bgCatalog=null;
+let fighterCatalog=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -113,6 +115,30 @@ async function loadBackgroundIndex(source){
     }));
   }
 }
+async function loadFighterIndex(source) {
+  const label=$('hd-fighter-count');
+  fighterCatalog=null;
+  label.textContent='正在本機 ZIP 讀取 class2/index.json…';
+  try {
+    const catalog=await readFighterCatalog(source);
+    if(library!==source)return;
+    fighterCatalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='官方戰鬥姿勢索引 '+catalog.count.toLocaleString('en-US')+
+      ' 筆；'+catalog.noPalette+' 筆缺少可核對的調色盤；'+catalog.missing.length+
+      ' 筆無法安全套用。首階段只使用精確 OAM 鍵值、尺寸及調色盤都吻合的戰鬥人物。';
+  } catch(error) {
+    if(library!==source)return;
+    label.textContent='戰鬥人物索引未就緒：'+(error?.message||String(error))+
+      '。背景 HD、繁中及遊戲仍可正常運作。';
+    document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
+
 function prepareLocalReader(file,info){
   library?.clearCache();
   library=new LocalHdAssets(file,info);
@@ -121,6 +147,7 @@ function prepareLocalReader(file,info){
   $('hd-asset-browser').hidden=false;
   refreshAssetList();
   void loadBackgroundIndex(library);
+  void loadFighterIndex(library);
   sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
     ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
 }
@@ -155,7 +182,11 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+
   $('hd-asset-browser').hidden=true;
   document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
     detail: {catalog: null, assets: null}
@@ -234,7 +265,10 @@ $('hd-remove').addEventListener('click',async()=>{
     await clearSavedHdPack();
     persisted=false; verified=null; activeFile=null; sampleEntry=null;
     clearPreview();
-    library?.clearCache();library=null;bgCatalog=null;
+    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;
+  document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
     document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
       detail: {catalog: null, assets: null}
     }));

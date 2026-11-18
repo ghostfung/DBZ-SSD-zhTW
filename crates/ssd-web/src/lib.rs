@@ -10,7 +10,9 @@ use std::sync::Arc;
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 mod live_bg;
+mod live_fighters;
 use live_bg::LiveBackgrounds;
+use live_fighters::LiveFighters;
 
 /// Keep every page ever observed at a frame boundary briefly: the message
 /// engine sometimes points to the next string while the last page remains
@@ -75,6 +77,8 @@ pub struct WebGame {
     hd_warning: String,
     live_backgrounds: LiveBackgrounds,
     hd_art_pixels: u32,
+    live_fighters: LiveFighters,
+    hd_fighter_pixels: u32,
 }
 
 #[wasm_bindgen]
@@ -102,7 +106,8 @@ impl WebGame {
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
-            live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0 })
+            live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
+            live_fighters: LiveFighters::default(), hd_fighter_pixels: 0 })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -153,6 +158,7 @@ impl WebGame {
         self.native_painted = false;
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
+        self.hd_fighter_pixels = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
                 match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
@@ -164,6 +170,15 @@ impl WebGame {
                         self.live_backgrounds.refresh(log);
                         self.hd_art_pixels = self.live_backgrounds.composite(
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
+                            self.hd_width as usize, self.hd_height as usize,
+                        );
+                        // Author's exact grouped-OAM source keys; the first
+                        // browser pass only replaces the actual visible
+                        // original fighter silhouette. Native zh-TW remains
+                        // the final text pass above all HD art.
+                        self.live_fighters.refresh(log);
+                        self.hd_fighter_pixels = self.live_fighters.composite(
+                            self.hd_renderer.oam_ids(), &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
                         // Compare the page identified from WRAM with the actual
@@ -456,6 +471,27 @@ impl WebGame {
 
     pub fn hd_art_pixels(&self) -> u32 { self.hd_art_pixels }
 
+    /// Only the player's verified local class2 index; never HD bytes or ROM
+    /// data sent over a network. Exact fighter palette and hash are required.
+    pub fn set_fighter_index(&mut self, json: &str) -> Result<u32, JsValue> {
+        self.live_fighters.load_catalog(json)
+            .map(|count| count as u32)
+            .map_err(|err| JsValue::from_str(&err))
+    }
+
+    pub fn fighter_matches(&self) -> String {
+        self.live_fighters.matches_json()
+    }
+
+    pub fn set_fighter_art(&mut self, index: usize, width: u32,
+        height: u32, rgba: &[u8]) -> Result<(), JsValue> {
+        self.live_fighters.add_picture(index,width as usize,height as usize,rgba)
+            .map_err(|err|JsValue::from_str(&err))
+    }
+
+    /// SNES pixels with confirmed visible fighter OAM pixels replaced.
+    pub fn hd_fighter_pixels(&self) -> u32 { self.hd_fighter_pixels }
+
     /// Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
     /// Unsupported frames fall back to Classic without affecting emulator state.
     pub fn set_hd_mode(&mut self, enabled: bool) {
@@ -477,6 +513,7 @@ impl WebGame {
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
+        self.hd_fighter_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
         self.hd_height = 0;
@@ -532,6 +569,7 @@ impl WebGame {
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
+        self.hd_fighter_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
     }

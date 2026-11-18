@@ -3,6 +3,7 @@ import {SnesAudio} from './audio.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
 import {HdFrameGate} from './hd-frame-gate.mjs';
+import {LiveHdFighters} from './hd-fighter-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -11,6 +12,7 @@ let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
+const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });
 const storyFrameGate = new StoryFrameGate(10);
 const hdFrameGate = new HdFrameGate();
 
@@ -23,6 +25,7 @@ function sampleTranslationDiagnostics() {
     item.presentation_held_frames = storyFrameGate.heldFramesTotal;
     item.hd_presentation_holding = hdFrameGate.isHolding;
     item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;
+    item.hd_fighter_pixels = game.hd_fighter_pixels?.() ?? 0;
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
     const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.hd_presentation_holding,item.hd_presentation_held_frames,item.glyphs]);
@@ -39,6 +42,9 @@ function sampleTranslationDiagnostics() {
 document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
   hdFrameGate.reset();
+});
+document.addEventListener('hd-fighter-catalog-ready', event => {
+  liveFighters.setCatalog(event.detail.catalog, event.detail.assets);
 });
 
 function soundUi(message) {
@@ -106,6 +112,7 @@ $('start').addEventListener('click', async () => {
     hdFrameGate.reset();
     game.set_hd_mode(hdEnabled);
     liveHd.attach(game);
+    liveFighters.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
     $('setup').hidden = true;
@@ -188,10 +195,13 @@ function requestFrame(now) {
     // Accelerate background catalogue polling only while a new HD layer is
     // missing; 90 ms avoids waiting for the old 450 ms idle interval.
     const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
-    const interval = hdPending ? 90 : 450;
+    // Animated OAM poses may last only a few frames, so poll their catalogue
+    // at 90 ms while a local class2 ZIP is attached.
+    const interval = hdPending || (hdEnabled && liveFighters.assets) ? 90 : 450;
     if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
+      liveFighters.pulse();
     }
     drawFrame();
     if (now - lastDiagPoll >= 450) {
@@ -251,6 +261,7 @@ $('hd-toggle').addEventListener('click', () => {
   storyFrameGate.reset();
   hdFrameGate.reset();
   liveHd.pulse();
+  liveFighters.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
@@ -271,7 +282,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();liveFighters.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;

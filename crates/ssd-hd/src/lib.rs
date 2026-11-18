@@ -57,6 +57,55 @@ pub use pack::{Index, TileRef};
 pub use ssd_oracle::{LineRegs, SpriteLine};
 pub use tooltip::symbol_words;
 
+/// One battle fighter's real, grouped OAM pose in a completed PPU frame.
+/// The key uses the upstream capture's SHA-1 algorithm, not a filename guess.
+#[derive(Debug, Clone)]
+pub struct LiveFighterPose {
+    pub key: u64,
+    pub x: i32,
+    pub y: i32,
+    pub width: u16,
+    pub height: u16,
+    /// The source OAM entries represented by this pose.
+    pub oam_bits: u128,
+    /// Exact current 15-bit SNES sprite-palette colours expanded to RGB.
+    pub colours: [[u8; 3]; 16],
+}
+
+/// Return only whole-group/class2 fighter poses whose original source pixel
+/// hashes can be checked against the user's official HD art catalogue.
+/// This does not draw art and intentionally excludes effects, field objects,
+/// ambiguous mid-frame OAM/VRAM writes and other unsafe substitutions.
+#[must_use]
+pub fn live_fighter_poses(log: &FrameLog) -> Vec<LiveFighterPose> {
+    if !log.complete || !log.vram_writes.is_empty() || !log.oam_writes.is_empty()
+        || log.vram.len() < 0x8000 || log.cgram_start.len() < 256
+        || log.oam_low.len() < 512 || log.oam_high.len() < 32
+    {
+        return Vec::new();
+    }
+    let view=art::poses::View::window();
+    let sprites=art::poses::sprites_in(log,&view);
+    art::poses::poses_in(log,&sprites,&view).into_iter()
+        .filter(|pose| pose.fighter && !pose.field && !pose.bg &&
+            pose.sprites != 0 && pose.w>0 && pose.h>0 &&
+            pose.w<=255 && pose.h<=239)
+        .map(|pose| {
+            let start=128+usize::from(pose.palette)*16;
+            let colours=std::array::from_fn(|slot|
+                art::poses::rgb555(log.cgram_start[start+slot]));
+            LiveFighterPose {
+                key:pose.key,
+                x:pose.org.0,
+                y:pose.org.1+art::poses::ROW_OF_CAPTURE,
+                width:pose.w as u16,
+                height:pose.h as u16,
+                oam_bits:pose.sprites,
+                colours,
+            }
+        }).collect()
+}
+
 /// Width of the frame the renderer produces (and of the PPU's, without hi-res).
 pub const WIDTH: usize = 256;
 
@@ -173,6 +222,7 @@ pub struct Renderer {
     /// Optional pixel-layer ownership for the browser's local HD background compositor.
     track_layers: bool,
     layer_ids: Vec<u8>,
+    oam_ids: Vec<u8>,
     /// What the Enhanced picture needs, recorded while `capturing` (see `enhanced`).
     capture: enhanced::Capture,
     capturing: bool,
@@ -223,6 +273,7 @@ impl Renderer {
             origin: 0,
             track_layers: false,
             layer_ids: Vec::new(),
+            oam_ids: Vec::new(),
             capture: enhanced::Capture::default(),
             capturing: false,
             hidden_objects: 0,
@@ -401,12 +452,19 @@ impl Renderer {
     /// The browser bridge uses this to keep sprites above the substituted HD backgrounds.
     pub fn set_layer_tracking(&mut self, enabled: bool) {
         self.track_layers = enabled;
-        if !enabled { self.layer_ids.clear(); }
+        if !enabled { self.layer_ids.clear(); self.oam_ids.clear(); }
     }
 
     /// The visible pixel-layer owners of the most recently rendered frame.
     #[must_use]
     pub fn layer_ids(&self) -> &[u8] { &self.layer_ids }
+
+    /// Which OAM sprite actually won each pixel in the visible SNES picture
+    /// (255 for BG, backdrop, or no OBJ). Only for layer-tracked renders.
+    /// A browser HD pose may replace pixels of its own OAM members, never
+    /// paint over a higher-priority BG/UI or another sprite.
+    #[must_use]
+    pub fn oam_ids(&self) -> &[u8] { &self.oam_ids }
 
     /// Makes the Enhanced pictures ([`Renderer::render_hd`]) draw the art of `pack`; `None` (the
     /// start) draws none. The 1x frame of [`Renderer::render`] never has art.
@@ -515,6 +573,8 @@ impl Renderer {
         if self.track_layers {
             self.layer_ids.resize(WIDTH * height, 0);
             self.layer_ids.fill(0);
+            self.oam_ids.resize(WIDTH * height, NO_OBJECT);
+            self.oam_ids.fill(NO_OBJECT);
         }
         self.cgram.copy_from_slice(&log.cgram_start);
         if let Some(binder) = binder.as_deref_mut() {
@@ -622,7 +682,10 @@ impl Renderer {
         }
         if regs.forced_blanking {
             frame.pixels[span.clone()][from..].fill(Color::BLACK);
-            if self.track_layers { self.layer_ids[span.clone()][from..].fill(0); }
+            if self.track_layers {
+                self.layer_ids[span.clone()][from..].fill(0);
+                self.oam_ids[span.clone()][from..].fill(NO_OBJECT);
+            }
             if self.capturing {
                 self.capture_line(index, line, from, regs, memories.vram);
             }
@@ -632,6 +695,8 @@ impl Renderer {
         self.render_scanline(regs, &mut frame.pixels[span.clone()], from);
         if self.track_layers {
             for (i, pixel) in self.main.rendered[from..].iter().enumerate() {
+                self.oam_ids[span.start + from + i] =
+                    if pixel.layer == screen::Layer::Obj { pixel.oam } else { NO_OBJECT };
                 self.layer_ids[span.start + from + i] = match pixel.layer {
                     screen::Layer::Backdrop => 0,
                     screen::Layer::Bg1 => 1,
