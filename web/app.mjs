@@ -1,9 +1,11 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
+import {drawChineseInBox} from './chinese-overlay.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let lastTranslationPoll = 0, translationKey = '';
+let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 
@@ -59,7 +61,10 @@ $('start').addEventListener('click', async () => {
     const translatedRows = game.load_translation(await translationResponse.text());
     $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
     translationKey = '';
+    currentDialogue = null;
+    embedded = false;
     lastTranslationPoll = 0;
+    game.set_hd_mode(hdEnabled);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
     $('setup').hidden = true;
@@ -81,6 +86,13 @@ function drawFrame() {
   const rgba=game.frame_rgba();
   if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
+  const painted = document.getElementById('inframe')?.checked && currentDialogue
+    ? drawChineseInBox(ctx,rgba,w,h,currentDialogue) : false;
+  if(embedded!==Boolean(painted)){
+    embedded=Boolean(painted);
+    $('translation-card').hidden=embedded || !currentDialogue;
+  }
+  canvas.style.imageRendering=game.hd_active()?'auto':'pixelated';
 }
 function requestFrame(now) {
   if (!running) return;
@@ -98,7 +110,13 @@ function requestFrame(now) {
     }
     $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
-    if(now-countWindow>=1000){$('fps').textContent=`約 ${(countFrames*1000/(now-countWindow)).toFixed(1)} 模擬幀/秒`;countWindow=now;countFrames=0;}
+    if(now-countWindow>=1000){
+      $('fps').textContent=`約 ${(countFrames*1000/(now-countWindow)).toFixed(1)} 模擬幀/秒`;
+      $('hd-info').textContent=hdEnabled
+        ? (game.hd_active() ? `HD 2x：${game.width()}×${game.height()}` : `HD 已回退 Classic：${game.hd_warning()}`)
+        : 'Classic 原版畫面';
+      countWindow=now;countFrames=0;
+    }
     lastTick=now;
     raf=requestAnimationFrame(requestFrame);
   } catch(e) { running=false; window.alert(`遊戲執行失敗：${e}`); }
@@ -106,23 +124,43 @@ function requestFrame(now) {
 
 function updateTranslation() {
   const box = $('translation-card');
-  if (!game) { box.hidden = true; return; }
+  if (!game) {
+    currentDialogue = null;
+    box.hidden = true;
+    return;
+  }
   const serialized = game.current_dialogue();
   if (!serialized) {
+    currentDialogue = null;
+    embedded = false;
     box.hidden = true;
     translationKey = '';
     return;
   }
   const msg = JSON.parse(serialized);
-  if (!msg?.text) { box.hidden = true; return; }
-  // Debug metadata is visible for verifying that the correct source page is translated.
-  if (translationKey !== msg.key || box.hidden) {
+  if (!msg?.text) {
+    currentDialogue = null;
+    box.hidden = true;
+    return;
+  }
+  currentDialogue = msg;
+  if (translationKey !== msg.key) {
     $('translation-text').textContent = msg.text;
     $('translation-key').textContent = msg.key;
     translationKey = msg.key;
   }
-  box.hidden = false;
+  box.hidden = embedded;
 }
+$('inframe').addEventListener('change', () => {
+  embedded = false;
+  if (game) updateTranslation();
+});
+$('hd-toggle').addEventListener('click', () => {
+  hdEnabled = !hdEnabled;
+  $('hd-toggle').textContent = hdEnabled ? '關閉 HD 2x' : '啟用 HD 2x';
+  $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
+  if (game) game.set_hd_mode(hdEnabled);
+});
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
 window.addEventListener('keyup',e=>{if(keyToBit[e.code]!==undefined){held&=~(1<<keyToBit[e.code]);e.preventDefault();}});
@@ -142,7 +180,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
