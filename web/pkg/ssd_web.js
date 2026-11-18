@@ -58,6 +58,35 @@ export class WebGame {
         return v1;
     }
     /**
+     * @returns {boolean}
+     */
+    hd_active() {
+        const ret = wasm.webgame_hd_active(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {boolean}
+     */
+    hd_mode() {
+        const ret = wasm.webgame_hd_mode(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
+     * @returns {string}
+     */
+    hd_warning() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_hd_warning(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @returns {number}
      */
     height() {
@@ -125,6 +154,14 @@ export class WebGame {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * Use upstream Enhanced 2x renderer; HD art pack is not included.
+     * Unsupported frames fall back to Classic without affecting emulator state.
+     * @param {boolean} enabled
+     */
+    set_hd_mode(enabled) {
+        wasm.webgame_set_hd_mode(this.__wbg_ptr, enabled);
     }
     /**
      * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.

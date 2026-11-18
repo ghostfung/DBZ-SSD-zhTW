@@ -20,6 +20,9 @@ export class WebGame {
      * RGBA8 pixels, copied across the wasm-to-JS boundary.
      */
     frame_rgba(): Uint8Array;
+    hd_active(): boolean;
+    hd_mode(): boolean;
+    hd_warning(): string;
     height(): number;
     load_state(state: Uint8Array): void;
     /**
@@ -36,6 +39,11 @@ export class WebGame {
      */
     set_audio_rate(hz: number): void;
     /**
+     * Use upstream Enhanced 2x renderer; HD art pack is not included.
+     * Unsupported frames fall back to Classic without affecting emulator state.
+     */
+    set_hd_mode(enabled: boolean): void;
+    /**
      * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
      */
     tick(joypad_bits: number): void;
@@ -51,12 +59,16 @@ export interface InitOutput {
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_frame_count: (a: number) => number;
     readonly webgame_frame_rgba: (a: number) => [number, number];
+    readonly webgame_hd_active: (a: number) => number;
+    readonly webgame_hd_mode: (a: number) => number;
+    readonly webgame_hd_warning: (a: number) => [number, number];
     readonly webgame_height: (a: number) => number;
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
     readonly webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
+    readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_tick: (a: number, b: number) => [number, number];
     readonly webgame_width: (a: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
