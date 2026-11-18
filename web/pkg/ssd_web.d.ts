@@ -70,6 +70,11 @@ export class WebGame {
      */
     tick(joypad_bits: number): void;
     /**
+     * A compact, local-only diagnostic for rare missed English pages.
+     * Contains no ROM/IPS/HD bytes and never sends data to a server.
+     */
+    translation_diagnostics(): string;
+    /**
      * A direct lookup for an already-translated, token-free alert.
      */
     translation_for_key(key: string): string;
@@ -106,6 +111,7 @@ export interface InitOutput {
     readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_tick: (a: number, b: number) => [number, number];
+    readonly webgame_translation_diagnostics: (a: number) => [number, number];
     readonly webgame_translation_for_key: (a: number, b: number, c: number) => [number, number];
     readonly webgame_visible_text_cells: (a: number) => [number, number];
     readonly webgame_width: (a: number) => number;

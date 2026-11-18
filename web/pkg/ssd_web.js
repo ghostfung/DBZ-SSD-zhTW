@@ -251,6 +251,23 @@ export class WebGame {
         }
     }
     /**
+     * A compact, local-only diagnostic for rare missed English pages.
+     * Contains no ROM/IPS/HD bytes and never sends data to a server.
+     * @returns {string}
+     */
+    translation_diagnostics() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_translation_diagnostics(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * A direct lookup for an already-translated, token-free alert.
      * @param {string} key
      * @returns {string}
