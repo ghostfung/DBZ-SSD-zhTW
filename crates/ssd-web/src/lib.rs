@@ -1,6 +1,9 @@
-//! Browser bridge for the local SNES Classic core: picture, controller, save states, and PCM sound.
+//! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
 //! The HD renderer and zh-TW translation engine are separate future milestones.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
+use ssd_catalogue::engine::on_screen;
+use ssd_catalogue::translation::{render, Slot, Translation};
+use serde_json::json;
 use wasm_bindgen::prelude::*;
 
 /// Collect stereo floating-point samples in the precise order produced by the SNES core.
@@ -20,6 +23,9 @@ impl AudioSink for AudioFrame {
 pub struct WebGame {
     machine: Machine,
     audio: AudioFrame,
+    rom: Vec<u8>,
+    translation: Option<Translation>,
+    previous_page: Option<usize>,
 }
 
 #[wasm_bindgen]
@@ -30,10 +36,11 @@ impl WebGame {
         let patch = (!ips.is_empty()).then_some(ips);
         let normalised = ssd_rom::normalize(rom, patch)
             .map_err(|err| JsValue::from_str(&format!("ROM 驗證失敗：{err}")))?;
-        let mut machine = Machine::new(normalised.bytes, Box::new(MemorySaveStore::default()))
+        let rom = normalised.bytes;
+        let mut machine = Machine::new(rom.clone(), Box::new(MemorySaveStore::default()))
             .map_err(|err| JsValue::from_str(&format!("遊戲初始化失敗：{err}")))?;
         machine.set_audio_frequency(48_000);
-        Ok(Self { machine, audio: AudioFrame::default() })
+        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None, previous_page: None })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -56,6 +63,50 @@ impl WebGame {
     /// This drains the host-side samples but never changes the emulated sound chip's state.
     pub fn drain_audio(&mut self) -> Vec<f32> {
         std::mem::take(&mut self.audio.samples)
+    }
+
+    /// Load the original RC1 zh-TW translation TSV in memory without altering the ROM.
+    pub fn load_translation(&mut self, tsv: &str) -> Result<u32, JsValue> {
+        let table = Translation::parse(tsv)
+            .map_err(|err| JsValue::from_str(&format!("繁體中文 TSV 無法讀取：{err}")))?;
+        let count = table.len() as u32;
+        self.translation = Some(table);
+        self.previous_page = None;
+        Ok(count)
+    }
+
+    /// Returns the original translator's keyed dialogue as JSON for testing.
+    /// This does not redraw the SNES picture: the companion browser UI displays
+    /// a non-destructive Chinese subtitle until the HD overlay is ported.
+    pub fn current_dialogue(&mut self) -> String {
+        let Some(table) = self.translation.as_ref() else { return String::new() };
+        let Some(page) = on_screen(&self.rom, self.machine.wram(), self.previous_page) else {
+            return String::new();
+        };
+        self.previous_page = Some(page.page);
+        let Some(text) = table.text(&page.key) else { return String::new() };
+        let plain = |entry: &str| render(entry, |_| String::new()).replace('\n', "");
+        let translated = render(text, |slot| match slot {
+            Slot::Name(n) => page.names.get(usize::from(n).wrapping_sub(1))
+                .and_then(Option::as_ref)
+                .map(|name| table.text(&name.key).map_or_else(|| name.english.clone(), plain))
+                .unwrap_or_default(),
+            Slot::Number(n) => page.numbers.get(usize::from(n).wrapping_sub(1))
+                .cloned().unwrap_or_default(),
+            Slot::Phrase(n) => table.text(&format!("phrase:{n}"))
+                .map(plain).unwrap_or_default(),
+        });
+        let (column, row) = page.base_cell();
+        json!({
+            "key": page.key,
+            "text": translated,
+            "progress": page.progress,
+            "column": column,
+            "row": row,
+            "page": page.page,
+            "state": page.state,
+            "stopped": page.stopped
+        }).to_string()
     }
 
     pub fn width(&self) -> u32 {
@@ -81,6 +132,7 @@ impl WebGame {
 
     pub fn load_state(&mut self, state: &[u8]) -> Result<(), JsValue> {
         self.audio.samples.clear();
+        self.previous_page = None;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
     }
