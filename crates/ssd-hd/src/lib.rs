@@ -192,6 +192,7 @@ pub struct Renderer {
     /// The original translator renders all translated text AFTER local HD art is applied.
     native_translation: Option<translate::Translator>,
     native_text_frame: Option<Frame>,
+    native_changed_samples: u32,
     /// The text cells of the frame being drawn, noted while `text_on`.
     text: font::TextCapture,
     text_on: bool,
@@ -231,6 +232,7 @@ impl Renderer {
             text_capture_only: false,
             native_translation: None,
             native_text_frame: None,
+            native_changed_samples: 0,
             text: font::TextCapture::default(),
             text_on: false,
             lightning: None,
@@ -265,6 +267,7 @@ impl Renderer {
     pub fn set_native_translation(&mut self, overlay: Option<Arc<translate::Overlay>>) {
         self.native_translation = overlay.map(translate::Translator::new);
         self.native_text_frame = None;
+        self.native_changed_samples = 0;
     }
 
     /// The page named at the START of the SNES frame, as required by the
@@ -276,6 +279,30 @@ impl Renderer {
             translator.screen = screen;
         }
     }
+
+    /// Confirm that a page's ROM-derived English is actually visible on the
+    /// current PPU frame. Do not infer the text window from background colour.
+    /// This is used ONLY when the frame-start page is not visible.
+    #[must_use]
+    pub fn visible_translation_score(
+        &self, page: &ssd_catalogue::engine::OnScreen,
+    ) -> Option<usize> {
+        let (Some(frame), Some(font)) = (self.native_text_frame.as_ref(), self.font.as_ref())
+        else { return None };
+        if page.english.is_empty() || self.text.cells().len() < 3 { return None; }
+        let seen = translate::presence_in_window(
+            page, self.text.cells(), &|glyph| font.character(glyph),
+            self.origin, (frame.width as i32, frame.height as i32), None, None,
+        );
+        (seen.matched && seen.presence == translate::Presence::In &&
+            seen.own >= 5 && seen.other == 0).then_some(seen.own)
+    }
+
+    /// Sample locations within real text cells that changed after native
+    /// translation. Zero proves only that none of these samples changed,
+    /// NOT that no translated glyph was painted elsewhere.
+    #[must_use]
+    pub fn native_changed_samples(&self) -> u32 { self.native_changed_samples }
 
     /// Render the upstream author's translation over the supplied 2x frame.
     /// Call this only after locally matched HD background replacement.
@@ -299,6 +326,18 @@ impl Renderer {
         {
             return false;
         }
+        // Bounded instrumentation: a few locations within each PPU text
+        // cell, never a full-screen diff on the iPhone's 60 Hz hot path.
+        let positions: Vec<usize> = self.text.cells().iter().take(180)
+            .flat_map(|cell| [(4_usize, 4_usize), (8, 8), (12, 12)]
+                .into_iter().filter_map(move |(dx,dy)| {
+                    let x = usize::try_from(cell.x.checked_mul(2)?).ok()?.checked_add(dx)?;
+                    let y = usize::try_from(cell.y.checked_mul(2)?).ok()?.checked_add(dy)?;
+                    (x < width && y < height).then_some(4*(y*width+x))
+                }))
+            .collect();
+        let before: Vec<[u8; 3]> = positions.iter()
+            .map(|&at| [rgba[at],rgba[at+1],rgba[at+2]]).collect();
         let mut target = translate::Target { rgba, width, scale: 2 };
         let mut beneath = |_cells: &[(i32, i32)]| None;
         translator.draw(
@@ -311,6 +350,9 @@ impl Renderer {
             &mut beneath,
             None,
         );
+        self.native_changed_samples = positions.iter().zip(before).filter(
+            |(&at, colour)| target.rgba[at..at+3] != colour[..]
+        ).count() as u32;
         true
     }
 

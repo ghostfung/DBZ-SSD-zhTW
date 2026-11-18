@@ -1,7 +1,7 @@
 //! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
 //! HD art and the original Rust Traditional Chinese renderer share a single final picture.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
-use ssd_catalogue::engine::{on_screen, screen_names};
+use ssd_catalogue::engine::{on_screen, screen_names, OnScreen};
 use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
 use ssd_hd::translate::{ChineseFace, Overlay as TextOverlay};
@@ -11,6 +11,16 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 mod live_bg;
 use live_bg::LiveBackgrounds;
+
+/// Keep every page ever observed at a frame boundary briefly: the message
+/// engine sometimes points to the next string while the last page remains
+/// visible. Only the PPU glyph matcher may restore a prior visible page.
+fn remember_page(history: &mut Vec<(u32, OnScreen)>, page: &OnScreen, frame: u32) {
+    history.retain(|(seen, old)| frame.saturating_sub(*seen) <= 150
+        && !(old.table == page.table && old.string == page.string && old.page == page.page));
+    history.push((frame, page.clone()));
+    if history.len() > 12 { history.remove(0); }
+}
 
 fn tracked_renderer(font: Option<Arc<HdFont>>, overlay: Option<Arc<TextOverlay>>) -> HdRenderer {
     let mut renderer = HdRenderer::new();
@@ -45,6 +55,10 @@ pub struct WebGame {
     native_painted: bool,
     native_page_key: Option<String>,
     native_late_page: bool,
+    recent_pages: Vec<(u32, OnScreen)>,
+    native_visible_fallback: bool,
+    native_visible_score: usize,
+    native_untranslated_visible: Option<String>,
     text_font: Option<Arc<HdFont>>,
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
@@ -75,6 +89,8 @@ impl WebGame {
         Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None,
             native_overlay: None, native_page_hint: None, native_painted: false,
             native_page_key: None, native_late_page: false,
+            recent_pages: Vec::new(), native_visible_fallback: false,
+            native_visible_score: 0, native_untranslated_visible: None,
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
@@ -93,42 +109,39 @@ impl WebGame {
 
     /// The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
     pub fn tick(&mut self, joypad_bits: u16) -> Result<(), JsValue> {
-        // Match WideRun: the WRAM at the end of the previous emulated frame
-        // is the authoritative page for the frame we are about to render.
+        // The previous-frame WRAM is the primary source of the page that
+        // started this PPU frame (WideRun semantics). Keep short-lived page
+        // candidates so we can confirm what actually remained visible later.
         let mut started = None;
         if self.hd_enabled && self.native_overlay.is_some() {
             started = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
             if let Some(ref page) = started {
                 self.native_page_hint = Some(page.page);
+                remember_page(&mut self.recent_pages, page,
+                    self.machine.frame_count() as u32);
             }
         }
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
             .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
         self.native_late_page = false;
-        if self.hd_enabled && self.native_overlay.is_some() {
-            // Only on the first unrecognised frame of a newly appearing page,
-            // use the now-complete WRAM as a *candidate*. The upstream
-            // Translator::draw_pages still validates actual visible PPU glyphs
-            // before painting; never override a correctly tracked start page.
-            let selected = if started.is_none() {
-                let end = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
-                if let Some(ref candidate) = end
-                    && self.translation.as_ref()
-                        .is_some_and(|table| table.text(&candidate.key).is_some())
-                {
-                    self.native_late_page = true;
-                    self.native_page_hint = Some(candidate.page);
-                }
-                end.filter(|candidate| self.translation.as_ref()
-                    .is_some_and(|table| table.text(&candidate.key).is_some()))
-            } else {
-                started
-            };
-            self.native_page_key = selected.as_ref().map(|page| page.key.clone());
-            self.hd_renderer.set_translation_screen(selected);
-        } else {
-            self.native_page_key = None;
+        self.native_visible_fallback = false;
+        self.native_visible_score = 0;
+        self.native_untranslated_visible = None;
+        let mut selected = started;
+        if self.hd_enabled && self.native_overlay.is_some() && selected.is_none() {
+            // A page that began during this emulated frame is a candidate,
+            // never proof that it is already visible.
+            let ended = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
+            if let Some(ref page) = ended {
+                remember_page(&mut self.recent_pages, page,
+                    self.machine.frame_count() as u32);
+                self.native_page_hint = Some(page.page);
+            }
+            selected = ended.filter(|page| self.translation.as_ref()
+                .is_some_and(|table| table.text(&page.key).is_some()));
+            self.native_late_page = selected.is_some();
         }
+        self.native_page_key = selected.as_ref().map(|page| page.key.clone());
         self.native_painted = false;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
@@ -143,9 +156,45 @@ impl WebGame {
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
+                        // Compare the page identified from WRAM with the actual
+                        // PPU glyphs. When it does NOT match, a recent earlier
+                        // page may still be visible behind the advancing engine.
+                        // This uses the upstream character/position matcher,
+                        // not background colour, OCR or hard-coded coordinates.
+                        let direct = selected.as_ref()
+                            .and_then(|page| self.hd_renderer.visible_translation_score(page));
+                        let mut best = direct.unwrap_or(0);
+                        if direct.is_none() {
+                            let now = self.machine.frame_count() as u32;
+                            let mut fallback = None;
+                            for (seen, page) in self.recent_pages.iter().rev() {
+                                if now.saturating_sub(*seen) > 150
+                                    || selected.as_ref().is_some_and(|current|
+                                        current.key == page.key) { continue; }
+                                if let Some(score) = self.hd_renderer.visible_translation_score(page)
+                                    && score > best
+                                {
+                                    if self.translation.as_ref()
+                                        .is_some_and(|table| table.text(&page.key).is_some())
+                                    {
+                                        fallback = Some(page.clone());
+                                        best = score;
+                                    } else if self.native_untranslated_visible.is_none() {
+                                        self.native_untranslated_visible = Some(page.key.clone());
+                                    }
+                                }
+                            }
+                            if let Some(page) = fallback {
+                                selected = Some(page);
+                                self.native_visible_fallback = true;
+                            }
+                        }
+                        self.native_visible_score = best;
+                        self.native_page_key = selected.as_ref().map(|page| page.key.clone());
+                        self.hd_renderer.set_translation_screen(selected);
                         // The original native renderer owns every Chinese glyph.
-                        // It executes AFTER HD backgrounds but before JS displays
-                        // the frame, so English and Chinese cannot coexist.
+                        // It runs AFTER HD art. This boolean means the pass ran,
+                        // not necessarily that translated pixels changed.
                         self.native_painted = self.hd_renderer.paint_native_translation(
                             log, &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
@@ -194,6 +243,10 @@ impl WebGame {
         self.native_page_hint = None;
         self.native_page_key = None;
         self.native_late_page = false;
+        self.recent_pages.clear();
+        self.native_visible_fallback = false;
+        self.native_visible_score = 0;
+        self.native_untranslated_visible = None;
         self.native_painted = false;
         self.hd_renderer.set_native_translation(self.native_overlay.clone());
         self.previous_page = None;
@@ -243,6 +296,12 @@ impl WebGame {
             "frame": self.machine.frame_count(),
             "hd_active": self.hd_active(),
             "translator_ran": self.native_painted,
+            "changed_glyph_samples": self.hd_renderer.native_changed_samples(),
+            "visible_page_fallback": self.native_visible_fallback,
+            "visible_page_score": self.native_visible_score,
+            "untranslated_visible_key": self.native_untranslated_visible,
+            "recent_page_keys": self.recent_pages.iter()
+                .map(|(_,page)| page.key.as_str()).collect::<Vec<_>>(),
             "start_key": self.native_page_key,
             "end_key": end_key,
             "start_has_translation": self.native_page_key.as_ref()
@@ -324,6 +383,10 @@ impl WebGame {
         self.native_page_hint = None;
         self.native_page_key = None;
         self.native_late_page = false;
+        self.recent_pages.clear();
+        self.native_visible_fallback = false;
+        self.native_visible_score = 0;
+        self.native_untranslated_visible = None;
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -370,6 +433,10 @@ impl WebGame {
         self.native_page_hint = None;
         self.native_page_key = None;
         self.native_late_page = false;
+        self.recent_pages.clear();
+        self.native_visible_fallback = false;
+        self.native_visible_score = 0;
+        self.native_untranslated_visible = None;
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))

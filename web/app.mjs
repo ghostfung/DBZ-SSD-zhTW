@@ -17,7 +17,7 @@ function sampleTranslationDiagnostics() {
     const item = JSON.parse(game.translation_diagnostics());
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
-    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.glyphs]);
+    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.glyphs]);
     if (signature !== lastDiagSignature) {
       lastDiagSignature = signature;
       translationDiag.push(item);
