@@ -57,6 +57,21 @@ export class WebGame {
         return v1;
     }
     /**
+     * @returns {string}
+     */
+    fighter_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_fighter_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @returns {number}
      */
     frame_count() {
@@ -85,6 +100,14 @@ export class WebGame {
      */
     hd_art_pixels() {
         const ret = wasm.webgame_hd_art_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * SNES pixels with confirmed visible fighter OAM pixels replaced.
+     * @returns {number}
+     */
+    hd_fighter_pixels() {
+        const ret = wasm.webgame_hd_fighter_pixels(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -227,6 +250,35 @@ export class WebGame {
         const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.webgame_set_background_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} index
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_fighter_art(index, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_fighter_art(this.__wbg_ptr, index, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * Only the player's verified local class2 index; never HD bytes or ROM
+     * data sent over a network. Exact fighter palette and hash are required.
+     * @param {string} json
+     * @returns {number}
+     */
+    set_fighter_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_fighter_index(this.__wbg_ptr, ptr0, len0);
         if (ret[2]) {
             throw takeFromExternrefTable0(ret[1]);
         }
