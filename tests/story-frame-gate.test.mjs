@@ -43,7 +43,7 @@ test('the hold signal is based on PPU story cells + no translated pixel samples,
   const app=src('web/app.mjs');
   assert.match(rust,/self\.native_story_ascii_cells > 0/);
   assert.match(rust,/self\.hd_renderer\.native_changed_samples\(\) == 0/);
-  assert.match(renderer,/page\.table != 3/);
+  assert.match(renderer,/!matches!\(page\.table, 2 \| 3\)/);
   assert.match(renderer,/self\.text\.cells\(\)\.iter\(\)\.filter/);
   assert.match(app,/game\.story_translation_pending\(\)/);
   assert.match(app,/storyFrameGate\.shouldDefer\(/);
