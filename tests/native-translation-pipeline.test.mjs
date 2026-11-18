@@ -31,7 +31,7 @@ test('native text is synchronized with PPU and drawn after local HD background a
 test('Chinese UI is rendered by Rust in 2x, with safe caption-only Classic fallback',()=>{
   assert.match(app,/game\.native_translation_active\(\)/);
   assert.match(web,/pub fn native_translation_active\(&self\) -> bool/);
-  assert.match(app,/box\.hidden = !\$\(.'inframe'.\)\.checked/);
+  assert.ok(app.includes("box.hidden = !$(\'inframe\').checked;"));
   assert.match(web,/self\.native_overlay\.clone\(\)/);
   assert.ok(!app.includes('assembleTextRuns('));
 });
