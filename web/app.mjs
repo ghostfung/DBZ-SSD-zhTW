@@ -9,6 +9,25 @@ let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
+
+let translationDiag = [], lastDiagSignature = '';
+function sampleTranslationDiagnostics() {
+  if (!game || !hdEnabled || typeof game.translation_diagnostics !== 'function') return;
+  try {
+    const item = JSON.parse(game.translation_diagnostics());
+    // Only log changes (page key, detected glyph positions or fallback), rather
+    // than holding 60 large JSON objects per second in mobile Safari memory.
+    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.glyphs]);
+    if (signature !== lastDiagSignature) {
+      lastDiagSignature = signature;
+      translationDiag.push(item);
+      if (translationDiag.length > 120) translationDiag.shift();
+    }
+  } catch (error) {
+    console.warn('繁中狀態診斷無法讀取', error);
+  }
+}
+
 document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
 });
@@ -67,6 +86,7 @@ $('start').addEventListener('click', async () => {
     translationKey = '';
     currentDialogue = null;
     embedded = false;
+    translationDiag = []; lastDiagSignature = '';
     game.set_hd_mode(hdEnabled);
     liveHd.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
@@ -122,6 +142,7 @@ function requestFrame(now) {
     if (now - lastHdPoll >= 450) {
       lastHdPoll = now;
       liveHd.pulse();
+      sampleTranslationDiagnostics();
     }
     $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
@@ -194,8 +215,23 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
+$('translation-debug').addEventListener('click',()=>{
+  if (!game) return;
+  sampleTranslationDiagnostics();
+  const report = {
+    format:'DBZ-SSD iPhone zh-TW diagnostic v1',
+    branch:'iphone-web-poc',
+    note:'只有畫面上擷取的英文字符及翻譯鍵值；不包含 ROM、IPS、HD ZIP 或存檔。',
+    frame: game.frame_count(),
+    events: translationDiag
+  };
+  const url=URL.createObjectURL(new Blob([JSON.stringify(report,null,2)],{type:'application/json'}));
+  const a=document.createElement('a');
+  a.href=url;a.download='dbz-translation-diagnostic.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+});
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
   else if(!document.hidden&&game&&!running){

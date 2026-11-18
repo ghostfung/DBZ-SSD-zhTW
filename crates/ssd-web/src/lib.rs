@@ -43,6 +43,8 @@ pub struct WebGame {
     native_overlay: Option<Arc<TextOverlay>>,
     native_page_hint: Option<usize>,
     native_painted: bool,
+    native_page_key: Option<String>,
+    native_late_page: bool,
     text_font: Option<Arc<HdFont>>,
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
@@ -72,6 +74,7 @@ impl WebGame {
         let hd_renderer = tracked_renderer(text_font.clone(), None);
         Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None,
             native_overlay: None, native_page_hint: None, native_painted: false,
+            native_page_key: None, native_late_page: false,
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
@@ -90,17 +93,42 @@ impl WebGame {
 
     /// The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
     pub fn tick(&mut self, joypad_bits: u16) -> Result<(), JsValue> {
-        // The ROM's WRAM describes the page at the START of the rendered frame.
-        // Resolving the page after run_frame causes one-frame English flashes.
+        // Match WideRun: the WRAM at the end of the previous emulated frame
+        // is the authoritative page for the frame we are about to render.
+        let mut started = None;
         if self.hd_enabled && self.native_overlay.is_some() {
-            let screen = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
-            if let Some(ref page) = screen {
+            started = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
+            if let Some(ref page) = started {
                 self.native_page_hint = Some(page.page);
             }
-            self.hd_renderer.set_translation_screen(screen);
         }
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
             .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
+        self.native_late_page = false;
+        if self.hd_enabled && self.native_overlay.is_some() {
+            // Only on the first unrecognised frame of a newly appearing page,
+            // use the now-complete WRAM as a *candidate*. The upstream
+            // Translator::draw_pages still validates actual visible PPU glyphs
+            // before painting; never override a correctly tracked start page.
+            let selected = if started.is_none() {
+                let end = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
+                if let Some(ref candidate) = end
+                    && self.translation.as_ref()
+                        .is_some_and(|table| table.text(&candidate.key).is_some())
+                {
+                    self.native_late_page = true;
+                    self.native_page_hint = Some(candidate.page);
+                }
+                end.filter(|candidate| self.translation.as_ref()
+                    .is_some_and(|table| table.text(&candidate.key).is_some()))
+            } else {
+                started
+            };
+            self.native_page_key = selected.as_ref().map(|page| page.key.clone());
+            self.hd_renderer.set_translation_screen(selected);
+        } else {
+            self.native_page_key = None;
+        }
         self.native_painted = false;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
@@ -164,6 +192,8 @@ impl WebGame {
         ));
         self.translation = Some(table);
         self.native_page_hint = None;
+        self.native_page_key = None;
+        self.native_late_page = false;
         self.native_painted = false;
         self.hd_renderer.set_native_translation(self.native_overlay.clone());
         self.previous_page = None;
@@ -192,6 +222,38 @@ impl WebGame {
     /// Enhanced picture; the browser must not add heuristic text overlays.
     pub fn native_translation_active(&self) -> bool {
         self.hd_enabled && self.native_painted && self.hd_active()
+    }
+
+    /// A compact, local-only diagnostic for rare missed English pages.
+    /// Contains no ROM/IPS/HD bytes and never sends data to a server.
+    pub fn translation_diagnostics(&self) -> String {
+        let cells = self.hd_renderer.observed_text_cells();
+        // Cell capture is the ROM's *displayed* ASCII, not an OCR guess.
+        let letters: Vec<_> = cells.into_iter()
+            .filter(|(x, y, ch, _, _)| {
+                *x >= 0 && *x < 256 && *y >= 0 && *y < 240 &&
+                    ch.chars().any(|c| c.is_ascii_alphabetic())
+            })
+            .take(96)
+            .map(|(x,y,ch,_,_)| json!([x,y,ch]))
+            .collect();
+        let end = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
+        let end_key = end.as_ref().map(|screen| screen.key.clone());
+        json!({
+            "frame": self.machine.frame_count(),
+            "hd_active": self.hd_active(),
+            "translator_ran": self.native_painted,
+            "start_key": self.native_page_key,
+            "end_key": end_key,
+            "start_has_translation": self.native_page_key.as_ref()
+                .is_some_and(|key| self.translation.as_ref()
+                    .is_some_and(|table| table.text(key).is_some())),
+            "end_has_translation": end.as_ref()
+                .is_some_and(|page| self.translation.as_ref()
+                    .is_some_and(|table| table.text(&page.key).is_some())),
+            "late_page": self.native_late_page,
+            "glyphs": letters
+        }).to_string()
     }
 
     /// Returns the original translator's keyed dialogue as JSON for testing.
@@ -260,6 +322,8 @@ impl WebGame {
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
         self.native_painted = false;
         self.native_page_hint = None;
+        self.native_page_key = None;
+        self.native_late_page = false;
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -304,6 +368,8 @@ impl WebGame {
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
         self.native_painted = false;
         self.native_page_hint = None;
+        self.native_page_key = None;
+        self.native_late_page = false;
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
