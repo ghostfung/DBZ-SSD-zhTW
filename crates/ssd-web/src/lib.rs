@@ -1,17 +1,21 @@
 //! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
 //! The HD renderer and zh-TW translation engine are separate future milestones.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
-use ssd_catalogue::engine::on_screen;
+use ssd_catalogue::engine::{on_screen, screen_names};
 use ssd_catalogue::translation::{render, Slot, Translation};
-use ssd_hd::{HdOptions, Look, Renderer as HdRenderer};
+use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
+use std::collections::HashMap;
+use std::sync::Arc;
 use serde_json::json;
 use wasm_bindgen::prelude::*;
 mod live_bg;
 use live_bg::LiveBackgrounds;
 
-fn tracked_renderer() -> HdRenderer {
+fn tracked_renderer(font: Option<Arc<HdFont>>) -> HdRenderer {
     let mut renderer = HdRenderer::new();
     renderer.set_layer_tracking(true);
+    renderer.set_font(font);
+    renderer.set_text_capture_only(true);
     renderer
 }
 
@@ -34,6 +38,8 @@ pub struct WebGame {
     audio: AudioFrame,
     rom: Vec<u8>,
     translation: Option<Translation>,
+    text_font: Option<Arc<HdFont>>,
+    menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
     hd_enabled: bool,
     hd_renderer: HdRenderer,
@@ -57,8 +63,11 @@ impl WebGame {
         let mut machine = Machine::new(rom.clone(), Box::new(MemorySaveStore::default()))
             .map_err(|err| JsValue::from_str(&format!("遊戲初始化失敗：{err}")))?;
         machine.set_audio_frequency(48_000);
-        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None, previous_page: None,
-            hd_enabled: false, hd_renderer: tracked_renderer(), hd_pixels: Vec::new(),
+        let text_font = HdFont::standard(&rom).ok().map(Arc::new);
+        let hd_renderer = tracked_renderer(text_font.clone());
+        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None,
+            text_font, menu_names: HashMap::new(), previous_page: None,
+            hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0 })
     }
@@ -119,9 +128,28 @@ impl WebGame {
         let table = Translation::parse(tsv)
             .map_err(|err| JsValue::from_str(&format!("繁體中文 TSV 無法讀取：{err}")))?;
         let count = table.len() as u32;
+        self.menu_names = screen_names(&self.rom, &table);
         self.translation = Some(table);
         self.previous_page = None;
         Ok(count)
+    }
+
+    /// The original project's menu and name translations, indexed by the English words on screen.
+    pub fn menu_translations(&self) -> String {
+        serde_json::to_string(&self.menu_names).unwrap_or_else(|_| "{}".to_owned())
+    }
+
+    /// The glyph positions from the actual PPU frame (without any ROM modification).
+    pub fn visible_text_cells(&self) -> String {
+        serde_json::to_string(&self.hd_renderer.observed_text_cells())
+            .unwrap_or_else(|_| "[]".to_owned())
+    }
+
+    /// A direct lookup for an already-translated, token-free alert.
+    pub fn translation_for_key(&self, key: &str) -> String {
+        self.translation.as_ref().and_then(|table| table.text(key))
+            .map(|entry| render(entry, |_| String::new()))
+            .unwrap_or_default()
     }
 
     /// Returns the original translator's keyed dialogue as JSON for testing.
@@ -186,7 +214,7 @@ impl WebGame {
         if self.hd_enabled == enabled { return; }
         self.hd_enabled = enabled;
         self.machine.set_line_log(enabled);
-        self.hd_renderer = tracked_renderer();
+        self.hd_renderer = tracked_renderer(self.text_font.clone());
         self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -228,7 +256,7 @@ impl WebGame {
         self.audio.samples.clear();
         self.previous_page = None;
         self.hd_pixels.clear();
-        self.hd_renderer = tracked_renderer();
+        self.hd_renderer = tracked_renderer(self.text_font.clone());
         self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))

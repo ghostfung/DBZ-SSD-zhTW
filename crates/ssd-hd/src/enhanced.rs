@@ -223,7 +223,7 @@ impl Renderer {
     /// frame drawn again with only that layer off (see [`crate::font::beneath_logs`]). A fresh
     /// renderer draws them, so the frame's own state is left as it is.
     fn title_beneath(&self, log: &FrameLog, options: HdOptions) -> [Option<Frame>; 4] {
-        if self.font.is_none() || options.scale < 2 {
+        if self.font.is_none() || self.text_capture_only || options.scale < 2 {
             return [None, None, None, None];
         }
         crate::font::beneath_logs(log, self.text.cells())
@@ -235,7 +235,7 @@ impl Renderer {
     /// so that no sub-pixel of an original letter is left beside the HD glyph. The frame itself
     /// when no text is redrawn.
     fn without_text(&self, frame: &Frame, beneath: &[Option<Frame>; 4]) -> Option<Frame> {
-        if self.font.is_none() || self.text.cells().is_empty() {
+        if self.font.is_none() || self.text_capture_only || self.text.cells().is_empty() {
             return None;
         }
         let beneath_pixels: [Option<&[Color]>; 4] =
@@ -259,6 +259,7 @@ impl Renderer {
         beneath: &[Option<Frame>; 4],
         cells: Option<&[crate::font::TextCell]>,
     ) {
+        if self.text_capture_only { return; }
         if let (Some(font), true) = (&self.font, options.scale >= 2) {
             let beneath_pixels: [Option<&[Color]>; 4] =
                 std::array::from_fn(|bg| beneath[bg].as_ref().map(|frame| &frame.pixels[..]));

@@ -48,3 +48,28 @@ test('draws CJK text in detected window and falls back when missing',()=>{
   assert.ok(actions.some(x=>Array.isArray(x)&&x[0]==='fillText'&&x[1].includes('拉帝茲')));
   assert.equal(drawChineseInBox(ctx,new Uint8Array(W*H*4),W,H,message),false);
 });
+
+
+function mockBattleFrame(scale=1){
+  const w=W*scale,h=H*scale;
+  const rgba=new Uint8Array(w*h*4);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*4,lx=x/scale,ly=y/scale;
+    rgba[i]=25;rgba[i+1]=103;rgba[i+2]=198;rgba[i+3]=255;
+    if(lx>=48 && lx<=207 && ly>=177 && ly<=238){
+      rgba[i]=255;rgba[i+1]=239;rgba[i+2]=206;
+    }
+  }
+  return rgba;
+}
+test('locate right-shifted battle message box, not only story windows at x=26',()=>{
+  for(const scale of [1,2]){
+    const frame=mockBattleFrame(scale);
+    const box=findDialogueBox(frame,W*scale,H*scale);
+    assert.ok(box,'the narrower battle window must be detected');
+    assert.ok(box.left>=44 && box.left<=52);
+    assert.ok(box.right>=203 && box.right<=209);
+    assert.equal(box.top,177);
+    assert.ok(box.bottom>=236);
+  }
+});

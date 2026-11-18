@@ -10,42 +10,75 @@ function imagePixel(image, width, x, y) {
   return (y*width+x)*4;
 }
 
-// Find an ivory message box by sampling its left-side interior; reject non-dialogue scenes.
-// Output logical pixel coordinates (not device/CSS pixels), or null.
+// Find an actual visible ivory dialogue window, wherever it appears.
+// Battle boxes are narrower and farther right than the story windows; the
+// former anchor at x=26 falsely returns no match for the battle example.
 export function findDialogueBox(pixels,width,height) {
-  if (!pixels || pixels.length !== width*height*4 || width < 160 || height < 100) return null;
-  // The upstream 2x Enhanced frame preserves the same logical picture position.
-  const sx=width/256, sy=height/239;
-  const anchorX=Math.round(MARK_X*sx);
-  let start=-1, best=null;
-  for(let ly=18;ly<=229;ly++) {
-    const y=Math.round(ly*sy);
-    if (y >= height) break;
-    const i=imagePixel(pixels,width,anchorX,y);
-    const ivory=isIvory(pixels[i],pixels[i+1],pixels[i+2]);
-    if(ivory && start<0) start=ly;
-    if((!ivory||ly===229) && start>=0) {
-      const end=ivory?ly:ly-1;
-      if(end-start>=28 && (!best || end-start>best.end-best.start))best={start,end};
-      start=-1;
+  if(!pixels || pixels.length!==width*height*4 || width<160 || height<100) return null;
+  const sx=width/256, sy=sx;
+  const logicalHeight=Math.floor(height/sy);
+  const candidates=[];
+  const ivory=(x,y)=>{
+    const i=imagePixel(pixels,width,Math.round(x*sx),Math.round(y*sy));
+    return isIvory(pixels[i],pixels[i+1],pixels[i+2]);
+  };
+  // Each row may contain dark English glyphs; bridge the short gaps between
+  // ivory pixels, but reject distant clouds and isolated highlight pixels.
+  for(let y=18;y<logicalHeight-2;y++){
+    let first=-1,last=-1,hits=0,gap=0,best=null;
+    const finish=()=>{
+      if(first>=0){
+        const span=last-first+2;
+        if(span>=92 && hits*2/span>=0.48 &&
+          (!best || span>best.right-best.left)){
+          best={left:first,right:last,y,width:span};
+        }
+      }
+      first=-1;last=-1;hits=0;gap=0;
+    };
+    for(let x=8;x<=246;x+=2){
+      if(ivory(x,y)){
+        if(first<0)first=x;
+        last=x;hits++;gap=0;
+      }else if(first>=0){
+        gap+=2;
+        if(gap>14)finish();
+      }
+    }
+    finish();
+    if(best)candidates.push(best);
+  }
+  const groups=[];
+  for(const segment of candidates){
+    const prev=groups[groups.length-1];
+    if(prev && segment.y-prev.bottom<=4 &&
+       Math.abs(segment.left-prev.left)<=18 &&
+       Math.abs(segment.right-prev.right)<=18){
+      prev.bottom=segment.y;
+      prev.left=Math.min(prev.left,segment.left);
+      prev.right=Math.max(prev.right,segment.right);
+      prev.count++;
+    } else {
+      groups.push({left:segment.left,right:segment.right,
+        top:segment.y,bottom:segment.y,count:1});
     }
   }
-  if(!best)return null;
-  const middleY=Math.round((best.start+best.end)/2*sy);
-  let ivoryCount=0;
-  for(const lx of [26,42,57,73,101,127,158,195,215,225]){
-    const x=Math.round(lx*sx);
-    const i=imagePixel(pixels,width,x,middleY);
-    if(isIvory(pixels[i],pixels[i+1],pixels[i+2]))ivoryCount++;
+  const winner=groups.filter(g=>g.bottom-g.top>=24 && g.count>=19)
+    .sort((a,b)=>(b.right-b.left)*(b.bottom-b.top)-
+                (a.right-a.left)*(a.bottom-a.top))[0];
+  if(!winner)return null;
+  let fill=null;
+  for(let y=winner.top+2;y<=winner.bottom-2&&!fill;y++){
+    for(let x=winner.left+4;x<=winner.right-4;x+=4){
+      if(ivory(x,y)){
+        const at=imagePixel(pixels,width,Math.round(x*sx),Math.round(y*sy));
+        fill='rgb('+pixels[at]+','+pixels[at+1]+','+pixels[at+2]+')';
+        break;
+      }
+    }
   }
-  if(ivoryCount<7)return null;
-  const pixelIndex=imagePixel(pixels,width,anchorX,Math.round((best.start+5)*sy));
-  return {
-    top:best.start,
-    bottom:best.end,
-    fill:`rgb(${pixels[pixelIndex]},${pixels[pixelIndex+1]},${pixels[pixelIndex+2]})`,
-    sx,sy,
-  };
+  if(!fill)return null;
+  return {...winner,fill,sx,sy};
 }
 
 function splitLine(ctx,text,maxWidth) {
@@ -72,9 +105,11 @@ export function drawChineseInBox(ctx, image, width, height, dialogue) {
   ctx.scale(box.sx,box.sy);
   ctx.font='bold 12px "PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif';
   ctx.textBaseline='top';
+  const left=box.left+6,right=box.right-6;
+  if(right-left<80){ctx.restore();return false;}
   for(const explicit of dialogue.text.split('\n')){
     if(!explicit.trim()) continue;
-    lines.push(...splitLine(ctx,explicit.trim(),190));
+    lines.push(...splitLine(ctx,explicit.trim(),right-left-4));
   }
   if(!lines.length){ctx.restore();return false;}
   const paddingTop=7, paddingBottom=4;
@@ -84,7 +119,7 @@ export function drawChineseInBox(ctx, image, width, height, dialogue) {
   if(lineHeight<9){ctx.restore();return false;}
   // Leave a two-pixel margin around the original border. Cover only English glyphs.
   ctx.fillStyle=box.fill;
-  ctx.fillRect(30,box.top+4,198,box.bottom-box.top-7);
+  ctx.fillRect(left,box.top+4,right-left,box.bottom-box.top-7);
   ctx.fillStyle='#08082b';
   // The original translator uses gradual text reveal. It may appear a little early
   // at the beginning of the page; the underlying engine remains authoritative.
@@ -94,16 +129,16 @@ export function drawChineseInBox(ctx, image, width, height, dialogue) {
   for(let i=0;i<lines.length;i++){
     const line=lines[i];
     const cut=line.slice(0,Math.max(0,Math.min(line.length,remaining)));
-    if(cut)ctx.fillText(cut,32,box.top+paddingTop+i*lineHeight);
+    if(cut)ctx.fillText(cut,left+2,box.top+paddingTop+i*lineHeight);
     remaining-=line.length;
   }
   if(dialogue.state === 2 || dialogue.state === 3) {
     // Redraw a minimal continue indicator, previously covered with the English text.
     ctx.fillStyle='#e0480f';
     ctx.beginPath();
-    ctx.moveTo(160,box.bottom-13);
-    ctx.lineTo(167,box.bottom-13);
-    ctx.lineTo(163.5,box.bottom-8);
+    ctx.moveTo(right-13,box.bottom-13);
+    ctx.lineTo(right-6,box.bottom-13);
+    ctx.lineTo(right-9.5,box.bottom-8);
     ctx.fill();
   }
   ctx.restore();

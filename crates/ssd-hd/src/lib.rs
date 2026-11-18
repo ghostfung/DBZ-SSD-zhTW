@@ -187,6 +187,8 @@ pub struct Renderer {
     pub(crate) art: Option<Box<art::ArtState>>,
     /// The HD text font, when the pictures draw their text from it (see [`Renderer::set_font`]).
     font: Option<Arc<Font>>,
+    /// Capture ROM glyphs for browser-side Chinese UI without redrawing the English text.
+    text_capture_only: bool,
     /// The text cells of the frame being drawn, noted while `text_on`.
     text: font::TextCapture,
     text_on: bool,
@@ -223,6 +225,7 @@ impl Renderer {
             only_rows: None,
             art: None,
             font: None,
+            text_capture_only: false,
             text: font::TextCapture::default(),
             text_on: false,
             lightning: None,
@@ -249,6 +252,24 @@ impl Renderer {
     /// draws it. The 1x frame of [`Renderer::render`] never has HD text.
     pub fn set_font(&mut self, font: Option<Arc<Font>>) {
         self.font = font;
+    }
+
+    /// Enable capture of glyph positions without the HD font replacement pass.
+    pub fn set_text_capture_only(&mut self, enabled: bool) {
+        self.text_capture_only = enabled;
+    }
+
+    /// Visible English glyphs at game-pixel coordinates, with the in-game ink and paper.
+    /// This is a read-only view of pixels actually drawn by the SNES PPU.
+    #[must_use]
+    pub fn observed_text_cells(&self) -> Vec<(i32, i32, String, [u8; 3], [u8; 3])> {
+        let Some(font) = self.font.as_ref() else { return Vec::new() };
+        self.text.cells().iter().filter_map(|cell| {
+            if cell.mask == 0 || cell.half != 0 { return None; }
+            let ch = font.character(cell.glyph)?;
+            (ch.is_ascii() && !ch.is_ascii_control()).then(||
+                (cell.x, cell.y, ch.to_string(), cell.fg, cell.bg))
+        }).take(1536).collect()
     }
 
     /// Record visible winning BG (1-4), OBJ (5), or backdrop (0) for each 1x pixel.
