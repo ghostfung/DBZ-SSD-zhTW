@@ -60,7 +60,7 @@ pub struct WebGame {
     native_visible_score: usize,
     native_untranslated_visible: Option<String>,
     story_candidates: Vec<OnScreen>,
-    story_candidates_for: Option<(u16, u16)>,
+    story_candidates_for: Option<(u8, u16, u16)>,
     native_expected_english: String,
     native_story_text_pending: bool,
     native_story_ascii_cells: usize,
@@ -181,11 +181,15 @@ impl WebGame {
                             let reference = selected.as_ref().or_else(|| {
                                 self.recent_pages.last().map(|(_, page)| page)
                             });
-                            // Parse nearby ROM story pages only once per story
-                            // string/window, never from a hard-coded English
-                            // sentence, UI colour or guessed pixel coordinate.
-                            if let Some(page) = reference.filter(|page| page.table == 3) {
-                                let location = (page.string, page.base);
+                            // Parse nearby ROM pages of BOTH narration and
+                            // portrait dialogue. Prior code restricted this
+                            // fallback to table 3 and missed str2:0x002
+                            // ("I'd offer to help") while WRAM already
+                            // indicated its later "Don't die" page.
+                            if let Some(page) = reference.filter(|page|
+                                matches!(page.table, 2 | 3))
+                            {
+                                let location = (page.table, page.string, page.base);
                                 if self.story_candidates_for != Some(location) {
                                     self.story_candidates =
                                         story_pages_near(&self.rom, page, 2);
@@ -235,12 +239,20 @@ impl WebGame {
                         // Determine whether the actual PPU has started writing
                         // story letters. The preview should not expose these
                         // letters before the native Chinese glyph pass is ready.
-                        // If the engine has advanced, use a recently observed
-                        // story page only to locate its text rows.
-                        self.native_story_ascii_cells = selected.as_ref()
-                            .filter(|page| page.table == 3)
+                        // Portrait dialogue uses table 2; narration uses 3.
+                        // Never use an ancient page to classify a later menu
+                        // as dialogue. A recent page is eligible briefly after
+                        // the message engine stops naming it.
+                        let now = self.machine.frame_count() as u32;
+                        let text_page = selected.as_ref()
+                            .filter(|page| matches!(page.table, 2 | 3))
                             .or_else(|| self.recent_pages.iter().rev()
-                                .map(|(_, page)| page).find(|page| page.table == 3))
+                                .find(|(seen, page)| {
+                                    now.saturating_sub(*seen) <= 18
+                                        && matches!(page.table, 2 | 3)
+                                })
+                                .map(|(_, page)| page));
+                        self.native_story_ascii_cells = text_page
                             .map_or(0, |page| self.hd_renderer.story_ascii_cells(page));
                         self.hd_renderer.set_translation_screen(selected);
                         // The original native renderer owns every Chinese glyph.

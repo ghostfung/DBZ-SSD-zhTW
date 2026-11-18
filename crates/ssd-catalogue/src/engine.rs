@@ -779,7 +779,7 @@ fn pages(
     None
 }
 
-/// The ROM-derived story pages near the message currently named by WRAM.
+/// The ROM-derived dialogue and narration pages near the message currently named by WRAM.
 /// A story cutscene can leave an earlier page visibly on the PPU after the
 /// registers have advanced to a different string. Unlike an OCR or box-colour
 /// heuristic, these candidates contain the actual English glyphs from the ROM,
@@ -792,13 +792,13 @@ fn pages(
 pub fn story_pages_near(
     rom: &[u8], current: &OnScreen, radius: u16,
 ) -> Vec<OnScreen> {
-    if current.table != 3 || radius > 4 {
+    if !matches!(current.table, 2 | 3) || radius > 4 {
         return Vec::new();
     }
     let Ok(view) = RomView::new(rom) else { return Vec::new() };
     let mut found = Vec::new();
     for index in current.string.saturating_sub(radius)..=current.string.saturating_add(radius) {
-        let Some(start) = string_address(view, 3, index) else { continue };
+        let Some(start) = string_address(view, current.table, index) else { continue };
         let Some((pages, _)) = pages(
             view, start, 1,
             &|_| SLOT_CELLS,
@@ -816,7 +816,7 @@ pub fn story_pages_near(
             let mut candidate = current.clone();
             candidate.string = index;
             candidate.page = number;
-            candidate.key = page_key(&string_key(3, u32::from(index)), number);
+            candidate.key = page_key(&string_key(current.table, u32::from(index)), number);
             candidate.lines = page.lines;
             candidate.english = page.english;
             candidate.portrait = page.portrait;
@@ -887,6 +887,15 @@ mod tests {
             (0x07_9000, &[0x00, 0x91]),
             (0x07_9100, &[0x05, 0x07, 0xFF, 0x09, 0xFE, 0xFF, 0x0A, 0x0A, 0x0A, 0x0A, 0xFF, 0xFF]),
         ])
+    }
+
+    #[test]
+    fn nearby_pages_support_portrait_dialogue_table_two() {
+        let rom = rom();
+        let current = on_screen(&rom, &wram(0x81, 2, 1, 0), None).unwrap();
+        let candidates = story_pages_near(&rom, &current, 0);
+        assert!(candidates.iter().all(|page| page.table == 2));
+        assert!(candidates.iter().all(|page| page.key.starts_with("str2:")));
     }
 
     #[test]

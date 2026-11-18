@@ -298,14 +298,14 @@ impl Renderer {
             seen.own >= 5 && seen.other == 0).then_some(seen.own)
     }
 
-    /// Count visible ROM ASCII glyphs on this story page's PPU text rows.
+    /// Count visible ROM ASCII glyphs on a portrait dialogue or narration page's PPU text rows.
     /// This is a read-only, bounded check for a transition frame that may
     /// briefly show English before the stateful translator has placed Chinese.
     /// It never treats a generic ivory UI/status panel as a dialogue box.
     #[must_use]
     pub fn story_ascii_cells(&self, page: &ssd_catalogue::engine::OnScreen) -> usize {
         let Some(font) = self.font.as_ref() else { return 0 };
-        if page.table != 3 || page.english.is_empty() { return 0; }
+        if !matches!(page.table, 2 | 3) || page.english.is_empty() { return 0; }
         let (column, row) = page.base_cell();
         let left = i32::from(column) * 8 - 16;
         let top = i32::from(row) * 8 - 1;
