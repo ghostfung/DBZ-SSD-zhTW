@@ -6,6 +6,7 @@ const $=id=>document.getElementById(id);
 let verified=null;
 let activeFile=null;
 let busy=false;
+let persisted=false;
 let previewObjectUrl=null;
 let sampleEntry=null;
 
@@ -18,11 +19,12 @@ function clearPreview(){
 }
 
 function status(message){$('hd-status').textContent=message;}
+function previewEntry(info){return info.entries.find(x=>/\.(png|webp)$/i.test(x.name)&&x.unpacked>=128&&x.unpacked<=2*1024*1024)??null;}
 function busyMode(value){
   busy=value;
   $('hd-zip').disabled=value;
   $('hd-verify').disabled=value||!$('hd-zip').files?.[0];
-  $('hd-cache').disabled=value||!verified||!opfsAvailable();
+  $('hd-cache').disabled=value||!verified||!opfsAvailable()||persisted;
   $('hd-preview-btn').disabled=value||!sampleEntry||!verified;
   $('hd-remove').disabled=value;
 }
@@ -35,12 +37,12 @@ function progress(phase,done,total){
 function explanation(result){
   return `官方 ${result.version} HD 美術包已通過 SHA-256 驗證。
 ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLocaleString('en-US')} 個項目、${result.imageCount.toLocaleString('en-US')} 張 PNG/WebP。
-${result.manifest?'有 hdpack.toml：'+result.manifest:'未見 hdpack.toml'}；${result.index?'有 index.bin：'+result.index:'未見 index.bin'}。
+官方原始素材 ZIP 沒有 hdpack.toml／index.bin 是預期情況；後續仍需建立遊戲渲染索引。
 驗證只在 iPhone 本機進行。HD 美術套用尚未接入遊戲渲染。 `;
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;clearPreview();
   $('hd-preview-btn').disabled=true;
   $('hd-progress').hidden=true;
   const file=$('hd-zip').files?.[0];
@@ -52,7 +54,7 @@ $('hd-verify').addEventListener('click',async()=>{
   const file=$('hd-zip').files?.[0];
   if(!file||busy)return;
   busyMode(true);
-  verified=null;activeFile=null;sampleEntry=null;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;clearPreview();
   try {
     status('正在檢查 ZIP 結構...');
     // Import is deliberately strict: only the original signed GitHub asset digest is accepted.
@@ -71,8 +73,8 @@ $('hd-verify').addEventListener('click',async()=>{
       }
     }
     verified=checked;activeFile=file;
-    sampleEntry=checked.entries.find(x=>/\.(png|webp)$/i.test(x.name) && x.unpacked>=128 && x.unpacked<=2*1024*1024)??null;
-    status(explanation(checked)+extra);
+    sampleEntry=previewEntry(checked);
+    status(explanation(checked)+extra+'\n目前只完成驗證，尚未保存。若要下次自動讀取，請按「儲存至本機」。');
     $('hd-progress').value=100;
   } catch(e){
     $('hd-progress').hidden=true;
