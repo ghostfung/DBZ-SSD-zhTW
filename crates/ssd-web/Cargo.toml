@@ -1,0 +1,17 @@
+[package]
+name = "ssd-web"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ssd-rom = { path = "../ssd-rom" }
+ssd-oracle = { path = "../ssd-oracle" }
+bytemuck = { workspace = true }
+wasm-bindgen = "0.2"
+
+[lints]
+workspace = true

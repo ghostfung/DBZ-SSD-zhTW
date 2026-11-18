@@ -1,0 +1,58 @@
+name: DBZ iPhone Web POC (WASM)
+
+on:
+  push:
+    branches: [iphone-web-poc]
+    paths:
+      - 'crates/ssd-web/**'
+      - 'crates/ssd-oracle/**'
+      - 'crates/ssd-game/**'
+      - 'crates/ssd-rom/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/web-poc.yml'
+  pull_request:
+    paths:
+      - 'crates/ssd-web/**'
+      - 'crates/ssd-oracle/**'
+      - 'crates/ssd-game/**'
+      - 'crates/ssd-rom/**'
+      - 'web/**'
+      - 'tests/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/web-poc.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wasm-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Test JavaScript and ROM checks
+        run: node --test tests/rom-check.test.mjs
+      - name: Check SNES core WASM compatibility
+        run: cargo check -p ssd-oracle --target wasm32-unknown-unknown
+      - name: Check game module WASM compatibility
+        run: cargo check -p ssd-game --target wasm32-unknown-unknown
+      - name: Check browser bridge crate
+        run: cargo check -p ssd-web --target wasm32-unknown-unknown
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Build browser wasm
+        run: wasm-pack build crates/ssd-web --target web --out-dir ../../web/pkg --release
+      - name: Upload playable-test shell (no ROM, no IPS, no HD assets)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbz-ssd-web-poc
+          path: web/
+          retention-days: 7

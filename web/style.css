@@ -1,0 +1,18 @@
+[hidden]{display:none!important}
+:root {color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;background:#0b0e16;color:#f5f5f5}
+* {box-sizing:border-box} html,body {margin:0} body {min-height:100dvh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main {max-width:700px;margin:auto;padding:14px 16px} h1 {font-size:1.3rem;margin:4px 0 10px} small{font-size:.75rem;color:#aeb9c8;font-weight:400}
+.notice,.footer{font-size:.88rem;color:#a9b6ca;line-height:1.4} .notice{border-left:3px solid #f0ab45;padding-left:12px}
+#setup{background:#171d2a;border:1px solid #354056;padding:16px;border-radius:14px;display:grid;gap:13px}
+label {font-size:.88rem;display:grid;gap:7px} input[type=file]{width:100%;font-size:.75rem} output{display:block;color:#cbd7ed;white-space:pre-wrap;line-height:1.5}
+button,.upload {background:#2b3651;border:1px solid #4a5a7e;color:white;border-radius:12px;padding:12px 14px;touch-action:none;user-select:none;-webkit-user-select:none;font-weight:650}
+button:disabled{opacity:.45} #start{background:#3762c2;font-size:1rem}
+.screen {background:black;border:2px solid #41506f;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;aspect-ratio:4 / 3}
+canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}.stats{display:flex;justify-content:space-between;color:#aeb9c8;font-size:.75rem;margin:6px}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:17px auto;max-width:520px}.dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:3px}.dpad button{padding:0}
+.up{grid-column:2;grid-row:1}.left{grid-column:1;grid-row:2}.right{grid-column:3;grid-row:2}.down{grid-column:2;grid-row:3}
+.actions{display:grid;grid-template-columns:repeat(2,57px);grid-template-rows:repeat(2,57px);gap:8px}.actions button {border-radius:50%}
+.controls button:active,.controls button.pressed,.utility button:active{background:#d97b25}
+.utility{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}.utility button,.utility .upload{font-size:.75rem;padding:9px 11px}
+.upload input{display:none}.footer{font-size:.72rem;margin-top:22px;text-align:center}
+@media (orientation:landscape) and (max-height:550px){main{max-width:950px;display:grid;grid-template-columns:1fr 200px;gap:12px}h1,.notice,.footer{display:none}#game{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) 310px;grid-template-rows:auto auto;gap:4px}.screen{grid-column:1;grid-row:1/-1;aspect-ratio:auto;max-height:75dvh}.controls{grid-column:2;grid-row:1;margin:0}.dpad{grid-template-columns:repeat(3,36px);grid-template-rows:repeat(3,36px)}.actions{grid-template-columns:repeat(2,44px);grid-template-rows:repeat(2,44px)}.utility{grid-column:2;grid-row:2}.stats{display:none}}
