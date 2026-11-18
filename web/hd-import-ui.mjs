@@ -112,7 +112,18 @@ $('hd-cache').addEventListener('click',async()=>{
     persisted=true;
     status(explanation(verified)+'\n本機儲存成功，已重新讀取驗證。重新開啟相同網站會自動辨識；請保留原始 ZIP 作備份。');
     $('hd-progress').value=100;
-  }catch(e){$('hd-progress').hidden=true;status('本機儲存失敗：'+e.message+'。原始 ZIP 仍留在「檔案」App。');}
+  }catch(e){
+    $('hd-progress').hidden=true;
+    let diagnostic='';
+    try{
+      const estimate=await navigator.storage.estimate?.();
+      if(estimate?.quota!=null&&estimate?.usage!=null) {
+        const remaining=Math.max(0,estimate.quota-estimate.usage);
+        diagnostic='\\nSafari 回報剩餘空間約 '+(remaining/1048576).toFixed(0)+' MiB（僅供估算）。';
+      }
+    }catch{}
+    status('本機分段儲存失敗：'+e.message+diagnostic+'\\n原始 ZIP 仍在「檔案」App，可繼續正常遊玩目前的繁中 Enhanced 2x 版。');
+  }
   finally{busyMode(false);}
 });
 $('hd-remove').addEventListener('click',async()=>{
