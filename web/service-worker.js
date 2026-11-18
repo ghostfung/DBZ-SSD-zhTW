@@ -1,6 +1,6 @@
 // Cache app shell and compiled wasm; user-provided ROM/IPS is never cached or uploaded.
-const CACHE = 'dbz-ssd-web-shell-v4';
-const ASSETS = ['./','./index.html','./style.css','./app.mjs','./audio.mjs','./chinese-overlay.mjs','./rom-check.mjs','./zh-tw.tsv','./manifest.webmanifest'];
+const CACHE = 'dbz-ssd-web-shell-v5';
+const ASSETS = ['./','./index.html','./style.css','./app.mjs','./audio.mjs','./chinese-overlay.mjs','./hd-import-ui.mjs','./hd-pack.mjs','./hd-storage.mjs','./sha256-stream.mjs','./rom-check.mjs','./zh-tw.tsv','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
