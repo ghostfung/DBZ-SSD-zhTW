@@ -1,6 +1,6 @@
 // Decode the public art pack's bg/index.json without modifying the ROM or rendering.
 // The exact fields mirror ssd-hdpack/src/import.rs::import_bg. Matching a live PPU layer
-// by its key belongs to the Rust renderer and is NOT implemented by this index reader.
+// by its key is performed separately in the Rust WebGame bridge.
 const HEX_KEY=/^[0-9a-fA-F]{1,16}$/;
 const PATH=/^[^\\/][^\\]*\.(?:png|webp)$/i;
 const uint=(x,max)=>Number.isInteger(x)&&x>=0&&x<=max;

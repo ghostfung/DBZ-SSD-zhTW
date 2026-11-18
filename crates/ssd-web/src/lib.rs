@@ -6,6 +6,14 @@ use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{HdOptions, Look, Renderer as HdRenderer};
 use serde_json::json;
 use wasm_bindgen::prelude::*;
+mod live_bg;
+use live_bg::LiveBackgrounds;
+
+fn tracked_renderer() -> HdRenderer {
+    let mut renderer = HdRenderer::new();
+    renderer.set_layer_tracking(true);
+    renderer
+}
 
 /// Collect stereo floating-point samples in the precise order produced by the SNES core.
 #[derive(Default)]
@@ -33,6 +41,8 @@ pub struct WebGame {
     hd_width: u32,
     hd_height: u32,
     hd_warning: String,
+    live_backgrounds: LiveBackgrounds,
+    hd_art_pixels: u32,
 }
 
 #[wasm_bindgen]
@@ -48,8 +58,9 @@ impl WebGame {
             .map_err(|err| JsValue::from_str(&format!("遊戲初始化失敗：{err}")))?;
         machine.set_audio_frequency(48_000);
         Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None, previous_page: None,
-            hd_enabled: false, hd_renderer: HdRenderer::new(), hd_pixels: Vec::new(),
-            hd_width: 0, hd_height: 0, hd_warning: String::new() })
+            hd_enabled: false, hd_renderer: tracked_renderer(), hd_pixels: Vec::new(),
+            hd_width: 0, hd_height: 0, hd_warning: String::new(),
+            live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0 })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -74,16 +85,23 @@ impl WebGame {
                         self.hd_height = picture.height;
                         self.hd_pixels.clear();
                         self.hd_pixels.extend_from_slice(&picture.rgba);
+                        self.live_backgrounds.refresh(log);
+                        self.hd_art_pixels = self.live_backgrounds.composite(
+                            log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
+                            self.hd_width as usize, self.hd_height as usize,
+                        );
                         self.hd_warning.clear();
                     }
                     Err(error) => {
                         // Keep the game playable even when this frame cannot render in HD.
                         self.hd_pixels.clear();
+                        self.hd_art_pixels = 0;
                         self.hd_warning = error.to_string();
                     }
                 }
             } else {
                 self.hd_pixels.clear();
+                self.hd_art_pixels = 0;
                 self.hd_warning = "等待完整 PPU 畫面紀錄".to_owned();
             }
         }
@@ -140,13 +158,36 @@ impl WebGame {
         }).to_string()
     }
 
-    /// Use upstream Enhanced 2x renderer; HD art pack is not included.
+    /// Receive only the verified player's on-device background index (no media upload).
+    pub fn set_background_index(&mut self, json: &str) -> Result<u32, JsValue> {
+        let count = self.live_backgrounds.load_catalog(json)
+            .map_err(|e| JsValue::from_str(&e))?;
+        Ok(count as u32)
+    }
+
+    /// Matches use the live PPU registers and VRAM content hash.
+    pub fn background_matches(&self) -> String {
+        self.live_backgrounds.matches_json()
+    }
+
+    /// Accept a single locally decoded PNG/WebP of the matched battle background.
+    pub fn set_background_art(&mut self, index: usize, width: u32, height: u32,
+        rgba: &[u8]) -> Result<(), JsValue>
+    {
+        self.live_backgrounds.add_picture(index, width as usize, height as usize, rgba)
+            .map_err(|e| JsValue::from_str(&e))
+    }
+
+    pub fn hd_art_pixels(&self) -> u32 { self.hd_art_pixels }
+
+    /// Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
     /// Unsupported frames fall back to Classic without affecting emulator state.
     pub fn set_hd_mode(&mut self, enabled: bool) {
         if self.hd_enabled == enabled { return; }
         self.hd_enabled = enabled;
         self.machine.set_line_log(enabled);
-        self.hd_renderer = HdRenderer::new();
+        self.hd_renderer = tracked_renderer();
+        self.hd_art_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
         self.hd_height = 0;
@@ -187,7 +228,8 @@ impl WebGame {
         self.audio.samples.clear();
         self.previous_page = None;
         self.hd_pixels.clear();
-        self.hd_renderer = HdRenderer::new();
+        self.hd_renderer = tracked_renderer();
+        self.hd_art_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
     }

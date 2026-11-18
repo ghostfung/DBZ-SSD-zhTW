@@ -170,6 +170,9 @@ pub struct Renderer {
     /// chunk of the wide view sits at another place in the window, so the windows and Mode 7 are
     /// evaluated at `origin + x` (positions outside the screen's 256 pixels are in no window).
     pub(crate) origin: i32,
+    /// Optional pixel-layer ownership for the browser's local HD background compositor.
+    track_layers: bool,
+    layer_ids: Vec<u8>,
     /// What the Enhanced picture needs, recorded while `capturing` (see `enhanced`).
     capture: enhanced::Capture,
     capturing: bool,
@@ -212,6 +215,8 @@ impl Renderer {
             main: screen::ScreenBuffer::new(),
             sub: screen::ScreenBuffer::new(),
             origin: 0,
+            track_layers: false,
+            layer_ids: Vec::new(),
             capture: enhanced::Capture::default(),
             capturing: false,
             hidden_objects: 0,
@@ -245,6 +250,17 @@ impl Renderer {
     pub fn set_font(&mut self, font: Option<Arc<Font>>) {
         self.font = font;
     }
+
+    /// Record visible winning BG (1-4), OBJ (5), or backdrop (0) for each 1x pixel.
+    /// The browser bridge uses this to keep sprites above the substituted HD backgrounds.
+    pub fn set_layer_tracking(&mut self, enabled: bool) {
+        self.track_layers = enabled;
+        if !enabled { self.layer_ids.clear(); }
+    }
+
+    /// The visible pixel-layer owners of the most recently rendered frame.
+    #[must_use]
+    pub fn layer_ids(&self) -> &[u8] { &self.layer_ids }
 
     /// Makes the Enhanced pictures ([`Renderer::render_hd`]) draw the art of `pack`; `None` (the
     /// start) draws none. The 1x frame of [`Renderer::render`] never has art.
@@ -350,6 +366,10 @@ impl Renderer {
             pixels: vec![Color::BLACK; WIDTH * height],
             sources: if sourced { vec![Source::Backdrop; WIDTH * height] } else { Vec::new() },
         };
+        if self.track_layers {
+            self.layer_ids.resize(WIDTH * height, 0);
+            self.layer_ids.fill(0);
+        }
         self.cgram.copy_from_slice(&log.cgram_start);
         if let Some(binder) = binder.as_deref_mut() {
             binder.update(&log.vram);
@@ -456,6 +476,7 @@ impl Renderer {
         }
         if regs.forced_blanking {
             frame.pixels[span.clone()][from..].fill(Color::BLACK);
+            if self.track_layers { self.layer_ids[span.clone()][from..].fill(0); }
             if self.capturing {
                 self.capture_line(index, line, from, regs, memories.vram);
             }
@@ -463,6 +484,18 @@ impl Renderer {
         }
         self.render_bg_layers(memories.vram, regs, entry.scanline, from);
         self.render_scanline(regs, &mut frame.pixels[span.clone()], from);
+        if self.track_layers {
+            for (i, pixel) in self.main.rendered[from..].iter().enumerate() {
+                self.layer_ids[span.start + from + i] = match pixel.layer {
+                    screen::Layer::Backdrop => 0,
+                    screen::Layer::Bg1 => 1,
+                    screen::Layer::Bg2 => 2,
+                    screen::Layer::Bg3 => 3,
+                    screen::Layer::Bg4 => 4,
+                    screen::Layer::Obj => 5,
+                };
+            }
+        }
         if self.capturing {
             self.capture_line(index, line, from, regs, memories.vram);
         }

@@ -13,6 +13,7 @@ ssd-oracle = { path = "../ssd-oracle" }
 ssd-catalogue = { workspace = true }
 ssd-hd = { workspace = true }
 serde_json = { workspace = true }
+serde = { workspace = true }
 bytemuck = { workspace = true }
 wasm-bindgen = "0.2"
 

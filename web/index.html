@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第五階段：RC1 內嵌繁中、有聲、Enhanced 2x 正常運行；新增玩家自備 HD ZIP 的本機按需讀取。完整 HD 美術替換、選單和 16:9 仍在開發。</p>
+    <p class="notice">第六階段：RC1 內嵌繁中、有聲、Enhanced 2x；實驗性 PPU 即時匹配 HD 背景（僅局部場景）。完整 HD 美術、選單和 16:9 仍在開發。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -44,7 +44,7 @@
           </label>
           <p id="hd-bg-details" class="hd-import-note"></p>
           <button id="hd-bg-preview" type="button" disabled>預覽這個索引對應的 HD 背景</button>
-          <p class="hd-import-note">這裡顯示官方素材與匹配條件，尚未表示目前遊戲畫面已匹配到該背景。下一階段才會接上 Rust PPU 圖層辨識。</p>
+          <p class="hd-import-note">此處只顯示官方素材索引。遊戲啟動並開啟 HD 2x 後，會由 Rust PPU 核對 VRAM 與圖層設定；只有相符背景才會嘗試套用。</p>
         </div>
         <details class="hd-storage-experimental">
           <summary>實驗性本機永久快取（Safari 已發生寫入失敗）</summary>
@@ -57,7 +57,7 @@
         <progress id="hd-progress" max="100" value="0" hidden></progress>
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
         <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note"><strong>目前階段：</strong>HD ZIP 已可逐張按需讀取。真正遊戲場景美術替換仍在開發，現有 Enhanced 2x、繁中及聲音功能維持不變。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
+        <p class="hd-import-note"><strong>目前階段：</strong>可按需讀取 ZIP 並嘗試替換實際符合的戰鬥背景。角色、選單、色彩特效等仍未完成 HD 美術替換；維持 Enhanced 2x、繁中及聲音。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
       </div>
       <button id="start" disabled>啟動本機遊戲</button>
       <output id="status" aria-live="polite">等待載入。</output>
@@ -69,6 +69,7 @@
         <label class="check-option"><input id="inframe" type="checkbox" checked/> 中文顯示於遊戲內</label>
         <button id="hd-toggle" type="button">啟用 HD 2x</button>
         <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
+        <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
       </div>
       <div id="translation-card" class="translation-card" hidden>
         <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>

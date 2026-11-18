@@ -1,13 +1,18 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
 import {drawChineseInBox} from './chinese-overlay.mjs';
+import {LiveHdArt} from './hd-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
-let lastTranslationPoll = 0, translationKey = '';
+let lastTranslationPoll = 0, lastHdPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const sound = new SnesAudio();
+const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
+document.addEventListener('hd-catalog-ready', event => {
+  liveHd.setCatalog(event.detail.catalog, event.detail.assets);
+});
 
 function soundUi(message) {
   $('sound').textContent = sound.enabled && sound.state === 'running' ? '靜音' : '啟用聲音';
@@ -65,6 +70,7 @@ $('start').addEventListener('click', async () => {
     embedded = false;
     lastTranslationPoll = 0;
     game.set_hd_mode(hdEnabled);
+    liveHd.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
     $('setup').hidden = true;
@@ -107,6 +113,10 @@ function requestFrame(now) {
     if (now - lastTranslationPoll >= 80) {
       lastTranslationPoll = now;
       updateTranslation();
+    }
+    if (now - lastHdPoll >= 450) {
+      lastHdPoll = now;
+      liveHd.pulse();
     }
     $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
@@ -160,6 +170,7 @@ $('hd-toggle').addEventListener('click', () => {
   $('hd-toggle').textContent = hdEnabled ? '關閉 HD 2x' : '啟用 HD 2x';
   $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
   if (game) game.set_hd_mode(hdEnabled);
+  liveHd.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
@@ -180,7 +191,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{liveHd.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}

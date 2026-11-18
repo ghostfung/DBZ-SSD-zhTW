@@ -88,6 +88,9 @@ async function loadBackgroundIndex(source){
     const catalogue=await readBackgroundCatalog(source);
     if(library!==source)return; // User selected a different ZIP while reading.
     bgCatalog=catalogue;
+    document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
+      detail: {catalog: catalogue, assets: source}
+    }));
     const items=catalogue.items;
     const select=$('hd-bg-list');
     for(let i=0;i<Math.min(items.length,50);i++){
@@ -105,6 +108,9 @@ async function loadBackgroundIndex(source){
     if(library!==source)return;
     $('hd-bg-count').textContent='場景索引無法讀取：'+(error?.message||String(error));
     $('hd-bg-details').textContent='HD 單張圖片按需讀取仍可正常使用。';
+    document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
+      detail: {catalog: null, assets: null}
+    }));
   }
 }
 function prepareLocalReader(file,info){
@@ -151,6 +157,9 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 $('hd-zip').addEventListener('change',()=>{
   verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
   $('hd-asset-browser').hidden=true;
+  document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
+    detail: {catalog: null, assets: null}
+  }));
   sessionStatus('尚未啟用本次分頁的 HD 素材讀取。');
   $('hd-preview-btn').disabled=true;
   $('hd-progress').hidden=true;
@@ -225,6 +234,10 @@ $('hd-remove').addEventListener('click',async()=>{
     await clearSavedHdPack();
     persisted=false; verified=null; activeFile=null; sampleEntry=null;
     clearPreview();
+    library?.clearCache();library=null;bgCatalog=null;
+    document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
+      detail: {catalog: null, assets: null}
+    }));
     status('本機快取已清除。請重新選擇 ZIP；「檔案」App 的原始檔案不受影響。');
     $('hd-progress').hidden=true;
   }catch(e){status('無法清除本機快取：'+e.message);}
