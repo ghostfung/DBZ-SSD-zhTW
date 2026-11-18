@@ -35,6 +35,10 @@ export class WebGame {
      */
     load_translation(tsv: string): number;
     /**
+     * The original project's menu and name translations, indexed by the English words on screen.
+     */
+    menu_translations(): string;
+    /**
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      */
     constructor(rom: Uint8Array, ips: Uint8Array);
@@ -60,6 +64,14 @@ export class WebGame {
      * The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
      */
     tick(joypad_bits: number): void;
+    /**
+     * A direct lookup for an already-translated, token-free alert.
+     */
+    translation_for_key(key: string): string;
+    /**
+     * The glyph positions from the actual PPU frame (without any ROM modification).
+     */
+    visible_text_cells(): string;
     width(): number;
 }
 
@@ -80,6 +92,7 @@ export interface InitOutput {
     readonly webgame_height: (a: number) => number;
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
     readonly webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_menu_translations: (a: number) => [number, number];
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
@@ -87,6 +100,8 @@ export interface InitOutput {
     readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_tick: (a: number, b: number) => [number, number];
+    readonly webgame_translation_for_key: (a: number, b: number, c: number) => [number, number];
+    readonly webgame_visible_text_cells: (a: number) => [number, number];
     readonly webgame_width: (a: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;

@@ -142,6 +142,22 @@ export class WebGame {
         return ret[0] >>> 0;
     }
     /**
+     * The original project's menu and name translations, indexed by the English words on screen.
+     * @returns {string}
+     */
+    menu_translations() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_menu_translations(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      * @param {Uint8Array} rom
      * @param {Uint8Array} ips
@@ -223,6 +239,41 @@ export class WebGame {
         const ret = wasm.webgame_tick(this.__wbg_ptr, joypad_bits);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * A direct lookup for an already-translated, token-free alert.
+     * @param {string} key
+     * @returns {string}
+     */
+    translation_for_key(key) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ptr0 = passStringToWasm0(key, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.webgame_translation_for_key(this.__wbg_ptr, ptr0, len0);
+            deferred2_0 = ret[0];
+            deferred2_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
+     * The glyph positions from the actual PPU frame (without any ROM modification).
+     * @returns {string}
+     */
+    visible_text_cells() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_visible_text_cells(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
         }
     }
     /**

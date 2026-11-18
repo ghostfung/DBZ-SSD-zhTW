@@ -14,6 +14,7 @@ export const webgame_hd_warning: (a: number) => [number, number];
 export const webgame_height: (a: number) => number;
 export const webgame_load_state: (a: number, b: number, c: number) => [number, number];
 export const webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
+export const webgame_menu_translations: (a: number) => [number, number];
 export const webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
 export const webgame_save_state: (a: number) => [number, number];
 export const webgame_set_audio_rate: (a: number, b: number) => [number, number];
@@ -21,6 +22,8 @@ export const webgame_set_background_art: (a: number, b: number, c: number, d: nu
 export const webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
 export const webgame_set_hd_mode: (a: number, b: number) => void;
 export const webgame_tick: (a: number, b: number) => [number, number];
+export const webgame_translation_for_key: (a: number, b: number, c: number) => [number, number];
+export const webgame_visible_text_cells: (a: number) => [number, number];
 export const webgame_width: (a: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
