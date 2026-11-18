@@ -37,7 +37,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.99"
           targets: wasm32-unknown-unknown
+      - name: Verify active Rust toolchain and target
+        run: |
+          rustup show active-toolchain
+          rustup target list --installed
+          rustc --version
       - name: Test JavaScript and ROM checks
         run: node --test tests/rom-check.test.mjs
       - name: Check SNES core WASM compatibility
