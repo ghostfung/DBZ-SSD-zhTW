@@ -6,6 +6,16 @@ const $=id=>document.getElementById(id);
 let verified=null;
 let activeFile=null;
 let busy=false;
+let previewObjectUrl=null;
+let sampleEntry=null;
+
+function clearPreview(){
+  if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
+  previewObjectUrl=null;
+  $('hd-preview-panel').hidden=true;
+  $('hd-preview-image').removeAttribute('src');
+  $('hd-preview-name').textContent='';
+}
 
 function status(message){$('hd-status').textContent=message;}
 function busyMode(value){
@@ -13,6 +23,7 @@ function busyMode(value){
   $('hd-zip').disabled=value;
   $('hd-verify').disabled=value||!$('hd-zip').files?.[0];
   $('hd-cache').disabled=value||!verified||!opfsAvailable();
+  $('hd-preview-btn').disabled=value||!sampleEntry||!verified;
   $('hd-remove').disabled=value;
 }
 function progress(phase,done,total){
@@ -29,7 +40,8 @@ ${result.manifest?'有 hdpack.toml：'+result.manifest:'未見 hdpack.toml'}；$
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;
+  verified=null;activeFile=null;sampleEntry=null;clearPreview();
+  $('hd-preview-btn').disabled=true;
   $('hd-progress').hidden=true;
   const file=$('hd-zip').files?.[0];
   $('hd-verify').disabled=!file;
@@ -40,7 +52,7 @@ $('hd-verify').addEventListener('click',async()=>{
   const file=$('hd-zip').files?.[0];
   if(!file||busy)return;
   busyMode(true);
-  verified=null;activeFile=null;
+  verified=null;activeFile=null;sampleEntry=null;clearPreview();
   try {
     status('正在檢查 ZIP 結構...');
     // Import is deliberately strict: only the original signed GitHub asset digest is accepted.
@@ -59,6 +71,7 @@ $('hd-verify').addEventListener('click',async()=>{
       }
     }
     verified=checked;activeFile=file;
+    sampleEntry=checked.entries.find(x=>/\.(png|webp)$/i.test(x.name) && x.unpacked>=128 && x.unpacked<=2*1024*1024)??null;
     status(explanation(checked)+extra);
     $('hd-progress').value=100;
   } catch(e){
@@ -67,6 +80,26 @@ $('hd-verify').addEventListener('click',async()=>{
   } finally {busyMode(false);}
 });
 
+$('hd-preview-btn').addEventListener('click',async()=>{
+  if(!activeFile||!sampleEntry||!verified||busy)return;
+  busyMode(true);
+  try {
+    clearPreview();
+    const entry=sampleEntry;
+    const data=await extractZipEntry(activeFile,entry,{maxBytes:2*1024*1024});
+    const isPng=entry.name.toLowerCase().endsWith('.png');
+    const valid=isPng
+      ? data.length>24&&data[0]===137&&data[1]===80&&data[2]===78&&data[3]===71
+      : data.length>12&&String.fromCharCode(...data.subarray(0,4))==='RIFF'&&
+        String.fromCharCode(...data.subarray(8,12))==='WEBP';
+    if(!valid)throw Error('圖片檔案標頭不符合 PNG/WebP');
+    previewObjectUrl=URL.createObjectURL(new Blob([data],{type:isPng?'image/png':'image/webp'}));
+    $('hd-preview-image').src=previewObjectUrl;
+    $('hd-preview-name').textContent='已從手機本機 ZIP 解壓並校驗：'+entry.name+'（此為素材預覽，尚未套用到遊戲）';
+    $('hd-preview-panel').hidden=false;
+  }catch(e){status('HD 圖片測試失敗：'+e.message);}
+  finally{busyMode(false);}
+});
 $('hd-cache').addEventListener('click',async()=>{
   if(!verified||!activeFile||busy)return;
   busyMode(true);
