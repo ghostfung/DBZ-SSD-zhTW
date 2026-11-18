@@ -22,7 +22,7 @@
         <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
           <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
         </label>
-        <p class="hd-import-note">約 462 MiB。先驗證 ZIP 的 SHA-256，再選擇是否保存在 iPhone。檔案不會上傳網站。</p>
+        <p class="hd-import-note">約 462 MiB。先驗證 ZIP 的 SHA-256，再以 2 MiB 小檔分段儲存；避免 Safari 一次寫入 462 MiB。檔案不會上傳網站。</p>
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
           <button id="hd-cache" type="button" disabled>儲存至本機</button>
