@@ -13,7 +13,7 @@
 <body>
   <main>
     <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第一階段：本機 ROM 載入及 SNES Classic 測試。尚非 HD 繁體中文版。</p>
+    <p class="notice">第二階段：SNES Classic 有聲版＋RC1 繁體中文對話驗證。畫面仍是英文原版，HD 圖像與內嵌中文字尚未完成。</p>
     <section id="setup">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
@@ -23,6 +23,11 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
+      <div id="translation-card" class="translation-card" hidden>
+        <div class="translation-heading"><strong>繁體中文對話測試</strong><span id="translation-key"></span></div>
+        <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
+      </div>
+      <p id="translation-count" class="translation-count" aria-live="polite"></p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -43,7 +48,10 @@
       </div>
       <p id="sound-status" class="audio-status" aria-live="polite">啟動時嘗試開啟聲音；如無聲請按「啟用聲音」。</p>
     </section>
-    <p class="footer">只在本機讀取檔案，不會上傳 ROM、IPS 或遊戲進度。</p>
+    <p class="footer">ROM、IPS、存檔只在本機處理，不上傳伺服器。
+
+      繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
+      </p>
   </main>
   <script type="module" src="app.mjs"></script>
 </body>
