@@ -53,7 +53,7 @@ $('hd-verify').addEventListener('click',async()=>{
         try {
           const raw=await extractZipEntry(file,entry,{maxBytes:256*1024});
           const text=new TextDecoder().decode(raw);
-          const match=text.match(/^\\s*format\\s*=\\s*(\\d+)/m);
+          const match=text.match(/^\s*format\s*=\s*(\d+)/m);
           extra=match?`\n素材索引 format=${match[1]}`:'';
         }catch(e){extra=`\n索引文字檢查未完成：${e.message}`;}
       }
