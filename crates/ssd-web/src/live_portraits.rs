@@ -303,6 +303,54 @@ mod tests {
         assert_eq!(CELLS[1][12..16],[28,29,30,31]);
     }
     #[test]
+    fn exact_sixteen_tiles_composite_only_their_visible_pixels(){
+        let mut vram=vec![0_u16;32768];
+        let mut keys=[0_u64;16];
+        for (cell,key) in keys.iter_mut().enumerate(){
+            vram[cell*16]=(cell+1) as u16;
+            let mut raw=[0_u8;32];
+            raw[..2].copy_from_slice(&((cell+1) as u16).to_le_bytes());
+            *key=tile_key(&raw);
+        }
+        let log=FrameLog{
+            complete:true,height:32,h_hi_res:false,v_hi_res:false,
+            entries:Vec::new(),cgram_start:vec![0;256],
+            cgram_writes:Vec::new(),vram,vram_writes:Vec::new(),
+            oam_low:vec![0;512],oam_high:vec![0;32],oam_writes:Vec::new(),
+        };
+        let mut samples=vec![LiveTilePixel::default();256*32];
+        for y in 0..32_usize{
+            for x in 0..32_usize{
+                let cell=(y/8)*4+x/8;
+                samples[y*256+x]=LiveTilePixel{
+                    address:(cell*16) as u16,
+                    pos:(((y%8)<<3)|(x%8)) as u8,
+                    palette:0,layer:1,bpp:4,
+                };
+            }
+        }
+        let mut live=LivePortraits::default();
+        live.entries.push(Entry{id:"test".into(),art:"class1/test.png".into(),
+            keys,palette:vec![None;16]});
+        for (cell,key) in keys.iter().enumerate(){
+            live.lookup.entry(*key).or_default().push((0,cell));
+        }
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1);
+        assert_eq!((live.active[0].x,live.active[0].y),(0,0));
+        let mut rgba=vec![0_u8;512*64*4];
+        let mut image=vec![0_u8;64*64*4];
+        for pixel in image.chunks_exact_mut(4){
+            pixel.copy_from_slice(&[250,50,10,255]);
+        }
+        live.add_picture(0,64,64,&image).unwrap();
+        assert_eq!(live.composite(&log,&samples,&mut rgba,512,64),1024);
+        assert_eq!(&rgba[..4], &[250,50,10,255]);
+        let outside=(40*4);
+        assert_eq!(&rgba[outside..outside+4], &[0,0,0,0]);
+    }
+
+    #[test]
     fn palette_guards_against_wrong_character(){
         let entry=Entry{id:"goku".into(),art:"class1/goku.png".into(),keys:[0;16],
             palette:(0..16).map(|i|if i==1 {Some([255,0,0])}else{None}).collect()};
