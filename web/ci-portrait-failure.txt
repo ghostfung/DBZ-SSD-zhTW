@@ -1,3 +1,133 @@
-iPhone web build failed at source 2050539f710eb4dab80b3482e32ba94a9e5ae923
+iPhone web build failed at source 0f59fef1724f26140e0f2a1dea46edbeba518945
 Only compiler/test output (no ROM, HD assets or credentials).
 ===== dbz-node.log =====
+    "    // Do not edit Ming Liu's licensed source TSV. Small, independently\n" +
+    '    // reviewed page alignments are appended only in this iPhone prototype.\n' +
+    "    const alignResponse = await fetch('./zh-tw-page-alignments.tsv');\n" +
+    "    if (!alignResponse.ok) throw Error('繁體中文分頁對齊檔未部署（HTTP '+alignResponse.status+'）。');\n" +
+    '    const primary = await translationResponse.text();\n' +
+    '    const alignments = await alignResponse.text();\n' +
+    "    const translatedRows = game.load_translation(primary.trimEnd() + '\\n' + alignments.trim());\n" +
+    "    $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';\n" +
+    "    translationKey = '';\n" +
+    '    currentDialogue = null;\n' +
+    '    embedded = false;\n' +
+    "    translationDiag = []; lastDiagSignature = '';\n" +
+    '    storyFrameGate.reset();\n' +
+    '    hdFrameGate.reset();\n' +
+    '    game.set_hd_mode(hdEnabled);\n' +
+    "    game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);\n" +
+    "    game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);\n" +
+    '    liveHd.attach(game);\n' +
+    '    liveFighters.attach(game);\n' +
+    '    livePortraits.attach(game);\n' +
+    "    if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);\n" +
+    '    soundUi();\n' +
+    "    $('setup').hidden = true;\n" +
+    "    $('game').hidden = false;\n" +
+    '    held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;\n' +
+    '    raf = requestAnimationFrame(requestFrame);\n' +
+    '  } catch (error) {\n' +
+    "    $('start').disabled = false;\n" +
+    '    setStatus(String(error));\n' +
+    '  }\n' +
+    '});\n' +
+    '\n' +
+    "const ctx = $('screen').getContext('2d', {alpha:false});\n" +
+    'function drawFrame() {\n' +
+    '  const w=game.width(), h=game.height();\n' +
+    "  const canvas=$('screen');\n" +
+    '  if (w===0 || h===0) return;\n' +
+    '  if (canvas.width!==w || canvas.height!==h) {\n' +
+    '    canvas.width=w; canvas.height=h;\n' +
+    '    storyFrameGate.reset();\n' +
+    '    hdFrameGate.reset();\n' +
+    '  }\n' +
+    "  // A fast advance can expose the next page's native English glyphs before\n" +
+    '  // the Rust stateful Chinese renderer has filled that frame. Hold only the\n' +
+    '  // *last presented picture* for up to ten simulated frames, not the game:\n' +
+    '  // inputs, sound and emulated time continue without interruption.\n' +
+    '  const pixels=game.hd_art_pixels();\n' +
+    '  const enhanced=game.hd_active();\n' +
+    '  const storyHold=storyFrameGate.shouldDefer(\n' +
+    '    game.frame_count(), game.story_translation_pending(), enhanced\n' +
+    '  );\n' +
+    '  // A new PPU background can be matched a few frames before its local 2x\n' +
+    '  // picture finishes decoding. Keep the last HD picture temporarily instead\n' +
+    '  // of painting the raw SNES background. Never hold indefinitely.\n' +
+    '  let pendingArt=false;\n' +
+    '  if (enhanced && hdEnabled && liveHd.assets && pixels===0) {\n' +
+    '    try {\n' +
+    '      pendingArt=JSON.parse(game.background_matches()).some(m=>!m.ready);\n' +
+    '    } catch { /* Corrupt/absent catalogue: fail open to the original frame. */ }\n' +
+    '  }\n' +
+    '  const hdHold=hdFrameGate.shouldDefer(game.frame_count(),{\n' +
+    '    enabled:enhanced && hdEnabled && Boolean(liveHd.assets),\n' +
+    '    pixels,pending:pendingArt\n' +
+    '  });\n' +
+    '  if (!storyHold && !hdHold) {\n' +
+    '    const rgba=game.frame_rgba();\n' +
+    "    if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');\n" +
+    '    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);\n' +
+    '    storyFrameGate.didPresent();\n' +
+    '    hdFrameGate.didPresent(pixels);\n' +
+    '  }\n' +
+    '  const native = game.native_translation_active();\n' +
+    '  if (native) {\n' +
+    '    // The Rust renderer already paints Chinese in the final RGBA pixels.\n' +
+    '    // Do not run legacy Canvas guesses or draw overlapping English/Chinese.\n' +
+    '    embedded = true;\n' +
+    "    $('translation-card').hidden = true;\n" +
+    '  } else {\n' +
+    '    // Classic/unsupported mode has no PPU-driven Chinese text renderer yet.\n' +
+    '    // Keep a separate caption only; never erase menu/status pixels by colour.\n' +
+    '    embedded = false;\n' +
+    "    $('translation-card').hidden = !currentDialogue;\n" +
+    '  }\n' +
+    "  canvas.style.imageRendering=game.hd_active()?'auto':'pixelated';\n" +
+    '}\n' +
+    'function requestFrame(now) {\n' +
+    '  if (!running) return;\n' +
+    '  try {\n' +
+    '    if (!lastTick) lastTick = now;\n' +
+    "    // Render and simulation clocks are independent, so 120 Hz displays don't speed up gameplay.\n" +
+    '    accumulator += Math.min(now-lastTick, STEP*3);\n' +
+    '    let n = 0;\n' +
+    '    while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }\n' +
+    '    if (n) {\n' +
+    '      sound.enqueue(game.drain_audio());\n' +
+    '      // Synchronise the message with the PPU from the same emulation frame.\n' +
+    '      // The former 80 ms timer displayed bare English before Chinese.\n' +
+    '      updateTranslation();\n' +
+    '    }\n' +
+    '    // Accelerate background catalogue polling only while a new HD layer is\n' +
+    '    // missing; 90 ms avoids waiting for the old 450 ms idle interval.\n' +
+    '    const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;\n' +
+    '    // Animated OAM poses may last only a few frames, so poll their catalogue\n' +
+    '    // at 90 ms while a local class2 ZIP is attached.\n' +
+    '    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets)) ? 90 : 450;\n' +
+    '    if (now - lastHdPoll >= interval) {\n' +
+    '      lastHdPoll = now;\n' +
+    '      liveHd.pulse();\n' +
+    '      liveFighters.pulse();\n' +
+    '      livePortraits.pulse();\n' +
+    '    }\n' +
+    '    drawFrame();\n' +
+    '    if (now - lastDiagPoll >= 450) {\n' +
+    '      lastDiagPoll = now;\n' +
+    '      sampleTransl'... 5657 more characters
+  
+      at TestContext.<anonymous> (file:///home/runner/work/DBZ-SSD-zhTW/DBZ-SSD-zhTW/tests/hd-scene-transition.test.mjs:50:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: "import {inspectRom} from './rom-check.mjs';\nimport {SnesAudio} from './audio.mjs';\nimport {LiveHdArt} from './hd-live.mjs';\nimport {StoryFrameGate} from './story-frame-gate.mjs';\nimport {HdFrameGate} from './hd-frame-gate.mjs';\nimport {LiveHdFighters} from './hd-fighter-live.mjs';\nimport {LiveHdPortraits} from './hd-portrait-live.mjs';\nconst $ = id => document.getElementById(id);\nlet moduleReady = null, game = null, held = 0, running = false, raf = 0;\nlet lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;\nlet lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';\nlet currentDialogue = null, embedded = false, hdEnabled = false;\nconst STEP = 1000/60.0988;\nconst sound = new SnesAudio();\nconst liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });\nconst liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });\nconst livePortraits = new LiveHdPortraits(message => { $('hd-portrait-info').textContent = message; });\nconst storyFrameGate = new StoryFrameGate(10);\nconst hdFrameGate = new HdFrameGate();\n\nlet translationDiag = [], lastDiagSignature = '';\nfunction sampleTranslationDiagnostics() {\n  if (!game || !hdEnabled || typeof game.translation_diagnostics !== 'function') return;\n  try {\n    const item = JSON.parse(game.translation_diagnostics());\n    item.presentation_holding = storyFrameGate.isHolding;\n    item.presentation_held_frames = storyFrameGate.heldFramesTotal;\n    item.hd_presentation_holding = hdFrameGate.isHolding;\n    item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;\n    item.hd_fighter_pixels = game.hd_fighter_pixels?.() ?? 0;\n    item.hd_portrait_pixels = game.hd_portrait_pixels?.() ?? 0;\n    // Only log changes (page key, detected glyph positions or fallback), rather\n    // than holding 60 large JSON objects per second in mobile Safari memory.\n    const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.hd_presentation_holding,item.hd_presentation_held_frames,item.glyphs]);\n    if (signature !== lastDiagSignature) {\n      lastDiagSignature = signature;\n      translationDiag.push(item);\n      if (translationDiag.length > 120) translationDiag.shift();\n    }\n  } catch (error) {\n    console.warn('繁中狀態診斷無法讀取', error);\n  }\n}\n\ndocument.addEventListener('hd-catalog-ready', event => {\n  liveHd.setCatalog(event.detail.catalog, event.detail.assets);\n  hdFrameGate.reset();\n});\ndocument.addEventListener('hd-fighter-catalog-ready', event => {\n  liveFighters.setCatalog(event.detail.catalog, event.detail.assets);\n});\ndocument.addEventListener('hd-portrait-catalog-ready', event => {\n  livePortraits.setCatalog(event.detail.catalog, event.detail.assets);\n});\n\nfunction soundUi(message) {\n  $('sound').textContent = sound.enabled && sound.state === 'running' ? '靜音' : '啟用聲音';\n  $('sound-status').textContent = message || (sound.enabled && sound.state === 'running' ? `聲音已啟用 · ${sound.sampleRate} Hz` : '未啟用聲音');\n}\n\nfunction unlockAudio() {\n  // Calling resume() before the first await is required for Safari's user-gesture policy.\n  const promise = sound.enable();\n  promise.then(rate => {\n    if (game) game.set_audio_rate(rate);\n    soundUi(`聲音已啟用 · ${rate} Hz`);\n  }).catch(err => soundUi(`無法播放聲音：${err.message}`));\n  return promise;\n}\n\nconst setStatus = msg => { $('status').textContent = msg; };\nconst romInput = $('rom'), ipsInput = $('ips');\n\nromInput.addEventListener('change', async () => {\n  if (!romInput.files?.[0]) return;\n  const check = inspectRom(await romInput.files[0].arrayBuffer());\n  setStatus(`${check.label}\\n${check.crc ? `CRC32: ${check.crc}` : ''}`);\n  $('start').disabled = check.kind === 'invalid' || check.kind === 'unknown';\n});\n\nasync function ensureEngine() {\n  if (moduleReady) return moduleReady;\n  try {\n    const mod = await import('./pkg/ssd_web.js');\n    await mod.default();\n    moduleReady = mod;\n    return mod;\n  } catch (error) {\n    throw Error(`瀏覽器頁面已就緒，但尚未成功編譯 Rust WebAssembly 遊戲核心。\\n${error.message}`);\n  }\n}\n\n$('start').addEventListener('click', async () => {\n  // Begin unlocking Safari audio synchronously on this tap (before loading files/WASM).\n  unlockAudio();\n  try {\n    $('start').disabled = true;\n    const rom = new Uint8Array(await romInput.files[0].arrayBuffer());\n    const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);\n    const { WebGame } = await ensureEngine();\n    game = new WebGame(rom, ips);\n    // Translation remains on-device: the TSV loads from this site, never from the user's ROM.\n    const translationResponse = await fetch('./zh-tw.tsv');\n    if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');\n    // Do not edit Ming Liu's licensed source TSV. Small, independently\n    // reviewed page alignments are appended only in this iPhone prototype.\n    const alignResponse = await fetch('./zh-tw-page-alignments.tsv');\n    if (!alignResponse.ok) throw Error('繁體中文分頁對齊檔未部署（HTTP '+alignResponse.status+'）。');\n    const primary = await translationResponse.text();\n    const alignments = await alignResponse.text();\n    const translatedRows = game.load_translation(primary.trimEnd() + '\\n' + alignments.trim());\n    $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';\n    translationKey = '';\n    currentDialogue = null;\n    embedded = false;\n    translationDiag = []; lastDiagSignature = '';\n    storyFrameGate.reset();\n    hdFrameGate.reset();\n    game.set_hd_mode(hdEnabled);\n    game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);\n    game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);\n    liveHd.attach(game);\n    liveFighters.attach(game);\n    livePortraits.attach(game);\n    if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);\n    soundUi();\n    $('setup').hidden = true;\n    $('game').hidden = false;\n    held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;\n    raf = requestAnimationFrame(requestFrame);\n  } catch (error) {\n    $('start').disabled = false;\n    setStatus(String(error));\n  }\n});\n\nconst ctx = $('screen').getContext('2d', {alpha:false});\nfunction drawFrame() {\n  const w=game.width(), h=game.height();\n  const canvas=$('screen');\n  if (w===0 || h===0) return;\n  if (canvas.width!==w || canvas.height!==h) {\n    canvas.width=w; canvas.height=h;\n    storyFrameGate.reset();\n    hdFrameGate.reset();\n  }\n  // A fast advance can expose the next page's native English glyphs before\n  // the Rust stateful Chinese renderer has filled that frame. Hold only the\n  // *last presented picture* for up to ten simulated frames, not the game:\n  // inputs, sound and emulated time continue without interruption.\n  const pixels=game.hd_art_pixels();\n  const enhanced=game.hd_active();\n  const storyHold=storyFrameGate.shouldDefer(\n    game.frame_count(), game.story_translation_pending(), enhanced\n  );\n  // A new PPU background can be matched a few frames before its local 2x\n  // picture finishes decoding. Keep the last HD picture temporarily instead\n  // of painting the raw SNES background. Never hold indefinitely.\n  let pendingArt=false;\n  if (enhanced && hdEnabled && liveHd.assets && pixels===0) {\n    try {\n      pendingArt=JSON.parse(game.background_matches()).some(m=>!m.ready);\n    } catch { /* Corrupt/absent catalogue: fail open to the original frame. */ }\n  }\n  const hdHold=hdFrameGate.shouldDefer(game.frame_count(),{\n    enabled:enhanced && hdEnabled && Boolean(liveHd.assets),\n    pixels,pending:pendingArt\n  });\n  if (!storyHold && !hdHold) {\n    const rgba=game.frame_rgba();\n    if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');\n    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);\n    storyFrameGate.didPresent();\n    hdFrameGate.didPresent(pixels);\n  }\n  const native = game.native_translation_active();\n  if (native) {\n    // The Rust renderer already paints Chinese in the final RGBA pixels.\n    // Do not run legacy Canvas guesses or draw overlapping English/Chinese.\n    embedded = true;\n    $('translation-card').hidden = true;\n  } else {\n    // Classic/unsupported mode has no PPU-driven Chinese text renderer yet.\n    // Keep a separate caption only; never erase menu/status pixels by colour.\n    embedded = false;\n    $('translation-card').hidden = !currentDialogue;\n  }\n  canvas.style.imageRendering=game.hd_active()?'auto':'pixelated';\n}\nfunction requestFrame(now) {\n  if (!running) return;\n  try {\n    if (!lastTick) lastTick = now;\n    // Render and simulation clocks are independent, so 120 Hz displays don't speed up gameplay.\n    accumulator += Math.min(now-lastTick, STEP*3);\n    let n = 0;\n    while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }\n    if (n) {\n      sound.enqueue(game.drain_audio());\n      // Synchronise the message with the PPU from the same emulation frame.\n      // The former 80 ms timer displayed bare English before Chinese.\n      updateTranslation();\n    }\n    // Accelerate background catalogue polling only while a new HD layer is\n    // missing; 90 ms avoids waiting for the old 450 ms idle interval.\n    const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;\n    // Animated OAM poses may last only a few frames, so poll their catalogue\n    // at 90 ms while a local class2 ZIP is attached.\n    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets)) ? 90 : 450;\n    if (now - lastHdPoll >= interval) {\n      lastHdPoll = now;\n      liveHd.pulse();\n      liveFighters.pulse();\n      livePortraits.pulse();\n    }\n    drawFrame();\n    if (now - lastDiagPoll >= 450) {\n      lastDiagPoll = now;\n      sampleTransl"... 5657 more characters,
+    expected: /const interval = hdPending \|\| \(hdEnabled && liveFighters\.assets\) \? 90 : 450/,
+    operator: 'match',
+    diff: 'simple'
+  }
