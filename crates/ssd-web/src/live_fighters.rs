@@ -271,7 +271,7 @@ impl LiveFighters {
                     }
                     if owned || has_art {
                         claimed[p]=true;
-                        let changed=[0,1,2,3].any(|i|{
+                        let changed=[0_usize,1,2,3].into_iter().any(|i|{
                             let dst=((y*2+i/2)*width+x*2+i%2)*4;
                             before[i]!=[rgba[dst],rgba[dst+1],rgba[dst+2],rgba[dst+3]]
                         });
