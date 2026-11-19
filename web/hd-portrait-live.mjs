@@ -15,13 +15,15 @@ export class LiveHdPortraits {
     this.generation++;this.assets=assets||null;
     this.catalog=catalog?.items||[];
     this.loading.clear();this.failed.clear();this.decoded.clear();this.cacheBytes=0;
-    if(this.game)this.game.set_portrait_index(JSON.stringify(this.catalog));
+    if(this.game && typeof this.game.set_portrait_index==='function')
+      this.game.set_portrait_index(JSON.stringify(this.catalog));
     this.status(this.assets?'HD 頭像 class1 索引已載入，等待 PPU 圖塊驗證。':
       '尚未匯入 HD 頭像，使用原版肖像。');
   }
   attach(game){
     this.generation++;this.game=game;this.loading.clear();this.failed.clear();
-    if(this.assets)game.set_portrait_index(JSON.stringify(this.catalog));
+    if(this.assets && typeof game.set_portrait_index==='function')
+      game.set_portrait_index(JSON.stringify(this.catalog));
   }
   detach(){
     this.generation++;this.game=null;this.loading.clear();this.failed.clear();
@@ -40,6 +42,9 @@ export class LiveHdPortraits {
   pulse(){
     const game=this.game;
     if(!game||!this.assets||!game.hd_mode())return;
+    if(typeof game.portrait_matches!=='function'){
+      this.status('HD 頭像 WASM 尚未更新，保留原版頭像。');return;
+    }
     let matches,probe;
     try{
       matches=JSON.parse(game.portrait_matches());
