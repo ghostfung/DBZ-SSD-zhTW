@@ -33,6 +33,7 @@ export class WebGame {
     frame_rgba(): Uint8Array;
     hd_active(): boolean;
     hd_art_pixels(): number;
+    hd_background_pending(): boolean;
     hd_card_pixels(): number;
     /**
      * SNES pixels with confirmed visible fighter OAM pixels replaced.
@@ -173,6 +174,7 @@ export interface InitOutput {
     readonly webgame_frame_rgba: (a: number) => [number, number];
     readonly webgame_hd_active: (a: number) => number;
     readonly webgame_hd_art_pixels: (a: number) => number;
+    readonly webgame_hd_background_pending: (a: number) => number;
     readonly webgame_hd_card_pixels: (a: number) => number;
     readonly webgame_hd_fighter_pixels: (a: number) => number;
     readonly webgame_hd_map_pixels: (a: number) => number;

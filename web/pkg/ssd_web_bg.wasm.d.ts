@@ -13,6 +13,7 @@ export const webgame_frame_count: (a: number) => number;
 export const webgame_frame_rgba: (a: number) => [number, number];
 export const webgame_hd_active: (a: number) => number;
 export const webgame_hd_art_pixels: (a: number) => number;
+export const webgame_hd_background_pending: (a: number) => number;
 export const webgame_hd_card_pixels: (a: number) => number;
 export const webgame_hd_fighter_pixels: (a: number) => number;
 export const webgame_hd_map_pixels: (a: number) => number;

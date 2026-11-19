@@ -149,6 +149,13 @@ export class WebGame {
         return ret >>> 0;
     }
     /**
+     * @returns {boolean}
+     */
+    hd_background_pending() {
+        const ret = wasm.webgame_hd_background_pending(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * @returns {number}
      */
     hd_card_pixels() {
