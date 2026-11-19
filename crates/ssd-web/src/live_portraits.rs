@@ -149,6 +149,13 @@ impl LivePortraits {
 
     pub(crate) fn has_entries(&self)->bool { !self.entries.is_empty() }
 
+    /// Transitions get checked twice as often as a stable matched frame.
+    /// Still bounded: a missing class1 asset cannot force a full scan at 60 Hz.
+    pub(crate) fn needs_attention(&self)->bool {
+        self.active.is_empty() ||
+            self.active.iter().any(|m|!self.pictures.contains_key(&m.index))
+    }
+
     pub(crate) fn refresh(&mut self, log: &FrameLog, samples: &[LiveTilePixel]) {
         self.active.clear();
         self.probes=0;
