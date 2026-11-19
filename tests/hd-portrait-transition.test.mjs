@@ -44,7 +44,7 @@ test('class1 face requests run in the same emulator update, before displaying th
   const app=read('web/app.mjs');
   assert.ok(app.indexOf('livePortraits.pulse(true)')>app.indexOf('game.tick(held)'));
   assert.ok(app.indexOf('livePortraits.pulse(true)')<app.indexOf('drawFrame();'));
-  assert.match(app,/if \(!storyHold && !hdHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold\)/);
+  assert.match(app,/if \(!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold\)/);
   assert.match(app,/portraitFrameGate\.reset\(\)/);
   const ci=read('.github/workflows/web-poc.yml');
   assert.match(ci,/node --test tests\/\*\.test\.mjs/);

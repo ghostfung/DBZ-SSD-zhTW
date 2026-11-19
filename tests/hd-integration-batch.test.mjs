@@ -52,8 +52,8 @@ test('Mode7 exact key, 256 palette colours and fixed art tiles',()=>{
   assert.equal(parseMode7Index({...raw,planes:[{...raw.planes[0],key:'garbage'}]}).ignored,1);
   assert.equal(parseMode7Index({...raw,planes:[{...raw.planes[0],palette:['abc']}]}).ignored,1);
 });
-test('new categories cannot display a raw matched pose while art is still loading',()=>{
-  for(const phase of ['field', 'effect','map','card','mode7']){
+test('all HD categories hold a matched but unready asset only for a bounded number of frames',()=>{
+  for(const phase of ['fighter','portrait','field','effect','map','card','mode7']){
     const gate=new PortraitFrameGate({pendingFrames:6,transitionFrames:3});
     gate.didPresent();
     assert.equal(gate.shouldDefer(100,{enabled:true,pending:true,key:phase}),true);
@@ -73,12 +73,12 @@ test('strict data-path gating retains old Chinese overlay and fallback rules',()
   for(const p of ['specials','maps','cards','mode7']){
     assert.ok(bridge.indexOf('self.live_'+p+'.composite(')<end);
   }
-  for(const v of ['liveSpecials','liveMaps','liveCards','liveMode7']){
+  for(const v of ['liveFighters','livePortraits','liveSpecials','liveMaps','liveCards','liveMode7']){
     assert.match(ui,new RegExp(v+'\\.pulse\\(true\\)'));
   }
   for(const folder of ['hd-special','hd-map','hd-card','hd-mode7']){
     assert.match(importUI,new RegExp('read'+(folder==='hd-special'?'Special':folder==='hd-map'?'Map':folder==='hd-card'?'Card':'Mode7')+'Catalog'));
   }
-  assert.match(ui,/!storyHold && !hdHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold/);
+  assert.match(ui,/!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold/);
   assert.doesNotMatch(ui,/fetch\(.+class[123]\/|fetch\(.+mode7\//);
 });

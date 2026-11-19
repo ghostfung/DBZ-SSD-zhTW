@@ -27,6 +27,7 @@ const liveMode7 = new LiveHdMode7(message => { $('hd-mode7-info').textContent = 
 const storyFrameGate = new StoryFrameGate(10);
 const hdFrameGate = new HdFrameGate();
 const portraitFrameGate = new PortraitFrameGate();
+const fighterFrameGate = new PortraitFrameGate({pendingFrames:36,transitionFrames:5});
 const specialFrameGate = new PortraitFrameGate({pendingFrames:24,transitionFrames:4});
 const mapFrameGate = new PortraitFrameGate({pendingFrames:48,transitionFrames:6});
 const cardFrameGate = new PortraitFrameGate({pendingFrames:30,transitionFrames:5});
@@ -71,6 +72,7 @@ document.addEventListener('hd-catalog-ready', event => {
 });
 document.addEventListener('hd-fighter-catalog-ready', event => {
   liveFighters.setCatalog(event.detail.catalog, event.detail.assets);
+  fighterFrameGate.reset();
 });
 document.addEventListener('hd-mode7-catalog-ready',event=>{
   liveMode7.setCatalog(event.detail.catalog,event.detail.assets);
@@ -157,6 +159,7 @@ $('start').addEventListener('click', async () => {
     storyFrameGate.reset();
     hdFrameGate.reset();
     portraitFrameGate.reset();
+    fighterFrameGate.reset();
     specialFrameGate.reset();
     mapFrameGate.reset();
     cardFrameGate.reset();
@@ -233,6 +236,19 @@ function drawFrame() {
     try { portraitMatches=JSON.parse(game.portrait_matches()); }
     catch { portraitMatches=[]; }
   }
+  let fighterMatches=[];
+  if(enhanced && hdEnabled && liveFighters.assets && $('fighter-hd-toggle').checked &&
+    typeof game.fighter_matches==='function'){
+    try{fighterMatches=JSON.parse(game.fighter_matches());}catch{}
+  }
+  const fighterHold=fighterFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveFighters.assets) &&
+      $('fighter-hd-toggle').checked,
+    pending:fighterMatches.some(m=>!m.ready),
+    ready:fighterMatches.some(m=>m.ready),
+    pixels:game.hd_fighter_pixels?.()??0,
+    key:fighterMatches.map(m=>m.index+':'+m.key).sort().join('|')
+  });
   const portraitHold=portraitFrameGate.shouldDefer(game.frame_count(),{
     enabled:enhanced && hdEnabled && Boolean(livePortraits.assets) &&
       $('portrait-hd-toggle').checked,
@@ -293,13 +309,14 @@ function drawFrame() {
     pixels:game.hd_mode7_pixels?.()??0,
     key:mode7Matches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
   });
-  if (!storyHold && !hdHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
+  if (!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
     ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
     storyFrameGate.didPresent();
     hdFrameGate.didPresent(pixels);
     portraitFrameGate.didPresent();
+    fighterFrameGate.didPresent();
     specialFrameGate.didPresent();
     mapFrameGate.didPresent();
     cardFrameGate.didPresent();
@@ -334,6 +351,7 @@ function requestFrame(now) {
       updateTranslation();
       // A face may enter on a single battle/cutscene frame. Queue locally
       // matched art on that same emulated frame, not 90 ms later.
+      if(hdEnabled && liveFighters.assets)liveFighters.pulse(true);
       if(hdEnabled && livePortraits.assets)livePortraits.pulse(true);
       if(hdEnabled && liveSpecials.assets)liveSpecials.pulse(true);
       if(hdEnabled && liveMaps.assets)liveMaps.pulse(true);
@@ -408,6 +426,7 @@ $('inframe').addEventListener('change', () => {
 });
 $('fighter-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
+  fighterFrameGate.reset();
 });
 $('mode7-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_mode7_hd_enabled?.($('mode7-hd-toggle').checked);
@@ -437,6 +456,7 @@ $('hd-toggle').addEventListener('click', () => {
   storyFrameGate.reset();
   hdFrameGate.reset();
   portraitFrameGate.reset();
+  fighterFrameGate.reset();
   specialFrameGate.reset();
   mapFrameGate.reset();
   cardFrameGate.reset();
@@ -468,7 +488,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -500,7 +520,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });

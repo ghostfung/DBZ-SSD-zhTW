@@ -58,19 +58,19 @@ export class LiveHdFighters {
     this.decoded.set(name,picture);
     this.cacheBytes+=bytes;
   }
-  pulse() {
+  pulse(silent=false) {
     const game=this.game;
     if(!game || !this.assets || !this.catalog.length || !game.hd_mode()) return;
     let matches;
     try {matches=JSON.parse(game.fighter_matches());}
-    catch(error){this.status('人物 HD 姿勢匹配資料無法解析：'+error.message);return;}
+    catch(error){if(!silent)this.status('人物 HD 姿勢匹配資料無法解析：'+error.message);return;}
     this.pulses++;
     const ready=matches.filter(m=>m.ready).length;
     let probe={poses:0,keyHits:0,paletteRejected:0};
     try {
       if(game.fighter_probe)probe=JSON.parse(game.fighter_probe());
     }catch { /* no optional diagnostic in older runtimes */ }
-    this.status(matches.length
+    if(!silent)this.status(matches.length
       ? '戰鬥人物 HD：匹配 '+matches.length+' 組／已載入 '+ready+
         ' 組；畫面實際改變 '+(game.hd_fighter_pixels?.()??0)+
         ' 個像素。候選 '+probe.poses+' 組，鍵值吻合 '+probe.keyHits+' 組。'
