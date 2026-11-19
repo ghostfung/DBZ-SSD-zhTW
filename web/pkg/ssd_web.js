@@ -28,6 +28,36 @@ export class WebGame {
         }
     }
     /**
+     * @returns {string}
+     */
+    card_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_card_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    card_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_card_probe(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
      * a non-destructive Chinese subtitle until the HD overlay is ported.
@@ -119,11 +149,32 @@ export class WebGame {
         return ret >>> 0;
     }
     /**
+     * @returns {number}
+     */
+    hd_card_pixels() {
+        const ret = wasm.webgame_hd_card_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * SNES pixels with confirmed visible fighter OAM pixels replaced.
      * @returns {number}
      */
     hd_fighter_pixels() {
         const ret = wasm.webgame_hd_fighter_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    hd_map_pixels() {
+        const ret = wasm.webgame_hd_map_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    hd_mode7_pixels() {
+        const ret = wasm.webgame_hd_mode7_pixels(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -138,6 +189,13 @@ export class WebGame {
      */
     hd_portrait_pixels() {
         const ret = wasm.webgame_hd_portrait_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
+     * @returns {number}
+     */
+    hd_special_pixels() {
+        const ret = wasm.webgame_hd_special_pixels(this.__wbg_ptr);
         return ret >>> 0;
     }
     /**
@@ -188,6 +246,36 @@ export class WebGame {
         return ret[0] >>> 0;
     }
     /**
+     * @returns {string}
+     */
+    map_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_map_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    map_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_map_probe(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * The original project's menu and name translations, indexed by the English words on screen.
      * @returns {string}
      */
@@ -196,6 +284,36 @@ export class WebGame {
         let deferred1_1;
         try {
             const ret = wasm.webgame_menu_translations(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    mode7_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_mode7_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    mode7_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_mode7_probe(this.__wbg_ptr);
             deferred1_0 = ret[0];
             deferred1_1 = ret[1];
             return getStringFromWasm0(ret[0], ret[1]);
@@ -310,6 +428,42 @@ export class WebGame {
     }
     /**
      * @param {number} index
+     * @param {number} layer
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_card_art(index, layer, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_card_art(this.__wbg_ptr, index, layer, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {boolean} enabled
+     */
+    set_card_hd_enabled(enabled) {
+        wasm.webgame_set_card_hd_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * Source-keyed official card and UI tile art, layers blended through
+     * the ROM's PPU palettes (base and roles).
+     * @param {string} json
+     * @returns {number}
+     */
+    set_card_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_card_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} index
      * @param {number} width
      * @param {number} height
      * @param {Uint8Array} rgba
@@ -353,6 +507,76 @@ export class WebGame {
         wasm.webgame_set_hd_mode(this.__wbg_ptr, enabled);
     }
     /**
+     * @param {boolean} enabled
+     */
+    set_map_hd_enabled(enabled) {
+        wasm.webgame_set_map_hd_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * @param {string} json
+     * @returns {number}
+     */
+    set_map_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_map_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} index
+     * @param {number} x
+     * @param {number} y
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_map_tile(index, x, y, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_map_tile(this.__wbg_ptr, index, x, y, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {boolean} on
+     */
+    set_mode7_hd_enabled(on) {
+        wasm.webgame_set_mode7_hd_enabled(this.__wbg_ptr, on);
+    }
+    /**
+     * @param {string} json
+     * @returns {number}
+     */
+    set_mode7_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_mode7_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} index
+     * @param {number} x
+     * @param {number} y
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_mode7_tile(index, x, y, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_mode7_tile(this.__wbg_ptr, index, x, y, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * @param {number} index
      * @param {number} width
      * @param {number} height
@@ -386,6 +610,71 @@ export class WebGame {
             throw takeFromExternrefTable0(ret[1]);
         }
         return ret[0] >>> 0;
+    }
+    /**
+     * @param {number} index
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_special_art(index, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_special_art(this.__wbg_ptr, index, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {boolean} enabled
+     */
+    set_special_hd_enabled(enabled) {
+        wasm.webgame_set_special_hd_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * Only verified class3 sprites and class2 effects, never a named
+     * character or a guessed screen rectangle.
+     * @param {string} json
+     * @returns {number}
+     */
+    set_special_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_special_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
+    }
+    /**
+     * @returns {string}
+     */
+    special_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_special_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    special_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_special_probe(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * Whether a story dialogue frame contains untranslated PPU letters

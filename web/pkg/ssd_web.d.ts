@@ -8,6 +8,8 @@ export class WebGame {
      * Matches use the live PPU registers and VRAM content hash.
      */
     background_matches(): string;
+    card_matches(): string;
+    card_probe(): string;
     /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
@@ -31,12 +33,16 @@ export class WebGame {
     frame_rgba(): Uint8Array;
     hd_active(): boolean;
     hd_art_pixels(): number;
+    hd_card_pixels(): number;
     /**
      * SNES pixels with confirmed visible fighter OAM pixels replaced.
      */
     hd_fighter_pixels(): number;
+    hd_map_pixels(): number;
+    hd_mode7_pixels(): number;
     hd_mode(): boolean;
     hd_portrait_pixels(): number;
+    hd_special_pixels(): number;
     hd_warning(): string;
     height(): number;
     load_state(state: Uint8Array): void;
@@ -44,10 +50,14 @@ export class WebGame {
      * Load the original RC1 zh-TW translation TSV in memory without altering the ROM.
      */
     load_translation(tsv: string): number;
+    map_matches(): string;
+    map_probe(): string;
     /**
      * The original project's menu and name translations, indexed by the English words on screen.
      */
     menu_translations(): string;
+    mode7_matches(): string;
+    mode7_probe(): string;
     /**
      * True only when the original Rust translator painted the *current*
      * Enhanced picture; the browser must not add heuristic text overlays.
@@ -72,6 +82,13 @@ export class WebGame {
      * Receive only the verified player's on-device background index (no media upload).
      */
     set_background_index(json: string): number;
+    set_card_art(index: number, layer: number, width: number, height: number, rgba: Uint8Array): void;
+    set_card_hd_enabled(enabled: boolean): void;
+    /**
+     * Source-keyed official card and UI tile art, layers blended through
+     * the ROM's PPU palettes (base and roles).
+     */
+    set_card_index(json: string): number;
     set_fighter_art(index: number, width: number, height: number, rgba: Uint8Array): void;
     /**
      * A/B compare exact same battle frame with background HD left on.
@@ -87,6 +104,12 @@ export class WebGame {
      * Unsupported frames fall back to Classic without affecting emulator state.
      */
     set_hd_mode(enabled: boolean): void;
+    set_map_hd_enabled(enabled: boolean): void;
+    set_map_index(json: string): number;
+    set_map_tile(index: number, x: number, y: number, width: number, height: number, rgba: Uint8Array): void;
+    set_mode7_hd_enabled(on: boolean): void;
+    set_mode7_index(json: string): number;
+    set_mode7_tile(index: number, x: number, y: number, width: number, height: number, rgba: Uint8Array): void;
     set_portrait_art(index: number, width: number, height: number, rgba: Uint8Array): void;
     set_portrait_hd_enabled(enabled: boolean): void;
     /**
@@ -94,6 +117,15 @@ export class WebGame {
      * reconstructed from the user's own ROM, never from remote services.
      */
     set_portrait_index(json: string): number;
+    set_special_art(index: number, width: number, height: number, rgba: Uint8Array): void;
+    set_special_hd_enabled(enabled: boolean): void;
+    /**
+     * Only verified class3 sprites and class2 effects, never a named
+     * character or a guessed screen rectangle.
+     */
+    set_special_index(json: string): number;
+    special_matches(): string;
+    special_probe(): string;
     /**
      * Whether a story dialogue frame contains untranslated PPU letters
      * that should be deferred briefly before Safari presents it.
@@ -125,6 +157,8 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_webgame_free: (a: number, b: number) => void;
     readonly webgame_background_matches: (a: number) => [number, number];
+    readonly webgame_card_matches: (a: number) => [number, number];
+    readonly webgame_card_probe: (a: number) => [number, number];
     readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_fighter_matches: (a: number) => [number, number];
@@ -133,14 +167,22 @@ export interface InitOutput {
     readonly webgame_frame_rgba: (a: number) => [number, number];
     readonly webgame_hd_active: (a: number) => number;
     readonly webgame_hd_art_pixels: (a: number) => number;
+    readonly webgame_hd_card_pixels: (a: number) => number;
     readonly webgame_hd_fighter_pixels: (a: number) => number;
+    readonly webgame_hd_map_pixels: (a: number) => number;
     readonly webgame_hd_mode: (a: number) => number;
+    readonly webgame_hd_mode7_pixels: (a: number) => number;
     readonly webgame_hd_portrait_pixels: (a: number) => number;
+    readonly webgame_hd_special_pixels: (a: number) => number;
     readonly webgame_hd_warning: (a: number) => [number, number];
     readonly webgame_height: (a: number) => number;
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
     readonly webgame_load_translation: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_map_matches: (a: number) => [number, number];
+    readonly webgame_map_probe: (a: number) => [number, number];
     readonly webgame_menu_translations: (a: number) => [number, number];
+    readonly webgame_mode7_matches: (a: number) => [number, number];
+    readonly webgame_mode7_probe: (a: number) => [number, number];
     readonly webgame_native_translation_active: (a: number) => number;
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly webgame_portrait_matches: (a: number) => [number, number];
@@ -149,13 +191,27 @@ export interface InitOutput {
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
     readonly webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_card_art: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly webgame_set_card_hd_enabled: (a: number, b: number) => void;
+    readonly webgame_set_card_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
+    readonly webgame_set_map_hd_enabled: (a: number, b: number) => void;
+    readonly webgame_set_map_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_map_tile: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
+    readonly webgame_set_mode7_hd_enabled: (a: number, b: number) => void;
+    readonly webgame_set_mode7_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_mode7_tile: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number];
     readonly webgame_set_portrait_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_portrait_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_portrait_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_special_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly webgame_set_special_hd_enabled: (a: number, b: number) => void;
+    readonly webgame_set_special_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_special_matches: (a: number) => [number, number];
+    readonly webgame_special_probe: (a: number) => [number, number];
     readonly webgame_story_translation_pending: (a: number) => number;
     readonly webgame_tick: (a: number, b: number) => [number, number];
     readonly webgame_translation_diagnostics: (a: number) => [number, number];
