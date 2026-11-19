@@ -4,6 +4,7 @@ import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
 import {HdFrameGate} from './hd-frame-gate.mjs';
 import {LiveHdFighters} from './hd-fighter-live.mjs';
+import {LiveHdPortraits} from './hd-portrait-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -13,6 +14,7 @@ const STEP = 1000/60.0988;
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
 const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });
+const livePortraits = new LiveHdPortraits(message => { $('hd-portrait-info').textContent = message; });
 const storyFrameGate = new StoryFrameGate(10);
 const hdFrameGate = new HdFrameGate();
 
@@ -26,6 +28,7 @@ function sampleTranslationDiagnostics() {
     item.hd_presentation_holding = hdFrameGate.isHolding;
     item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;
     item.hd_fighter_pixels = game.hd_fighter_pixels?.() ?? 0;
+    item.hd_portrait_pixels = game.hd_portrait_pixels?.() ?? 0;
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
     const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.hd_presentation_holding,item.hd_presentation_held_frames,item.glyphs]);
@@ -45,6 +48,9 @@ document.addEventListener('hd-catalog-ready', event => {
 });
 document.addEventListener('hd-fighter-catalog-ready', event => {
   liveFighters.setCatalog(event.detail.catalog, event.detail.assets);
+});
+document.addEventListener('hd-portrait-catalog-ready', event => {
+  livePortraits.setCatalog(event.detail.catalog, event.detail.assets);
 });
 
 function soundUi(message) {
@@ -112,8 +118,10 @@ $('start').addEventListener('click', async () => {
     hdFrameGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
+    game.set_portrait_hd_enabled($('portrait-hd-toggle').checked);
     liveHd.attach(game);
     liveFighters.attach(game);
+    livePortraits.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
     $('setup').hidden = true;
@@ -198,11 +206,12 @@ function requestFrame(now) {
     const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
     // Animated OAM poses may last only a few frames, so poll their catalogue
     // at 90 ms while a local class2 ZIP is attached.
-    const interval = hdPending || (hdEnabled && liveFighters.assets) ? 90 : 450;
+    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets)) ? 90 : 450;
     if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
       liveFighters.pulse();
+      livePortraits.pulse();
     }
     drawFrame();
     if (now - lastDiagPoll >= 450) {
@@ -257,6 +266,9 @@ $('inframe').addEventListener('change', () => {
 $('fighter-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
 });
+$('portrait-hd-toggle').addEventListener('change',()=>{
+  if(game)game.set_portrait_hd_enabled($('portrait-hd-toggle').checked);
+});
 $('hd-toggle').addEventListener('click', () => {
   hdEnabled = !hdEnabled;
   $('hd-toggle').textContent = hdEnabled ? '關閉 HD 2x' : '啟用 HD 2x';
@@ -266,6 +278,7 @@ $('hd-toggle').addEventListener('click', () => {
   hdFrameGate.reset();
   liveHd.pulse();
   liveFighters.pulse();
+  livePortraits.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
@@ -286,7 +299,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();liveFighters.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
