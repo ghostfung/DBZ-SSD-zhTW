@@ -20,6 +20,10 @@ export class WebGame {
      */
     drain_audio(): Float32Array;
     fighter_matches(): string;
+    /**
+     * Read-only counts explaining why a given stance has no local HD art.
+     */
+    fighter_probe(): string;
     frame_count(): number;
     /**
      * RGBA8 pixels, copied across the wasm-to-JS boundary.
@@ -67,6 +71,10 @@ export class WebGame {
     set_background_index(json: string): number;
     set_fighter_art(index: number, width: number, height: number, rgba: Uint8Array): void;
     /**
+     * A/B compare exact same battle frame with background HD left on.
+     */
+    set_fighter_hd_enabled(enabled: boolean): void;
+    /**
      * Only the player's verified local class2 index; never HD bytes or ROM
      * data sent over a network. Exact fighter palette and hash are required.
      */
@@ -110,6 +118,7 @@ export interface InitOutput {
     readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_fighter_matches: (a: number) => [number, number];
+    readonly webgame_fighter_probe: (a: number) => [number, number];
     readonly webgame_frame_count: (a: number) => number;
     readonly webgame_frame_rgba: (a: number) => [number, number];
     readonly webgame_hd_active: (a: number) => number;
@@ -128,6 +137,7 @@ export interface InitOutput {
     readonly webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_background_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_story_translation_pending: (a: number) => number;

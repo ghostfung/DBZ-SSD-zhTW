@@ -72,6 +72,22 @@ export class WebGame {
         }
     }
     /**
+     * Read-only counts explaining why a given stance has no local HD art.
+     * @returns {string}
+     */
+    fighter_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_fighter_probe(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @returns {number}
      */
     frame_count() {
@@ -268,6 +284,13 @@ export class WebGame {
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
+    }
+    /**
+     * A/B compare exact same battle frame with background HD left on.
+     * @param {boolean} enabled
+     */
+    set_fighter_hd_enabled(enabled) {
+        wasm.webgame_set_fighter_hd_enabled(this.__wbg_ptr, enabled);
     }
     /**
      * Only the player's verified local class2 index; never HD bytes or ROM
