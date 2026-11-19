@@ -53,6 +53,14 @@ fn lines(log:&FrameLog)->Option<Vec<LineRegs>> {
 }
 impl LiveMode7 {
     pub(crate) fn has_entries(&self)->bool{!self.index.plane.is_empty()}
+    pub(crate) fn needs_attention(&self,log:&FrameLog)->bool{
+        if self.active.is_none() {return true;}
+        if !log.complete || log.vram.len()<0x4000 {return true;}
+        if self.matching_key!=mode7art::plane_key(&log.vram) {return true;}
+        self.active.as_ref().is_some_and(|a|
+            a.wanted.iter().any(|&(x,y)|
+                !self.tiles.contains_key(&(a.index,x,y))))
+    }
     pub(crate) fn load_catalog(&mut self,json:&str)->Result<usize,String>{
         let list:Vec<Input>=serde_json::from_str(json)
             .map_err(|e|format!("Mode7 HD 索引格式錯誤：{e}"))?;

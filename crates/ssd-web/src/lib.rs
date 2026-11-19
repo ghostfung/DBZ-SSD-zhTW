@@ -229,7 +229,11 @@ impl WebGame {
                         // original palette, and sampled with the SNES HDMA
                         // matrix per scanline and subpixel. No fixed scale.
                         if self.live_mode7.has_entries() {
-                            if self.machine.frame_count()%4==0 {
+                            // Refresh on the very first frame of a new
+                            // VRAM plane; otherwise previously matched art
+                            // could appear 1–3 raw frames before detection.
+                            if self.live_mode7.needs_attention(log) ||
+                                self.machine.frame_count()%4==0 {
                                 self.live_mode7.refresh(log);
                             }
                             if self.hd_mode7_enabled {
@@ -267,6 +271,18 @@ impl WebGame {
                                     log,&below_layers,&mut below.rgba,
                                     self.hd_width as usize,self.hd_height as usize,
                                 );
+                                // The underpass must also reproduce the HD
+                                // ground and Mode 7 below a transparent pose.
+                                if self.hd_map_enabled {
+                                    self.live_maps.composite(log,&below_layers,
+                                        &mut below.rgba,self.hd_width as usize,
+                                        self.hd_height as usize);
+                                }
+                                if self.hd_mode7_enabled {
+                                    self.live_mode7.composite(log,&below_layers,
+                                        &mut below.rgba,self.hd_width as usize,
+                                        self.hd_height as usize);
+                                }
                                 if self.hd_fighter_enabled {
                                     self.hd_fighter_pixels=self.live_fighters.composite(
                                         &original_oam,&original_layers,&below.rgba,
@@ -287,7 +303,7 @@ impl WebGame {
                         // tile hashes against the player's ROM streams. Only
                         // verified local HD artwork may replace those pixels.
                         if self.live_portraits.has_entries() {
-                            let cadence=if self.live_portraits.needs_attention() {2} else {4};
+                            let cadence=if self.live_portraits.needs_attention() {1} else {2};
                             if self.machine.frame_count() % cadence == 0 {
                                 self.live_portraits.refresh(
                                     log, self.hd_renderer.portrait_pixels());
@@ -302,9 +318,9 @@ impl WebGame {
                         // Card/UI 2bpp art uses a unique ROM tile hash and
                         // the PPU's winning BG tile, not a guessed card box.
                         if self.live_cards.has_entries() {
-                            if self.machine.frame_count()%3==0 {
-                                self.live_cards.refresh(log,self.hd_renderer.portrait_pixels());
-                            }
+                            // Small 2bpp tile table: checking every frame
+                            // prevents early raw-card flashes on fast menus.
+                            self.live_cards.refresh(log,self.hd_renderer.portrait_pixels());
                             if self.hd_card_enabled {
                                 self.hd_card_pixels=self.live_cards.composite(
                                     log,self.hd_renderer.portrait_pixels(),&mut self.hd_pixels,

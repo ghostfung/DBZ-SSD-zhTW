@@ -155,8 +155,9 @@ impl LiveCards{
             let roles=e.roles.as_ref().map(|art|serde_json::json!({
                 "index":m.index,"layer":1,"art":art,
                 "ready":self.art.contains_key(&(m.index,1))}));
+            let layers=[base,roles].into_iter().flatten().collect::<Vec<_>>();
             serde_json::json!({"index":m.index,"code":e.code,
-                "title":e.title,"x":m.x,"y":m.y,"layers":[base,roles].into_iter().flatten().collect::<Vec<_>>()})
+                "title":e.title,"x":m.x,"y":m.y,"layers":layers})
         }).collect()).to_string()
     }
     pub(crate) fn probe_json(&self)->String{

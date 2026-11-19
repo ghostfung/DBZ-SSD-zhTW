@@ -100,8 +100,8 @@ impl LiveMaps {
         if !log.cgram_writes.is_empty(){self.reason="場景調色盤正在變化";return;}
         let Some(state)=state else {self.reason="沒有 WRAM 地圖狀態";return;};
         let state=state.in_room(Rom(rom));
-        if !(state.is_field() || state.game_mode&0x7f==1 &&
-            state.map_id>=48) {
+        if !(ssd_hd::world::is_field_mode(state.game_mode) ||
+            state.game_mode&0x7f==1 && state.map_id>=48) {
             self.reason="目前不是可驗證的探索地圖";return;
         }
         let Some(from)=origin(log,state.camera) else {
@@ -110,6 +110,12 @@ impl LiveMaps {
         let (grid,metatiles)=state.map.layout();
         let Some(index)=self.index.find(state.map.blocks,grid,metatiles,state.map_id)
             else {self.reason="沒有與 ROM 地圖指標吻合的 HD 佈局";return;};
+        // Reused ROM layouts can have distinct palette art. Without an
+        // explicit map ID, never assume another map's HD colours are safe.
+        let entry=&self.index.layer[index];
+        if !entry.maps.is_empty() && !entry.maps.contains(&state.map_id) {
+            self.reason="同一地圖佈局被其他地圖使用，拒絕錯誤配色";return;
+        }
         let check=check_tiles(Rom(rom),&state,log);
         self.checked_tiles=check.tiles;
         self.mismatched_tiles=check.differing;

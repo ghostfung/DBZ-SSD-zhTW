@@ -118,11 +118,18 @@ impl LiveSpecials {
             self.probes+=1;
             let Some(indices)=self.lookup.get(&(pose.kind,pose.key)) else { continue };
             self.key_hits+=1;
-            let selected=indices.iter().copied().find(|&index| {
+            let mut candidates=indices.iter().copied().filter(|&index| {
                 let entry=&self.entries[index];
                 entry.width == pose.width && entry.height == pose.height
                     && palette_matches(entry,&pose)
             });
+            let selected=candidates.next();
+            // Different assets with indistinguishable OAM source keys cannot
+            // be resolved from a character name or a screen position.
+            if candidates.next().is_some() {
+                self.palette_rejections+=1;
+                continue;
+            }
             if let Some(index)=selected {
                 used_oam|=pose.oam_bits;
                 self.active.push(Matching {index,pose});
