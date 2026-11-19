@@ -55,17 +55,49 @@ jobs:
           rustup target list --installed
           rustc --version
       - name: Test JavaScript and ROM checks
-        run: node --test tests/*.test.mjs
+        run: |
+          set -o pipefail
+          node --test tests/*.test.mjs 2>&1 | tee "$RUNNER_TEMP/dbz-node.log"
       - name: Verify browser JavaScript syntax
         run: node --check web/app.mjs && node --check web/story-frame-gate.mjs && node --check web/hd-frame-gate.mjs && node --check web/chinese-overlay.mjs && node --check web/hd-pack.mjs && node --check web/hd-import-ui.mjs && node --check web/sha256-stream.mjs && node --check web/hd-storage.mjs && node --check web/hd-local-assets.mjs && node --check web/hd-background-index.mjs && node --check web/hd-live.mjs && node --check web/hd-portrait-index.mjs && node --check web/hd-portrait-live.mjs && node --check web/screen-text.mjs
       - name: Test browser bridge's native OAM pose and alpha-mask rules
-        run: cargo test -p ssd-web --lib
+        run: |
+          set -o pipefail
+          cargo test -p ssd-web --lib 2>&1 | tee "$RUNNER_TEMP/dbz-rust.log"
       - name: Check web bridge, including SNES core (WASM)
-        run: cargo check -p ssd-web --target wasm32-unknown-unknown
+        run: |
+          set -o pipefail
+          cargo check -p ssd-web --target wasm32-unknown-unknown 2>&1 | tee "$RUNNER_TEMP/dbz-wasm-check.log"
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Build browser wasm
-        run: wasm-pack build crates/ssd-web --target web --out-dir ../../web/pkg --release
+        run: |
+          set -o pipefail
+          wasm-pack build crates/ssd-web --target web --out-dir ../../web/pkg --release 2>&1 | tee "$RUNNER_TEMP/dbz-wasm-pack.log"
+      - name: Publish bounded diagnostics if browser build fails
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/iphone-web-poc'
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin iphone-web-poc
+          if [ "$GITHUB_SHA" != "$(git rev-parse FETCH_HEAD)" ]; then
+            echo "Source moved; skip stale diagnostic commit."
+            exit 0
+          fi
+          {
+            echo "iPhone web build failed at source $GITHUB_SHA"
+            echo "Only compiler/test output (no ROM, HD assets or credentials)."
+            for log in dbz-node.log dbz-rust.log dbz-wasm-check.log dbz-wasm-pack.log; do
+              if test -f "$RUNNER_TEMP/$log"; then
+                echo "===== $log ====="
+                grep -E -A 5 '^(error|Error:|FAIL|not ok|[[:space:]]+-->)' "$RUNNER_TEMP/$log" | tail -n 90 || true
+              fi
+            done
+          } > web/ci-portrait-failure.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f web/ci-portrait-failure.txt
+          git commit -m "ci(iphone): record failed portrait build [skip ci]"
+          git push origin HEAD:iphone-web-poc
       - name: Publish compiled browser package to isolated test branch
         if: github.event_name == 'push' && github.ref == 'refs/heads/iphone-web-poc'
         run: |
