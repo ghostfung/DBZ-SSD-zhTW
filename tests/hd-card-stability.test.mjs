@@ -27,7 +27,7 @@ test('Safari requests HD images on the same frame only when source art is missin
       name+' should skip expensive JSON when ready');
   }
   assert.match(app,/const pendingMask=game\.hd_pending_mask\?\.\(\)/);
-  assert.match(app,/const interval = hdPending \? 90 : hdEnabled \? 350 : 450/);
+  assert.match(app,/const interval = hdPending \? 180 : hdEnabled \? 750 : 900/);
 });
 
 test('Safari reuses a full-frame pixel buffer rather than allocating each frame',()=>{

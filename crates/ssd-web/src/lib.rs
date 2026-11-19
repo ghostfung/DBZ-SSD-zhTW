@@ -162,7 +162,7 @@ impl WebGame {
         // NMI prepares the PPU frame from the field state at its start.
         // Do not read the next map/camera after run_frame(), which can already
         // be on another scene during transitions.
-        let field_state=if self.hd_enabled && self.live_maps.has_entries() {
+        let field_state=if self.hd_enabled && self.hd_map_enabled && self.live_maps.has_entries() {
             ssd_hd::world::FieldState::from_wram(self.machine.wram())
         } else {None};
         let mut started = None;
@@ -219,8 +219,8 @@ impl WebGame {
                         );
                         // Field map art is bound by the ROM map layout and
                         // independently checked against live PPU BG2 tilemap.
-                        self.live_maps.refresh(&self.rom,field_state,log);
-                        if self.hd_map_enabled {
+                        if self.hd_map_enabled && self.live_maps.has_entries() {
+                            self.live_maps.refresh(&self.rom,field_state,log);
                             self.hd_map_pixels=self.live_maps.composite(
                                 log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
                                 self.hd_width as usize,self.hd_height as usize);
@@ -228,19 +228,19 @@ impl WebGame {
                         // Mode7 art is keyed to an exact VRAM plane and
                         // original palette, and sampled with the SNES HDMA
                         // matrix per scanline and subpixel. No fixed scale.
-                        if self.live_mode7.has_entries() {
-                            // Refresh on the very first frame of a new
-                            // VRAM plane; otherwise previously matched art
-                            // could appear 1–3 raw frames before detection.
+                        if self.hd_mode7_enabled && self.live_mode7.has_entries() {
+                            // Always verify VRAM, palette and HDMA on this
+                            // exact frame. Reuse the prior validated plane
+                            // on camera-only movement; revalidate every 4
+                            // frames to discover newly visible art tiles.
                             if self.live_mode7.needs_attention(log) ||
-                                self.machine.frame_count()%4==0 {
+                                (self.live_mode7.is_active() &&
+                                 self.machine.frame_count()%4==0) {
                                 self.live_mode7.refresh(log);
                             }
-                            if self.hd_mode7_enabled {
-                                self.hd_mode7_pixels=self.live_mode7.composite(
-                                    log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
-                                    self.hd_width as usize,self.hd_height as usize);
-                            }
+                            self.hd_mode7_pixels=self.live_mode7.composite(
+                                log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
+                                self.hd_width as usize,self.hd_height as usize);
                         }
                         // Reuse the desktop renderer's two-pass strategy:
                         // hide only validated fighter OAM sprites, reconstruct
@@ -317,15 +317,13 @@ impl WebGame {
                         }
                         // Card/UI 2bpp art uses a unique ROM tile hash and
                         // the PPU's winning BG tile, not a guessed card box.
-                        if self.live_cards.has_entries() {
-                            // Small 2bpp tile table: checking every frame
-                            // prevents early raw-card flashes on fast menus.
+                        if self.hd_card_enabled && self.live_cards.has_entries() {
+                            // Keep the already tested deterministic, full
+                            // visible tile selection; no 140 tile cutoff.
                             self.live_cards.refresh(log,self.hd_renderer.portrait_pixels());
-                            if self.hd_card_enabled {
-                                self.hd_card_pixels=self.live_cards.composite(
-                                    log,self.hd_renderer.portrait_pixels(),&mut self.hd_pixels,
-                                    self.hd_width as usize,self.hd_height as usize);
-                            }
+                            self.hd_card_pixels=self.live_cards.composite(
+                                log,self.hd_renderer.portrait_pixels(),&mut self.hd_pixels,
+                                self.hd_width as usize,self.hd_height as usize);
                         }
                         // Compare the page identified from WRAM with the actual
                         // PPU glyphs. When it does NOT match, a recent earlier
@@ -718,7 +716,11 @@ impl WebGame {
         (u32::from(self.hd_special_enabled && self.live_specials.has_pending_art()) << 2) |
         (u32::from(self.hd_map_enabled && self.live_maps.has_pending_art()) << 3) |
         (u32::from(self.hd_card_enabled && self.live_cards.has_pending_art()) << 4) |
-        (u32::from(self.hd_mode7_enabled && self.live_mode7.has_pending_art()) << 5)
+        (u32::from(self.hd_mode7_enabled && self.live_mode7.has_pending_art()) << 5) |
+        (u32::from(self.live_backgrounds.has_pending_art()) << 6)
+    }
+    pub fn hd_background_pending(&self)->bool {
+        self.hd_enabled && self.live_backgrounds.has_pending_art()
     }
     pub fn hd_card_pixels(&self)->u32{self.hd_card_pixels}
     pub fn set_card_hd_enabled(&mut self,enabled:bool){self.hd_card_enabled=enabled;}

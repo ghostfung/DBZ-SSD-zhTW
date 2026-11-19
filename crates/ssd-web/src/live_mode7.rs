@@ -24,6 +24,14 @@ pub(crate) struct LiveMode7 {
     tiles:HashMap<(usize,usize,usize),Vec<u8>>,
     reason:&'static str,
     matching_key:u64,
+    matching_palette:u64,
+    // Frame-scoped verification. Reuse it for foreground/underpass HD
+    // composites instead of rehashing 16K VRAM words two or three times.
+    frame_key:Option<(u64,u64)>,
+    frame_rows:Vec<LineRegs>,
+    // Identical unsupported Mode 7 planes must not run expensive art index
+    // and palette matching on every 60Hz simulation frame.
+    negative_key:Option<(u64,u64)>,
 }
 
 fn safe_template(path:&str)->bool {
@@ -31,6 +39,15 @@ fn safe_template(path:&str)->bool {
         && !path.contains("..") && !path.contains('\\')
         && path.contains("{x}") && path.contains("{y}")
         && (path.ends_with(".png") || path.ends_with(".webp"))
+}
+fn palette_key(cgram:&[u16])->u64{
+    let mut hash=0xcbf2_9ce4_8422_2325_u64;
+    for word in cgram.iter().take(256) {
+        for byte in word.to_le_bytes() {
+            hash=(hash^u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3);
+        }
+    }
+    hash
 }
 fn lines(log:&FrameLog)->Option<Vec<LineRegs>> {
     if !log.complete || !log.vram_writes.is_empty() ||
@@ -58,13 +75,30 @@ impl LiveMode7 {
             a.wanted.iter().any(|&(x,y)|
                 !self.tiles.contains_key(&(a.index,x,y))))
     }
-    pub(crate) fn needs_attention(&self,log:&FrameLog)->bool{
-        if self.active.is_none() {return true;}
-        if !log.complete || log.vram.len()<0x4000 {return true;}
-        if self.matching_key!=mode7art::plane_key(&log.vram) {return true;}
-        self.active.as_ref().is_some_and(|a|
-            a.wanted.iter().any(|&(x,y)|
-                !self.tiles.contains_key(&(a.index,x,y))))
+    pub(crate) fn is_active(&self)->bool{self.active.is_some()}
+    pub(crate) fn needs_attention(&mut self,log:&FrameLog)->bool{
+        // Fail closed on a scene transition: cached proof must never be
+        // reused for a frame with different PPU rows or palette.
+        self.frame_key=None;
+        self.frame_rows.clear();
+        // Most scenes are not Mode 7. Avoid touching VRAM at all there.
+        if log.entries.first().is_none_or(|e|e.regs.bg_mode!=7) {
+            return self.active.is_some();
+        }
+        let Some(rows)=lines(log) else {return self.active.is_some()};
+        self.frame_rows=rows;
+        let fingerprint=(mode7art::plane_key(&log.vram),
+            palette_key(&log.cgram_start));
+        self.frame_key=Some(fingerprint);
+        if self.active.is_none() {
+            return self.negative_key!=Some(fingerprint);
+        }
+        if fingerprint!=(self.matching_key,self.matching_palette){
+            return true;
+        }
+        // Camera HDMA can reveal previously unseen texture tiles, so a
+        // matching but still-loading plane is refreshed to discover them.
+        self.has_pending_art()
     }
     pub(crate) fn load_catalog(&mut self,json:&str)->Result<usize,String>{
         let list:Vec<Input>=serde_json::from_str(json)
@@ -83,22 +117,39 @@ impl LiveMode7 {
         }
         self.index=Index{plane:planes};
         self.active=None;self.tiles.clear();self.reason="等待 Mode7 VRAM 核對";
+        self.negative_key=None;self.frame_key=None;self.frame_rows.clear();
         Ok(self.index.plane.len())
     }
     pub(crate) fn refresh(&mut self,log:&FrameLog){
+        // Same exact VRAM and CGRAM identity: reuse the already verified
+        // plane index while recalculating visible tiles from current HDMA.
+        // A new plane or any palette shift still takes the full verification.
+        let previous=self.active.as_ref()
+            .filter(|_|self.frame_key==Some((self.matching_key,self.matching_palette)))
+            .map(|a|a.index);
         self.active=None;
+        self.negative_key=None;
         self.reason="Mode7 畫面尚未驗證";
-        let Some(rows)=lines(log) else {
+        let Some(fingerprint)=self.frame_key else {
             self.reason="Mode7 畫面非完整或正在轉場";return;};
-        let Some(index)=self.index.find_plane(&log.vram,&log.cgram_start) else {
+        let rows=&self.frame_rows;
+        if rows.len()!=usize::from(log.height) {
+            self.reason="Mode7 掃描線尚未完成";return;
+        }
+        let Some(index)=previous.or_else(||
+            self.index.find_plane(&log.vram,&log.cgram_start)) else {
+            self.negative_key=Some(fingerprint);
             self.reason="Mode7 VRAM plane 不存在於官方索引";return;};
-        let Some(colours)=self.index.plane[index].colours() else {
-            self.reason="Mode7 調色盤不存在";return;};
-        // Exact visual identity matters: one plane is reused with different
-        // character colours (including Super Saiyan yellow hair). Do not
-        // paint the wrong character. No palette-agnostic fallback here.
-        if mode7art::colours_agree(&log.vram,&log.cgram_start,&colours)!=1000 {
-            self.reason="Mode7 當前 palette 與原始 HD 美術不一致";return;
+        // Palette verification is reusable only with byte-identical VRAM
+        // and CGRAM hashes. On any change, recompute against official art.
+        if previous.is_none() {
+            let Some(colours)=self.index.plane[index].colours() else {
+                self.reason="Mode7 調色盤不存在";return;
+            };
+            if mode7art::colours_agree(&log.vram,&log.cgram_start,&colours)!=1000 {
+                self.negative_key=Some(fingerprint);
+                self.reason="Mode7 當前 palette 與原始 HD 美術不一致";return;
+            }
         }
         let mut used=std::collections::HashSet::new();
         let h=rows.len();
@@ -117,7 +168,8 @@ impl LiveMode7 {
         if used.len()>MAX_TILES {self.reason="Mode7 可見圖塊超出上限";return;}
         let mut wanted=used.into_iter().collect::<Vec<_>>();
         wanted.sort_unstable();
-        self.matching_key=mode7art::plane_key(&log.vram);
+        self.matching_key=fingerprint.0;
+        self.matching_palette=fingerprint.1;
         self.active=Some(Active{index,wanted});
         self.reason="Mode7 完整 VRAM 與 palette 均匹配";
     }
@@ -152,8 +204,8 @@ impl LiveMode7 {
     pub(crate) fn composite(&self,log:&FrameLog,layers:&[u8],
         rgba:&mut[u8],w:usize,h:usize)->u32{
         let Some(a)=&self.active else{return 0};
-        let Some(rows)=lines(log) else{return 0};
-        if self.matching_key!=mode7art::plane_key(&log.vram) ||
+        let rows=&self.frame_rows;
+        if self.frame_key!=Some((self.matching_key,self.matching_palette)) ||
             w!=512||h!=rows.len()*2||rgba.len()!=w*h*4||
             layers.len()!=rows.len()*256 {return 0;}
         let mut changed=0;
@@ -188,5 +240,42 @@ impl LiveMode7 {
             }
         }
         changed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ssd_oracle::{LineEntry,SpriteLine};
+    #[test]
+    fn invalid_or_unsupported_planes_are_rechecked_only_on_identity_change(){
+        let mut live=LiveMode7::default();
+        let mut log=FrameLog{
+            complete:true,height:1,h_hi_res:false,v_hi_res:false,
+            entries:vec![],cgram_start:vec![0;256],cgram_writes:vec![],
+            vram:vec![0;32768],vram_writes:vec![],
+            oam_low:vec![0;512],oam_high:vec![0;32],oam_writes:vec![]
+        };
+        // Non-Mode7 frames never compute a full-plane lookup.
+        assert!(!live.needs_attention(&log));
+        log.entries.push(LineEntry{
+            scanline:1,from_pixel:0,
+            regs:LineRegs{bg_mode:7,brightness:15,main_bg:[true,false,false,false],
+                ..LineRegs::default()},
+            sprites:SpriteLine::default()
+        });
+        assert!(live.needs_attention(&log));
+        live.refresh(&log);
+        assert!(live.negative_key.is_some());
+        assert!(!live.needs_attention(&log));
+        log.cgram_start[0]=31;
+        assert!(live.needs_attention(&log),
+            "palette changes must invalidate previous negative lookups");
+        log.vram[0]=0xFFFF;
+        assert!(live.needs_attention(&log),
+            "VRAM changes must not reuse another plane's HD matching");
+        log.entries[0].regs.bg_mode=1;
+        assert!(!live.needs_attention(&log));
+        assert!(live.frame_key.is_none());
     }
 }

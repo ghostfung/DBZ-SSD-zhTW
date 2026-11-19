@@ -106,16 +106,16 @@ export class LiveHdArt {
     this.sceneKey = '';
   }
 
-  pulse() {
+  pulse(silent=false) {
     const game = this.game;
     if (!game || !this.assets || !this.catalog.length || !game.hd_mode()) {
-      this.status(!this.assets ? '尚未載入 HD 美術包；目前使用遊戲原生渲染。'
+      if(!silent)this.status(!this.assets ? '尚未載入 HD 美術包；目前使用遊戲原生渲染。'
         : 'HD 2x 未啟用，背景美術不會替換。');
       return;
     }
     let matches;
     try { matches = JSON.parse(game.background_matches()); }
-    catch (e) { this.status('HD 背景狀態讀取失敗：' + e.message); return; }
+    catch (e) { if(!silent)this.status('HD 背景狀態讀取失敗：' + e.message); return; }
     this.pulses++;
     // Stale loading failures should not follow a different PPU scene.
     const scene=matches.map(m=>m.index+':'+m.art).sort().join('|');
@@ -125,7 +125,7 @@ export class LiveHdArt {
     }
     const ready = matches.filter(m => m.ready).length;
     const painted = game.hd_art_pixels?.() ?? 0;
-    this.status(matches.length
+    if(!silent)this.status(matches.length
       ? 'PPU 命中 ' + matches.length + ' 個背景，已載入 HD 美術 ' + ready
         + ' 個；目前實際替換 ' + painted + ' 個遊戲像素（其餘維持原版）。'
       : 'HD 素材就緒；此場景未符合背景索引，維持原版畫面。');

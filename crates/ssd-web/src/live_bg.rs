@@ -47,6 +47,10 @@ pub struct LiveBackgrounds {
 }
 
 impl LiveBackgrounds {
+    pub fn has_pending_art(&self)->bool {
+        self.active.iter().any(|i|!self.pictures.contains_key(i))
+    }
+
     pub fn load_catalog(&mut self, json: &str) -> Result<usize, String> {
         let layers: Vec<Layer> = serde_json::from_str(json)
             .map_err(|e| format!("背景索引解析失敗：{e}"))?;

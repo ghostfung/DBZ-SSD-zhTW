@@ -10,12 +10,14 @@ import {LiveHdSpecials} from './hd-special-live.mjs';
 import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
+import {FrameMetrics} from './frame-metrics.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
+const frameMetrics = new FrameMetrics();
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
 const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });
@@ -183,6 +185,8 @@ $('start').addEventListener('click', async () => {
     $('setup').hidden = true;
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
+    frameMetrics.reset();
+    $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
     raf = requestAnimationFrame(requestFrame);
   } catch (error) {
     $('start').disabled = false;
@@ -225,7 +229,7 @@ function drawFrame() {
   // picture finishes decoding. Keep the last HD picture temporarily instead
   // of painting the raw SNES background. Never hold indefinitely.
   let pendingArt=false;
-  if (enhanced && hdEnabled && liveHd.assets && pixels===0) {
+  if (enhanced && hdEnabled && liveHd.assets && pixels===0 && mayNeed(64)) {
     try {
       pendingArt=JSON.parse(game.background_matches()).some(m=>!m.ready);
     } catch { /* Corrupt/absent catalogue: fail open to the original frame. */ }
@@ -353,9 +357,18 @@ function requestFrame(now) {
   try {
     if (!lastTick) lastTick = now;
     // Render and simulation clocks are independent, so 120 Hz displays don't speed up gameplay.
-    accumulator += Math.min(now-lastTick, STEP*3);
+    // Avoid a spiral of death on heavy Mode 7 and scene transitions:
+    // three full 2x PPU renders in one RAF caused repeated multi-frame stalls.
+    // Keep at most two simulation steps and discard stale backlog rather
+    // than chasing elapsed wall-clock time with an unbounded burst.
+    const rafGap=now-lastTick;
+    accumulator += Math.min(rafGap, STEP*2);
     let n = 0;
-    while(accumulator >= STEP && n < 3) { game.tick(held); countFrames++; n++; accumulator -= STEP; }
+    const simulationStart=performance.now();
+    while(accumulator >= STEP && n < 2) {
+      game.tick(held);countFrames++;n++;accumulator -= STEP;
+    }
+    const simulationMs=performance.now()-simulationStart;
     if (n) {
       sound.enqueue(game.drain_audio());
       // Synchronise the message with the PPU from the same emulation frame.
@@ -367,6 +380,7 @@ function requestFrame(now) {
       // are ready. Pending bits are set within the same emulated frame.
       if(hdEnabled){
         const mask=game.hd_pending_mask?.()??63;
+        if(mask&64)liveHd.pulse(true);
         if(mask&1)liveFighters.pulse(true);
         if(mask&2)livePortraits.pulse(true);
         if(mask&4)liveSpecials.pulse(true);
@@ -377,12 +391,12 @@ function requestFrame(now) {
     }
     // Accelerate background catalogue polling only while a new HD layer is
     // missing; 90 ms avoids waiting for the old 450 ms idle interval.
-    const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
-    // Animated OAM poses may last only a few frames, so poll their catalogue
-    // at 90 ms while a local class2 ZIP is attached.
-    // Status updates are not game logic; 90 ms DOM rewrites from 7 modules
-    // caused avoidable Safari layout work even when every HD asset was ready.
-    const interval = hdPending ? 90 : hdEnabled ? 350 : 450;
+    // Background image requests now happen on the same frame via bit 64.
+    // Status messages are informational and must not trigger large JSON
+    // serializations / DOM layout during fast moving scenes.
+    const hdPending = hdEnabled && Boolean(liveHd.assets) &&
+      (game.hd_background_pending?.()??false);
+    const interval = hdPending ? 180 : hdEnabled ? 750 : 900;
     if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
@@ -393,8 +407,14 @@ function requestFrame(now) {
       liveCards.pulse();
       liveMode7.pulse();
     }
-    drawFrame();
-    if (now - lastDiagPoll >= 450) {
+    // On 120 Hz iPhone displays ~half of RAF calls have no emulated
+    // frame. Repainting the same 512x478 ImageData wasted bandwidth.
+    const drawStart=performance.now();
+    if (n) drawFrame();
+    const drawMs=performance.now()-drawStart;
+    const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
+    if(perf)$('frame-perf').textContent=FrameMetrics.describe(perf);
+    if (now - lastDiagPoll >= 900) {
       lastDiagPoll = now;
       sampleTranslationDiagnostics();
     }
