@@ -53,6 +53,9 @@ pub(crate) struct LivePortraits {
     active: Vec<Matched>,
     probes: u32,
     recognised: u32,
+    weak: u32,
+    palette_rejected: u32,
+    reason: &'static str,
 }
 
 fn source_keys(rom: &[u8], source: u32, half: usize) -> Option<[u64;16]> {
@@ -138,6 +141,9 @@ impl LivePortraits {
         self.pictures.clear();
         self.probes=0;
         self.recognised=0;
+        self.weak=0;
+        self.palette_rejected=0;
+        self.reason="尚未掃描";
         Ok(self.entries.len())
     }
 
@@ -147,30 +153,48 @@ impl LivePortraits {
         self.active.clear();
         self.probes=0;
         self.recognised=0;
-        if self.lookup.is_empty() || !log.complete
-            || !log.vram_writes.is_empty() || !log.cgram_writes.is_empty()
-            || samples.len()!=WIDTH*usize::from(log.height)
-        {return;}
+        self.weak=0;
+        self.palette_rejected=0;
+        self.reason="尚未匹配";
+        if self.lookup.is_empty(){self.reason="沒有可用的 class1 ROM 圖塊";return;}
+        if !log.complete {self.reason="PPU 畫面紀錄未完整";return;}
+        if !log.vram_writes.is_empty(){
+            self.reason="本幀 VRAM 中途更新，安全略過";return;
+        }
+        if !log.cgram_writes.is_empty(){
+            self.reason="本幀調色盤中途更新，安全略過";return;
+        }
+        if samples.len()!=WIDTH*usize::from(log.height){
+            self.reason="PPU 圖塊追蹤資料不足";return;
+        }
         let h=usize::from(log.height);
         if h<32 {return;}
         let mut cache=HashMap::new();
         let mut candidate=HashSet::new();
-        // Sample at 4-game-pixel intervals; use actual PPU tile positions to
-        // infer the picture origin. Never hard-code face or dialogue positions.
-        for y in (0..h).step_by(4) {
-            for x in (0..WIDTH).step_by(4) {
-                let p=samples[y*WIDTH+x];
-                if p.bpp!=4 || p.layer==0 || p.pos&0xc0!=0 {continue;}
-                let Some(key)=current_key(&log.vram,p,&mut cache) else {continue};
-                let Some(cells)=self.lookup.get(&key) else {continue};
-                for &(index,cell) in cells {
-                    let left=x as i32-i32::from(p.pos&7)-(cell%4*8) as i32;
-                    let top=y as i32-i32::from((p.pos>>3)&7)-(cell/4*8) as i32;
-                    if left>=0 && top>=0 && left<=224 && top+32<=h as i32 {
-                        candidate.insert((index,left as usize,top as usize));
+        // PPU pictures in cutscenes sometimes expose only thin slivers of
+        // original pixels. Try a 2-pixel lattice only if the usual 4-pixel
+        // lattice finds no candidate at all. No guessed character coordinates.
+        for step in [4_usize,2_usize] {
+            for y in (0..h).step_by(step) {
+                for x in (0..WIDTH).step_by(step) {
+                    let p=samples[y*WIDTH+x];
+                    if p.bpp!=4 || p.layer==0 {continue;}
+                    let Some(key)=current_key(&log.vram,p,&mut cache) else {continue};
+                    let Some(cells)=self.lookup.get(&key) else {continue};
+                    // The PPU position already reflects tile mirroring. Undo
+                    // a tile flip only for deriving the on-screen tile origin.
+                    let dx=if p.pos&0x40!=0 {7-(p.pos&7)} else {p.pos&7};
+                    let dy=if p.pos&0x80!=0 {7-((p.pos>>3)&7)} else {(p.pos>>3)&7};
+                    for &(index,cell) in cells {
+                        let left=x as i32-i32::from(dx)-(cell%4*8) as i32;
+                        let top=y as i32-i32::from(dy)-(cell/4*8) as i32;
+                        if left>=0 && top>=0 && left<=224 && top+32<=h as i32 {
+                            candidate.insert((index,left as usize,top as usize));
+                        }
                     }
                 }
             }
+            if !candidate.is_empty(){break;}
         }
         self.probes=candidate.len() as u32;
         let mut found=Vec::new();
@@ -178,12 +202,13 @@ impl LivePortraits {
             let e=&self.entries[index];
             let mut matched=0;
             let mut disagree=0;
+            let mut rows=0_u8;
             let mut observed=None;
             for cell in 0..16_usize {
                 let (cx,cy)=(x+(cell%4)*8,y+(cell/4)*8);
                 let mut recognised=false;
                 let mut covered=false;
-                for &(dx,dy) in &[(3,3),(1,1),(6,6),(4,2),(2,5)] {
+                for &(dx,dy) in &[(3,3),(1,1),(6,6),(4,2),(2,5),(0,0),(7,7),(0,7),(7,0)] {
                     let p=samples[(cy+dy)*WIDTH+cx+dx];
                     if p.bpp!=4 || p.layer==0 {continue;}
                     covered=true;
@@ -193,15 +218,22 @@ impl LivePortraits {
                         break;
                     }
                 }
-                if recognised {matched+=1}
+                if recognised {matched+=1;rows|=1<<(cell/4);}
                 else if covered {disagree+=1;}
             }
-            // Fail closed on mixed portraits. 10 independently matched 8x8
-            // cells are required, including the palette's identity evidence.
-            if matched<10 || disagree>3 {continue;}
+            // Eight independently keyed tiles across three distinct rows
+            // are enough *only* when the exact ROM palette also agrees.
+            // A palette-less picture still needs thirteen exact tiles.
+            if matched<8 || disagree>3 || rows.count_ones()<3 {
+                self.weak+=1;continue;
+            }
             let Some(p)=observed else {continue;};
-            let Some(palette_count)=palette_distance(e,p,&log.cgram_start) else {continue;};
-            if palette_count==0 && matched<13 {continue;}
+            let Some(palette_count)=palette_distance(e,p,&log.cgram_start) else {
+                self.palette_rejected+=1;continue;
+            };
+            if (palette_count==0 && matched<13) || (matched<10 && palette_count<2) {
+                self.weak+=1;continue;
+            }
             found.push((matched,Matched{index,x,y}));
         }
         found.sort_by_key(|(score,_)|std::cmp::Reverse(*score));
@@ -215,6 +247,10 @@ impl LivePortraits {
             if self.active.len()>=MAX_ACTIVE {break;}
         }
         self.recognised=self.active.len() as u32;
+        self.reason=if self.recognised>0 {"已驗證可見頭像"}
+            else if self.probes==0 {"沒有對應的可見 4bpp 圖塊"}
+            else if self.palette_rejected>0 {"來源圖塊存在，但調色盤不吻合"}
+            else {"來源圖塊存在，但有效輪廓不足"};
     }
 
     pub(crate) fn matches_json(&self)->String {
@@ -228,7 +264,9 @@ impl LivePortraits {
 
     pub(crate) fn probe_json(&self)->String {
         serde_json::json!({"candidate":self.probes,"matched":self.recognised,
-            "ready":self.active.iter().filter(|m|self.pictures.contains_key(&m.index)).count()}).to_string()
+            "ready":self.active.iter().filter(|m|self.pictures.contains_key(&m.index)).count(),
+            "weak":self.weak,"paletteRejected":self.palette_rejected,
+            "reason":self.reason}).to_string()
     }
 
     pub(crate) fn add_picture(&mut self,index:usize,width:usize,height:usize,rgba:&[u8])->Result<(),String>{
@@ -262,9 +300,11 @@ impl LivePortraits {
                     let x=matched.x+cx;
                     let y=matched.y+cy;
                     let p=samples[y*WIDTH+x];
-                    if p.layer==0 || p.bpp!=4 || p.pos&0xc0!=0
-                        || usize::from(p.pos&7)!=cx%8
-                        || usize::from((p.pos>>3)&7)!=cy%8
+                    let display_x=if p.pos&0x40!=0 {7-(p.pos&7)} else {p.pos&7};
+                    let display_y=if p.pos&0x80!=0 {7-((p.pos>>3)&7)} else {(p.pos>>3)&7};
+                    if p.layer==0 || p.bpp!=4
+                        || usize::from(display_x)!=cx%8
+                        || usize::from(display_y)!=cy%8
                         || current_key(&log.vram,p,&mut cache)!=Some(entry.keys[(cy/8)*4+cx/8])
                     {continue;}
                     // Only replace the exact source pixel that the PPU won
@@ -272,7 +312,12 @@ impl LivePortraits {
                     let mut different=false;
                     for sy in 0..2 {
                         for sx in 0..2 {
-                            let src=((cy*2+sy)*64+cx*2+sx)*4;
+                            // For an actual SNES tile flip, use the source
+                            // pixel coordinate, never a fake screen overlay.
+                            let tx=usize::from(p.pos&7)*2+if p.pos&0x40!=0 {1-sx} else {sx};
+                            let ty=usize::from((p.pos>>3)&7)*2+if p.pos&0x80!=0 {1-sy} else {sy};
+                            let src=((((cy/8)*8*2+ty)*64)+
+                                ((cx/8)*8*2+tx))*4;
                             let dst=((y*2+sy)*width+x*2+sx)*4;
                             let a=u32::from(img.rgba[src+3]);
                             if a==0 {continue;}
