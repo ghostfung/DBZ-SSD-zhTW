@@ -155,6 +155,10 @@ impl LiveSpecials {
         self.active.retain(|matched| matched.pose.oam_bits & owners == 0);
     }
 
+    pub(crate) fn has_pending_art(&self) -> bool {
+        self.active.iter().any(|m| !self.pictures.contains_key(&m.index))
+    }
+
     pub(crate) fn ready_oam_bits(&self) -> u128 {
         self.active.iter().filter(|p|self.pictures.contains_key(&p.index))
             .fold(0_u128,|m,p|m|p.pose.oam_bits)

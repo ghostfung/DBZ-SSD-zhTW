@@ -11,7 +11,10 @@ const SIDE: usize=16;
 const TILE_BYTES:usize=SIDE*SIDE*4;
 const UI_OFFSET:usize=0x11*0x8000+0x36;
 const MAX_ENTRIES:usize=152; // Upstream CARD_BASE=104, u8::MAX - 104 + 1 = 152.
-const MAX_VISIBLE:usize=140;
+// The whole 256x239 visible screen has at most 32 x 30 complete 8x8
+// cells. Never pick an arbitrary subset of matching cards: HashSet
+// iteration is randomized between frames and caused the user's flashing.
+const MAX_VISIBLE:usize=32*30;
 
 #[derive(Debug, Deserialize)]
 struct Input {
@@ -75,6 +78,13 @@ fn row_colors(log:&FrameLog,p:LiveTilePixel)->Option<[[u8;3];4]>{
 }
 impl LiveCards{
     pub(crate) fn has_entries(&self)->bool{!self.keys.is_empty()}
+    pub(crate) fn has_pending_art(&self)->bool {
+        self.active.iter().any(|m| {
+            let entry=&self.entries[m.index];
+            entry.base.is_some() && !self.art.contains_key(&(m.index,0)) ||
+            entry.roles.is_some() && !self.art.contains_key(&(m.index,1))
+        })
+    }
     pub(crate) fn load_catalog(&mut self,json:&str,rom:&[u8])->Result<usize,String>{
         let input:Vec<Input>=serde_json::from_str(json)
             .map_err(|e|format!("HD 卡牌索引格式錯誤：{e}"))?;
@@ -124,8 +134,11 @@ impl LiveCards{
         let mut cache=HashMap::new();
         let mut found=HashSet::new();
         let h=usize::from(log.height);
-        for y in (0..h).step_by(4){
-            for x in (0..W).step_by(4){
+        // The sampling lattice needs only one PPU pixel per 8x8 cell:
+        // any complete 8x8 tile intersects exactly one sample. Previously
+        // sampling 4x4 multiplied hash lookups by four every game frame.
+        for y in (0..h).step_by(8){
+            for x in (0..W).step_by(8){
                 let p=samples[y*W+x];
                 if p.bpp!=2 || p.layer==0 || p.layer==5 {continue;}
                 let Some(key)=visible_key(log,p,&mut cache)else{continue};
@@ -139,9 +152,13 @@ impl LiveCards{
                 found.insert((index,left as usize,top as usize));
             }
         }
-        for (index,x,y) in found.into_iter().take(MAX_VISIBLE){
-            self.active.push(Match{index,x,y});
-        }
+        // Never truncate by the randomized HashSet iteration order. On
+        // crowded menus it switched which tiles were HD each frame.
+        // Sort by on-screen position so even safety cap behaviour is stable.
+        let mut found=found.into_iter().collect::<Vec<_>>();
+        found.sort_unstable_by_key(|&(index,x,y)|(y,x,index));
+        self.active.extend(found.into_iter().take(MAX_VISIBLE)
+            .map(|(index,x,y)|Match{index,x,y}));
         self.recognised=self.active.len();
         self.reason=if self.recognised==0{"無符合卡牌索引的唯一圖塊"}
             else{"已核對可見 2bpp 原始圖塊"};
@@ -242,5 +259,57 @@ impl LiveCards{
             }
         }
         changed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ssd_hd::pack::tile_key;
+    use ssd_oracle::{LineEntry,LineRegs,SpriteLine};
+
+    #[test]
+    fn card_tiles_do_not_randomly_switch_back_to_snes_after_140_visible_tiles(){
+        let bytes=[0x53_u8;16];
+        let mut vram=vec![0_u16;32768];
+        for i in 0..8 {
+            vram[i]=u16::from_le_bytes([bytes[i*2],bytes[i*2+1]]);
+        }
+        let log=FrameLog {
+            complete:true,height:64,h_hi_res:false,v_hi_res:false,
+            entries:vec![LineEntry {
+                scanline:1,from_pixel:0,
+                regs:LineRegs{bg_mode:1,..LineRegs::default()},
+                sprites:SpriteLine::default()
+            }],
+            cgram_start:vec![0_u16;256],cgram_writes:vec![],
+            vram,vram_writes:vec![],oam_low:vec![0;512],
+            oam_high:vec![0;32],oam_writes:vec![]
+        };
+        let mut samples=vec![LiveTilePixel::default();W*64];
+        for y in 0..64 {
+            for x in 0..W {
+                samples[y*W+x]=LiveTilePixel {
+                    address:0,pos:(((y%8)<<3)|(x%8)) as u8,
+                    palette:0,layer:3,bpp:2
+                };
+            }
+        }
+        let mut cards=LiveCards::default();
+        cards.entries.push(Entry {
+            code:104,title:false,carve:false,
+            base:Some("cards/fake.png".into()),roles:None
+        });
+        cards.keys.insert(tile_key(&bytes),0);
+        cards.refresh(&log,&samples);
+        let before=cards.active.iter().map(|m|(m.index,m.x,m.y)).collect::<Vec<_>>();
+        assert_eq!(before.len(),256,"the old arbitrary 140-tile cap caused frame-to-frame flicker");
+        assert_eq!(before.first(),Some(&(0,0,0)));
+        assert_eq!(before.last(),Some(&(0,248,56)));
+        for _ in 0..10 {
+            cards.refresh(&log,&samples);
+            let now=cards.active.iter().map(|m|(m.index,m.x,m.y)).collect::<Vec<_>>();
+            assert_eq!(now,before,"visible HD tile selection must be deterministic");
+        }
     }
 }

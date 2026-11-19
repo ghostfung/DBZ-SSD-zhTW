@@ -140,6 +140,12 @@ impl LiveFighters {
         }).to_string()
     }
 
+    /// Cheap readiness check: avoid generating and parsing matches JSON on
+    /// every emulated frame after all visible poses are loaded.
+    pub(crate) fn has_pending_art(&self) -> bool {
+        self.active.iter().any(|m| !self.pictures.contains_key(&m.index))
+    }
+
     pub(crate) fn ready_oam_bits(&self) -> u128 {
         self.active.iter().filter(|p|self.pictures.contains_key(&p.index))
             .fold(0_u128,|m,p|m|p.pose.oam_bits)

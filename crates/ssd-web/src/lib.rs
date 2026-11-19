@@ -708,6 +708,18 @@ impl WebGame {
         self.live_cards.add_art(index,layer,width as usize,height as usize,rgba)
             .map_err(|e|JsValue::from_str(&e))
     }
+    /// Bitmask of visible HD art still awaiting local ZIP image decoding.
+    /// This prevents six expensive JS/WASM JSON roundtrips on *every* frame
+    /// while preserving same-frame requests when a new match appears.
+    pub fn hd_pending_mask(&self)->u32 {
+        if !self.hd_enabled {return 0;}
+        u32::from(self.hd_fighter_enabled && self.live_fighters.has_pending_art()) |
+        (u32::from(self.hd_portrait_enabled && self.live_portraits.has_pending_art()) << 1) |
+        (u32::from(self.hd_special_enabled && self.live_specials.has_pending_art()) << 2) |
+        (u32::from(self.hd_map_enabled && self.live_maps.has_pending_art()) << 3) |
+        (u32::from(self.hd_card_enabled && self.live_cards.has_pending_art()) << 4) |
+        (u32::from(self.hd_mode7_enabled && self.live_mode7.has_pending_art()) << 5)
+    }
     pub fn hd_card_pixels(&self)->u32{self.hd_card_pixels}
     pub fn set_card_hd_enabled(&mut self,enabled:bool){self.hd_card_enabled=enabled;}
 

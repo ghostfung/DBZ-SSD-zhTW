@@ -191,6 +191,9 @@ $('start').addEventListener('click', async () => {
 });
 
 const ctx = $('screen').getContext('2d', {alpha:false});
+// Reuse one ~1 MiB pixel buffer and ImageData across frames. Mobile Safari
+// previously allocated two new full-frame buffers on every 60 Hz repaint.
+let frameBytes=null, frameImage=null;
 function drawFrame() {
   const w=game.width(), h=game.height();
   const canvas=$('screen');
@@ -211,6 +214,10 @@ function drawFrame() {
   // inputs, sound and emulated time continue without interruption.
   const pixels=game.hd_art_pixels();
   const enhanced=game.hd_active();
+  // Bitmask computed in Rust without JSON serialization. Most visible HD
+  // assets are already decoded; only query expensive matches when pending.
+  const pendingMask=game.hd_pending_mask?.();
+  const mayNeed=bit=>pendingMask===undefined || (pendingMask & bit)!==0;
   const storyHold=storyFrameGate.shouldDefer(
     game.frame_count(), game.story_translation_pending(), enhanced
   );
@@ -231,13 +238,13 @@ function drawFrame() {
   // This is an independent, bounded presentation hold: music, input and
   // emulator clocks continue, including if the ZIP or art is missing.
   let portraitMatches=[];
-  if(enhanced && hdEnabled && livePortraits.assets &&
+  if(enhanced && hdEnabled && livePortraits.assets && mayNeed(2) &&
       $('portrait-hd-toggle').checked && typeof game.portrait_matches==='function'){
     try { portraitMatches=JSON.parse(game.portrait_matches()); }
     catch { portraitMatches=[]; }
   }
   let fighterMatches=[];
-  if(enhanced && hdEnabled && liveFighters.assets && $('fighter-hd-toggle').checked &&
+  if(enhanced && hdEnabled && liveFighters.assets && mayNeed(1) && $('fighter-hd-toggle').checked &&
     typeof game.fighter_matches==='function'){
     try{fighterMatches=JSON.parse(game.fighter_matches());}catch{}
   }
@@ -258,7 +265,7 @@ function drawFrame() {
     key:portraitMatches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
   });
   let specialMatches=[];
-  if(enhanced && hdEnabled && liveSpecials.assets &&
+  if(enhanced && hdEnabled && liveSpecials.assets && mayNeed(4) &&
       $('special-hd-toggle').checked && typeof game.special_matches==='function') {
     try {specialMatches=JSON.parse(game.special_matches());}catch{}
   }
@@ -271,7 +278,7 @@ function drawFrame() {
     key:specialMatches.map(m=>m.index+':'+m.key).sort().join('|')
   });
   let mapMatches=[];
-  if(enhanced && hdEnabled && liveMaps.assets && $('map-hd-toggle').checked &&
+  if(enhanced && hdEnabled && liveMaps.assets && mayNeed(8) && $('map-hd-toggle').checked &&
     typeof game.map_matches==='function'){
     try{mapMatches=JSON.parse(game.map_matches());}catch{}
   }
@@ -284,7 +291,7 @@ function drawFrame() {
     key:mapMatches.map(m=>m.index+':'+m.tileX+':'+m.tileY).sort().join('|')
   });
   let cardMatches=[];
-  if(enhanced && hdEnabled && liveCards.assets && $('card-hd-toggle').checked &&
+  if(enhanced && hdEnabled && liveCards.assets && mayNeed(16) && $('card-hd-toggle').checked &&
     typeof game.card_matches==='function'){
     try{cardMatches=JSON.parse(game.card_matches());}catch{}
   }
@@ -297,7 +304,7 @@ function drawFrame() {
     key:cardMatches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
   });
   let mode7Matches=[];
-  if(enhanced && hdEnabled && liveMode7.assets && $('mode7-hd-toggle').checked &&
+  if(enhanced && hdEnabled && liveMode7.assets && mayNeed(32) && $('mode7-hd-toggle').checked &&
     typeof game.mode7_matches==='function'){
     try{mode7Matches=JSON.parse(game.mode7_matches());}catch{}
   }
@@ -312,7 +319,12 @@ function drawFrame() {
   if (!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
+    if (!frameBytes || frameBytes.length!==rgba.length) {
+      frameBytes=new Uint8ClampedArray(rgba.length);
+      frameImage=new ImageData(frameBytes,w,h);
+    }
+    frameBytes.set(rgba);
+    ctx.putImageData(frameImage,0,0);
     storyFrameGate.didPresent();
     hdFrameGate.didPresent(pixels);
     portraitFrameGate.didPresent();
@@ -351,19 +363,26 @@ function requestFrame(now) {
       updateTranslation();
       // A face may enter on a single battle/cutscene frame. Queue locally
       // matched art on that same emulated frame, not 90 ms later.
-      if(hdEnabled && liveFighters.assets)liveFighters.pulse(true);
-      if(hdEnabled && livePortraits.assets)livePortraits.pulse(true);
-      if(hdEnabled && liveSpecials.assets)liveSpecials.pulse(true);
-      if(hdEnabled && liveMaps.assets)liveMaps.pulse(true);
-      if(hdEnabled && liveCards.assets)liveCards.pulse(true);
-      if(hdEnabled && liveMode7.assets)liveMode7.pulse(true);
+      // Skip six synchronous JS/WASM JSON roundtrips once matched images
+      // are ready. Pending bits are set within the same emulated frame.
+      if(hdEnabled){
+        const mask=game.hd_pending_mask?.()??63;
+        if(mask&1)liveFighters.pulse(true);
+        if(mask&2)livePortraits.pulse(true);
+        if(mask&4)liveSpecials.pulse(true);
+        if(mask&8)liveMaps.pulse(true);
+        if(mask&16)liveCards.pulse(true);
+        if(mask&32)liveMode7.pulse(true);
+      }
     }
     // Accelerate background catalogue polling only while a new HD layer is
     // missing; 90 ms avoids waiting for the old 450 ms idle interval.
     const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
     // Animated OAM poses may last only a few frames, so poll their catalogue
     // at 90 ms while a local class2 ZIP is attached.
-    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets || liveSpecials.assets || liveMaps.assets || liveCards.assets || liveMode7.assets)) ? 90 : 450;
+    // Status updates are not game logic; 90 ms DOM rewrites from 7 modules
+    // caused avoidable Safari layout work even when every HD asset was ready.
+    const interval = hdPending ? 90 : hdEnabled ? 350 : 450;
     if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
@@ -379,9 +398,9 @@ function requestFrame(now) {
       lastDiagPoll = now;
       sampleTranslationDiagnostics();
     }
-    $('frames').textContent=`${game.frame_count()} 幀`;
     if(!countWindow) countWindow=now;
     if(now-countWindow>=1000){
+      $('frames').textContent=`${game.frame_count()} 幀`;
       $('fps').textContent=`約 ${(countFrames*1000/(now-countWindow)).toFixed(1)} 模擬幀/秒`;
       $('hd-info').textContent=hdEnabled
         ? (game.hd_active() ? `HD 2x：${game.width()}×${game.height()}` : `HD 已回退 Classic：${game.hd_warning()}`)

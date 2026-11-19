@@ -69,6 +69,11 @@ fn origin(log:&FrameLog,camera:(u16,u16))->Option<(i32,i32)> {
 }
 impl LiveMaps {
     pub(crate) fn has_entries(&self)->bool{!self.index.layer.is_empty()}
+    pub(crate) fn has_pending_art(&self)->bool {
+        self.active.as_ref().is_some_and(|a|
+            a.wanted.iter().any(|&(x,y)|
+                !self.pictures.contains_key(&(a.index,x,y))))
+    }
     pub(crate) fn load_catalog(&mut self,json:&str)->Result<usize,String>{
         let input:Vec<Input>=serde_json::from_str(json)
             .map_err(|e|format!("地圖 HD 索引格式錯誤：{e}"))?;
