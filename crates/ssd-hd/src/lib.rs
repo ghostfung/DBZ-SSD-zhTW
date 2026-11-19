@@ -210,6 +210,18 @@ impl Pixel {
     }
 }
 
+/// The winning source character and source-pixel coordinate at an on-screen
+/// position. Used only by the browser's opt-in class1 HD portrait matcher.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub struct LiveTilePixel {
+    pub address: u16,
+    pub pos: u8,
+    pub palette: u8,
+    /// 1..4 BG, 5 OBJ; 0 is backdrop, and cannot receive portrait art.
+    pub layer: u8,
+    pub bpp: u8,
+}
+
 /// The renderer: line buffers and the CGRAM of the entry being rendered.
 pub struct Renderer {
     pub(crate) bg_pixels: [[Pixel; WIDTH]; 4],
@@ -232,6 +244,9 @@ pub struct Renderer {
     track_layers: bool,
     layer_ids: Vec<u8>,
     oam_ids: Vec<u8>,
+    /// On-demand exact character evidence for locally imported HD faces.
+    track_portrait_pixels: bool,
+    portrait_pixels: Vec<LiveTilePixel>,
     /// What the Enhanced picture needs, recorded while `capturing` (see `enhanced`).
     capture: enhanced::Capture,
     capturing: bool,
@@ -284,6 +299,8 @@ impl Renderer {
             track_layers: false,
             layer_ids: Vec::new(),
             oam_ids: Vec::new(),
+            track_portrait_pixels: false,
+            portrait_pixels: Vec::new(),
             capture: enhanced::Capture::default(),
             capturing: false,
             hidden_objects: 0,
@@ -465,6 +482,17 @@ impl Renderer {
         if !enabled { self.layer_ids.clear(); self.oam_ids.clear(); }
     }
 
+    /// Enable exact PPU tile-source capture only while the user has selected
+    /// a verified class1 index. No RGB guessing or fixed screen coordinates.
+    pub fn set_portrait_tracking(&mut self, enabled: bool) {
+        self.track_portrait_pixels = enabled;
+        if !enabled { self.portrait_pixels.clear(); }
+    }
+
+    /// Winning PPU source tile evidence for the most recent normal HD frame.
+    #[must_use]
+    pub fn portrait_pixels(&self) -> &[LiveTilePixel] { &self.portrait_pixels }
+
     /// The visible pixel-layer owners of the most recently rendered frame.
     #[must_use]
     pub fn layer_ids(&self) -> &[u8] { &self.layer_ids }
@@ -494,6 +522,9 @@ impl Renderer {
         let old_hidden=std::mem::replace(&mut self.hidden_objects,hidden);
         let original_layers=std::mem::take(&mut self.layer_ids);
         let original_owners=std::mem::take(&mut self.oam_ids);
+        // The underpass is a hidden second rendering. Its BG ownership must
+        // never replace the portrait evidence from the original PPU picture.
+        let portrait_tracking=std::mem::replace(&mut self.track_portrait_pixels,false);
         self.obj_pixels=self.before_obj_pixels;
         let under=self.render_log(log,None,false).ok();
         let under_layers=std::mem::take(&mut self.layer_ids);
@@ -503,6 +534,7 @@ impl Renderer {
         self.hidden_objects=old_hidden;
         self.layer_ids=original_layers;
         self.oam_ids=original_owners;
+        self.track_portrait_pixels=portrait_tracking;
         let frame=under?;
         let capture=enhanced::Capture::default();
         Some((enhanced::picture(&frame,&capture,Some(log),options),under_layers))
@@ -612,6 +644,10 @@ impl Renderer {
             pixels: vec![Color::BLACK; WIDTH * height],
             sources: if sourced { vec![Source::Backdrop; WIDTH * height] } else { Vec::new() },
         };
+        if self.track_portrait_pixels {
+            self.portrait_pixels.resize(WIDTH * height, LiveTilePixel::default());
+            self.portrait_pixels.fill(LiveTilePixel::default());
+        }
         if self.track_layers {
             self.layer_ids.resize(WIDTH * height, 0);
             self.layer_ids.fill(0);
@@ -746,6 +782,25 @@ impl Renderer {
                     screen::Layer::Bg3 => 3,
                     screen::Layer::Bg4 => 4,
                     screen::Layer::Obj => 5,
+                };
+            }
+        }
+        if self.track_portrait_pixels {
+            for (x, src) in self.main.rendered[from..].iter().enumerate() {
+                let layer=match src.layer {
+                    screen::Layer::Backdrop=>0,
+                    screen::Layer::Bg1=>1,
+                    screen::Layer::Bg2=>2,
+                    screen::Layer::Bg3=>3,
+                    screen::Layer::Bg4=>4,
+                    screen::Layer::Obj=>5,
+                };
+                let bpp=if layer==5 {4} else if (1..=4).contains(&layer)
+                    && matches!(regs.bg_mode,0|1) {
+                    bg::bg_bitplanes(regs.bg_mode,(layer-1) as usize) as u8
+                } else {0};
+                self.portrait_pixels[span.start+from+x]=LiveTilePixel {
+                    address:src.char,pos:src.pos,palette:src.palette,layer,bpp,
                 };
             }
         }
