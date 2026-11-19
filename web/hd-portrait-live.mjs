@@ -39,7 +39,7 @@ export class LiveHdPortraits {
     }
     this.decoded.set(name,picture);this.cacheBytes+=bytes;
   }
-  pulse(){
+  pulse(silent=false){
     const game=this.game;
     if(!game||!this.assets||!game.hd_mode())return;
     if(typeof game.portrait_matches!=='function'){
@@ -53,8 +53,10 @@ export class LiveHdPortraits {
     this.pulses++;
     const ready=matches.filter(m=>m.ready).length;
     const painted=game.hd_portrait_pixels?.()??0;
-    this.status('人物頭像 HD：匹配 '+matches.length+' 組／載入 '+ready+
-      ' 組；本幀實際改變 '+painted+' 個像素。候選 '+probe.candidate+' 組。');
+    if(!silent)this.status('人物頭像 HD：匹配 '+matches.length+' 組／載入 '+ready+
+      ' 組；本幀實際改變 '+painted+' 個像素。候選 '+probe.candidate+
+      ' 組。未符合 '+(probe.reason||'無')+'；弱候選 '+(probe.weak||0)+
+      '、調色盤拒絕 '+(probe.paletteRejected||0)+'。');
     for(const match of matches){
       if(this.loading.size>=MAX_CONCURRENT)break;
       const failed=this.failed.get(match.index);
