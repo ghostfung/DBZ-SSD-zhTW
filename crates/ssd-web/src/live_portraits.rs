@@ -141,6 +141,8 @@ impl LivePortraits {
         Ok(self.entries.len())
     }
 
+    pub(crate) fn has_entries(&self)->bool { !self.entries.is_empty() }
+
     pub(crate) fn refresh(&mut self, log: &FrameLog, samples: &[LiveTilePixel]) {
         self.active.clear();
         self.probes=0;
@@ -259,8 +261,10 @@ impl LivePortraits {
                     let x=matched.x+cx;
                     let y=matched.y+cy;
                     let p=samples[y*WIDTH+x];
-                    if p.layer==0 || p.bpp!=4 ||
-                        current_key(&log.vram,p,&mut cache)!=Some(entry.keys[(cy/8)*4+cx/8])
+                    if p.layer==0 || p.bpp!=4 || p.pos&0xc0!=0
+                        || usize::from(p.pos&7)!=cx%8
+                        || usize::from((p.pos>>3)&7)!=cy%8
+                        || current_key(&log.vram,p,&mut cache)!=Some(entry.keys[(cy/8)*4+cx/8])
                     {continue;}
                     // Only replace the exact source pixel that the PPU won
                     // with. This preserves text, other sprites and HUD layers.
