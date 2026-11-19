@@ -86,7 +86,13 @@ pub fn live_fighter_poses(log: &FrameLog) -> Vec<LiveFighterPose> {
     }
     let view=art::poses::View::window();
     let sprites=art::poses::sprites_in(log,&view);
-    art::poses::poses_in(log,&sprites,&view).into_iter()
+    // The desktop engine also treats OAM palettes 3..7 as fighters
+    // during formations, but ONLY if their source key exists in the art
+    // index. The web bridge performs that exact-key check immediately
+    // afterwards, so don't lose valid standing enemies here.
+    let mut found=art::poses::poses_in(log,&sprites,&view);
+    found.extend(art::poses::fighter_candidates(&sprites));
+    found.into_iter()
         .filter(|pose| pose.fighter && !pose.field && !pose.bg &&
             pose.sprites != 0 && pose.w>0 && pose.h>0 &&
             pose.w<=255 && pose.h<=239)
@@ -173,7 +179,7 @@ pub(crate) struct Memories<'a> {
 
 /// One pixel of a BG or object line buffer. `char` is the VRAM word address of the character
 /// the pixel comes from (0 in Mode 7).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct Pixel {
     pub palette: u8,
     pub color: u8,
@@ -208,6 +214,9 @@ impl Pixel {
 pub struct Renderer {
     pub(crate) bg_pixels: [[Pixel; WIDTH]; 4],
     pub(crate) obj_pixels: [Pixel; WIDTH],
+    /// The PPU sprite line buffer at the start of the latest full render.
+    /// Reused to draw the true background beneath a matched HD fighter.
+    pub(crate) before_obj_pixels: [Pixel; WIDTH],
     pub(crate) cgram: [u16; 256],
     /// VRAM as the frame changes it, when it does.
     vram_work: Vec<u16>,
@@ -265,6 +274,7 @@ impl Renderer {
         Self {
             bg_pixels: [[Pixel::TRANSPARENT; WIDTH]; 4],
             obj_pixels: [Pixel::TRANSPARENT; WIDTH],
+            before_obj_pixels: [Pixel::TRANSPARENT; WIDTH],
             cgram: [0; 256],
             vram_work: Vec::new(),
             oam_work: (Vec::new(), Vec::new()),
@@ -465,6 +475,38 @@ impl Renderer {
     /// paint over a higher-priority BG/UI or another sprite.
     #[must_use]
     pub fn oam_ids(&self) -> &[u8] { &self.oam_ids }
+
+    /// Reconstruct the picture below just the verified fighter sprites.
+    /// Like the original desktop art renderer, this uses the PPU's own
+    /// priority rules instead of erasing the character with a guessed colour.
+    /// Restore all renderer state required for normal future frames and for
+    /// the already-captured zh-TW glyph positions before returning.
+    #[must_use]
+    pub fn render_fighter_beneath(
+        &mut self, log: &FrameLog, hidden: u128, options: HdOptions,
+    ) -> Option<(HdFrame, Vec<u8>)> {
+        if hidden == 0 || !self.track_layers || self.art.is_some()
+            || self.capturing || self.text_on || options.scale != 2
+        {
+            return None;
+        }
+        let after_obj=self.obj_pixels;
+        let old_hidden=std::mem::replace(&mut self.hidden_objects,hidden);
+        let original_layers=std::mem::take(&mut self.layer_ids);
+        let original_owners=std::mem::take(&mut self.oam_ids);
+        self.obj_pixels=self.before_obj_pixels;
+        let under=self.render_log(log,None,false).ok();
+        let under_layers=std::mem::take(&mut self.layer_ids);
+        // Rendering the under-picture must be invisible to the next regular
+        // PPU frame and to the native translation's original text capture.
+        self.obj_pixels=after_obj;
+        self.hidden_objects=old_hidden;
+        self.layer_ids=original_layers;
+        self.oam_ids=original_owners;
+        let frame=under?;
+        let capture=enhanced::Capture::default();
+        Some((enhanced::picture(&frame,&capture,Some(log),options),under_layers))
+    }
 
     /// Makes the Enhanced pictures ([`Renderer::render_hd`]) draw the art of `pack`; `None` (the
     /// start) draws none. The 1x frame of [`Renderer::render`] never has art.
@@ -800,6 +842,26 @@ mod tests {
 
     fn rgb(color: Color) -> [u8; 3] {
         [color.r, color.g, color.b]
+    }
+
+    #[test]
+    fn fighter_underpass_restores_ppu_ownership_and_future_render_state() {
+        let log=log(mode_1(),SpriteLine::default());
+        let mut renderer=Renderer::new();
+        renderer.set_layer_tracking(true);
+        let options=HdOptions{scale:2,look:Look::Crisp};
+        let normal=renderer.render_hd(&log,options).unwrap();
+        let owners=renderer.oam_ids().to_vec();
+        let layers=renderer.layer_ids().to_vec();
+        let saved_obj=renderer.obj_pixels;
+        let (under,under_layers)=renderer.render_fighter_beneath(&log,1,options).unwrap();
+        assert_eq!((under.width,under.height),(normal.width,normal.height));
+        assert_eq!(under_layers.len(),256*224);
+        assert_eq!(renderer.oam_ids(),owners);
+        assert_eq!(renderer.layer_ids(),layers);
+        assert_eq!(renderer.obj_pixels,saved_obj);
+        assert_eq!(renderer.hidden_objects,0);
+        assert_eq!(renderer.render_hd(&log,options).unwrap().rgba,normal.rgba);
     }
 
     #[test]

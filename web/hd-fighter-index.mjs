@@ -9,6 +9,18 @@ const safe=(name)=>typeof name==='string' && name.length<=220
   && IMAGE.test(name) && !name.split('/').some(x=>x==='..'||x==='.');
 const positive=(x,max)=>Number.isInteger(x)&&x>0&&x<=max;
 
+// Keep the same known incorrect identity mappings excluded by the desktop
+// renderer (ssd-hd/art_index.rs::WRONG_OBJECTS).
+const WRONG_OBJECTS=new Set([
+  'battle-zarbon-801:b7d6b360fc00302f',
+  'fgfx-695459fedb:695459fedb6cecfd',
+  'battle-goku-802:e688dcec697ef299',
+  'field-frieza-force-004:3bb2d6bf3c99f517',
+  'field-frieza-force-005:ac772095857a6244',
+  'battle-nail-803:3bb2d6bf3c99f517',
+  'battle-nail-804:ac772095857a6244'
+]);
+
 export function parseFighterIndex(data,hasFile=()=>true) {
   if(!data||!Array.isArray(data.assets_list))
     throw Error('官方 class2 索引缺少 assets_list');
@@ -39,7 +51,9 @@ export function parseFighterIndex(data,hasFile=()=>true) {
     if(colourCount<2)noPalette++;
     const art='class2/'+entry.file;
     // Luma art is a greyscale transfer material, not directly usable RGB.
-    const available=!entry.luma && colourCount>=2 && hasFile(art);
+    const knownWrong=WRONG_OBJECTS.has(entry.id+':'+
+      entry.source_key.padStart(16,'0').toLowerCase());
+    const available=!knownWrong && !entry.luma && colourCount>=2 && hasFile(art);
     if(!available)missing.push(art);
     items.push({
       id:entry.id,key:entry.source_key.padStart(16,'0').toLowerCase(),

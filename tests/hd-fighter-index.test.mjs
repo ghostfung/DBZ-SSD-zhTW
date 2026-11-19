@@ -38,6 +38,13 @@ test('local reader fetches only class2 index and checks ZIP directory entries',a
  assert.deepEqual(calls,['class2/index.json']);
  assert.equal(r.count,1);
 });
+test('exclude original upstream known wrong-character asset bindings',()=>{
+ const result=parseFighterIndex({assets_list:[entry({
+   id:'battle-zarbon-801',source_key:'b7d6b360fc00302f'
+ })]},()=>true);
+ assert.equal(result.items[0].available,false,
+   'known Vegeta portrait pixels must not be displayed using Zarbon art');
+});
 test('reject malformed and oversized catalogue without creating a partial list',()=>{
  assert.throws(()=>parseFighterIndex({assets:[]}),/assets_list/);
  assert.throws(()=>parseFighterIndex({assets_list:Array(20001).fill({})}),/安全上限/);

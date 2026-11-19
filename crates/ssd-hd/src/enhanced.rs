@@ -193,6 +193,10 @@ impl Renderer {
         self.capture = capture;
         self.capturing = true;
         self.begin_text(options);
+        // The exact PPU buffer at frame start is needed if a locally loaded
+        // HD fighter needs its original SNES pixels removed, not merely
+        // covered with an alpha-blended picture.
+        self.before_obj_pixels = self.obj_pixels;
         let frame = self.render_log(log, None, false);
         // Preserve the exact pre-filter PPU frame for the author's translation
         // logic. The pixel colours and glyph cells must be from this SAME frame.

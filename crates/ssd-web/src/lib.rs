@@ -79,6 +79,7 @@ pub struct WebGame {
     hd_art_pixels: u32,
     live_fighters: LiveFighters,
     hd_fighter_pixels: u32,
+    hd_fighter_enabled: bool,
 }
 
 #[wasm_bindgen]
@@ -107,7 +108,8 @@ impl WebGame {
             hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
-            live_fighters: LiveFighters::default(), hd_fighter_pixels: 0 })
+            live_fighters: LiveFighters::default(), hd_fighter_pixels: 0,
+            hd_fighter_enabled: true })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -172,15 +174,33 @@ impl WebGame {
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
-                        // Author's exact grouped-OAM source keys; the first
-                        // browser pass only replaces the actual visible
-                        // original fighter silhouette. Native zh-TW remains
-                        // the final text pass above all HD art.
+                        // Reuse the desktop renderer's two-pass strategy:
+                        // hide only validated fighter OAM sprites, reconstruct
+                        // the genuine PPU pixels beneath them and reapply HD
+                        // background art. Then draw the transparent HD pose.
+                        // No guessed rectangles or solid colour masking.
                         self.live_fighters.refresh(log);
-                        self.hd_fighter_pixels = self.live_fighters.composite(
-                            self.hd_renderer.oam_ids(), &mut self.hd_pixels,
-                            self.hd_width as usize, self.hd_height as usize,
-                        );
+                        let hidden=if self.hd_fighter_enabled {
+                            self.live_fighters.ready_oam_bits()
+                        } else { 0 };
+                        if hidden != 0 {
+                            let original_oam=self.hd_renderer.oam_ids().to_vec();
+                            let original_layers=self.hd_renderer.layer_ids().to_vec();
+                            if let Some((mut below,below_layers))=
+                                self.hd_renderer.render_fighter_beneath(log,hidden,
+                                    HdOptions {scale:2,look:Look::Crisp})
+                            {
+                                self.live_backgrounds.composite(
+                                    log,&below_layers,&mut below.rgba,
+                                    self.hd_width as usize,self.hd_height as usize,
+                                );
+                                self.hd_fighter_pixels=self.live_fighters.composite(
+                                    &original_oam,&original_layers,&below.rgba,
+                                    &mut self.hd_pixels,
+                                    self.hd_width as usize,self.hd_height as usize,
+                                );
+                            }
+                        }
                         // Compare the page identified from WRAM with the actual
                         // PPU glyphs. When it does NOT match, a recent earlier
                         // page may still be visible behind the advancing engine.
@@ -483,6 +503,11 @@ impl WebGame {
         self.live_fighters.matches_json()
     }
 
+    /// Read-only counts explaining why a given stance has no local HD art.
+    pub fn fighter_probe(&self) -> String {
+        self.live_fighters.probe_json()
+    }
+
     pub fn set_fighter_art(&mut self, index: usize, width: u32,
         height: u32, rgba: &[u8]) -> Result<(), JsValue> {
         self.live_fighters.add_picture(index,width as usize,height as usize,rgba)
@@ -491,6 +516,11 @@ impl WebGame {
 
     /// SNES pixels with confirmed visible fighter OAM pixels replaced.
     pub fn hd_fighter_pixels(&self) -> u32 { self.hd_fighter_pixels }
+
+    /// A/B compare exact same battle frame with background HD left on.
+    pub fn set_fighter_hd_enabled(&mut self, enabled: bool) {
+        self.hd_fighter_enabled=enabled;
+    }
 
     /// Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
     /// Unsupported frames fall back to Classic without affecting emulator state.

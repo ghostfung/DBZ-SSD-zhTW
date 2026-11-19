@@ -45,6 +45,9 @@ pub(crate) struct LiveFighters {
     lookup: HashMap<u64, Vec<usize>>,
     active: Vec<Matching>,
     pictures: HashMap<usize, Picture>,
+    probes: usize,
+    key_hits: usize,
+    palette_rejections: usize,
 }
 
 fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
@@ -94,16 +97,25 @@ impl LiveFighters {
         self.lookup=lookup;
         self.active.clear();
         self.pictures.clear();
+        self.probes=0;
+        self.key_hits=0;
+        self.palette_rejections=0;
         Ok(self.entries.len())
     }
 
     pub(crate) fn refresh(&mut self, log: &FrameLog) {
         self.active.clear();
+        self.probes=0;
+        self.key_hits=0;
+        self.palette_rejections=0;
         if self.lookup.is_empty() { return; }
-        // Using author-provided OAM sprite grouping, not an object name,
-        // animation frame number or arbitrary rectangular UI mask.
+        // The original engine handles both standard OAM palettes 1-2 and
+        // formations that render enemies with palettes 3-7. Exact source
+        // hashes must still match an official class2 asset before use.
         for pose in ssd_hd::live_fighter_poses(log) {
+            self.probes+=1;
             let Some(indices)=self.lookup.get(&pose.key) else { continue };
+            self.key_hits+=1;
             let selected=indices.iter().copied().find(|&index| {
                 let entry=&self.entries[index];
                 entry.width == pose.width && entry.height == pose.height
@@ -112,8 +124,25 @@ impl LiveFighters {
             if let Some(index)=selected {
                 self.active.push(Matching {index,pose});
                 if self.active.len()>=MAX_POSES { break; }
+            } else {
+                self.palette_rejections+=1;
             }
         }
+    }
+
+    pub(crate) fn probe_json(&self) -> String {
+        serde_json::json!({
+            "poses":self.probes, "keyHits":self.key_hits,
+            "paletteRejected":self.palette_rejections,
+            "matched":self.active.len(),
+            "ready":self.active.iter()
+                .filter(|p| self.pictures.contains_key(&p.index)).count(),
+        }).to_string()
+    }
+
+    pub(crate) fn ready_oam_bits(&self) -> u128 {
+        self.active.iter().filter(|p|self.pictures.contains_key(&p.index))
+            .fold(0_u128,|m,p|m|p.pose.oam_bits)
     }
 
     pub(crate) fn matches_json(&self) -> String {
@@ -154,23 +183,25 @@ impl LiveFighters {
         Ok(())
     }
 
-    /// Paint only where one of the original OAM sprites truly won the PPU's
-    /// priority resolution. This cannot cover background/UI or expand a
-    /// fighter's silhouette into pixels owned by a different layer.
-    pub(crate) fn composite(&self, oam_ids: &[u8], rgba: &mut [u8],
-        width: usize,height: usize) -> u32
+    /// First restore the real PPU/HD background below the replaced OAM
+    /// pixels (second PPU render). Then draw the official HD artwork at 2x.
+    /// This handles transparent art and small overhangs inside the original
+    /// pose box, without leaving a 1x ROM sprite silhouette visible.
+    pub(crate) fn composite(&self, oam_ids: &[u8], layer_ids: &[u8],
+        beneath: &[u8], rgba: &mut [u8], width: usize,height: usize) -> u32
     {
-        if self.active.is_empty() || width != WIDTH*2 || height%2 != 0
-            || oam_ids.len()!=WIDTH*(height/2) || rgba.len()!=width*height*4
+        let cells=WIDTH*(height/2);
+        if self.active.is_empty() || width!=WIDTH*2 || height%2!=0
+            || oam_ids.len()!=cells || layer_ids.len()!=cells
+            || beneath.len()!=width*height*4 || rgba.len()!=width*height*4
         {
             return 0;
         }
         let rows=height/2;
-        let mut painted=0_u32;
-        // Ensure each pixel is claimed at most once by a matching pose.
-        let mut claimed=vec![false;WIDTH*rows];
+        let mut changed_pixels=0_u32;
+        let mut claimed=vec![false;cells];
         for matched in &self.active {
-            let Some(picture)=self.pictures.get(&matched.index) else { continue };
+            let Some(picture)=self.pictures.get(&matched.index) else {continue};
             let pose=&matched.pose;
             let (left,top)=(pose.x,pose.y);
             let (right,bottom)=(left+i32::from(pose.width),top+i32::from(pose.height));
@@ -181,34 +212,77 @@ impl LiveFighters {
             for y in y0..y1 {
                 for x in x0..x1 {
                     let p=y*WIDTH+x;
+                    if claimed[p] {continue;}
                     let owner=oam_ids[p];
-                    if owner>=128 || claimed[p] || pose.oam_bits & (1_u128<<owner)==0 {
-                        continue;
-                    }
+                    let owned=owner<128 && (pose.oam_bits & (1_u128<<owner))!=0;
+                    // Original art can extend a pixel into a transparent
+                    // part of its trimmed bounding box. Only allow it where
+                    // the PPU resolved a *background*, near a visible sprite
+                    // pixel of this pose, and above the battle HUD. Never
+                    // cover another OAM sprite or a BG3/BG4 UI plane.
+                    let near=if owned {false} else if owner==255 && y<176
+                        && layer_ids[p]<=2
+                    {
+                        let mut adjacent=false;
+                        'search: for dy in -1_i32..=1 {
+                            for dx in -1_i32..=1 {
+                                let xx=x as i32+dx;
+                                let yy=y as i32+dy;
+                                if xx<0 || xx>=WIDTH as i32 || yy<0 || yy>=rows as i32 {continue;}
+                                let other=oam_ids[yy as usize*WIDTH+xx as usize];
+                                if other<128 && pose.oam_bits & (1_u128<<other)!=0 {
+                                    adjacent=true;
+                                    break 'search;
+                                }
+                            }
+                        }
+                        adjacent
+                    } else {false};
+                    if !owned && !near {continue;}
                     let image_x=(x as i32-left) as usize*2;
                     let image_y=(y as i32-top) as usize*2;
-                    let mut changed=false;
+                    // A pixel with absolutely no HD coverage may still need
+                    // to uncover the correct HD background underneath its
+                    // opaque original sprite (remove the source silhouette).
+                    let before=[0,1,2,3].map(|i| {
+                        let sx=i%2;
+                        let sy=i/2;
+                        let dst=((y*2+sy)*width+x*2+sx)*4;
+                        [rgba[dst],rgba[dst+1],rgba[dst+2],rgba[dst+3]]
+                    });
+                    let mut has_art=false;
                     for sy in 0..2 {
                         for sx in 0..2 {
                             let src=((image_y+sy)*picture.width+image_x+sx)*4;
                             let dst=((y*2+sy)*width+x*2+sx)*4;
+                            if owned {
+                                rgba[dst..dst+4].copy_from_slice(&beneath[dst..dst+4]);
+                            }
                             let a=u32::from(picture.rgba[src+3]);
-                            if a==0 { continue; }
-                            changed=true;
+                            if a==0 {continue;}
+                            has_art=true;
                             for c in 0..3 {
-                                let foreground=u32::from(picture.rgba[src+c]);
-                                let background=u32::from(rgba[dst+c]);
-                                rgba[dst+c]=((foreground*a+background*(255-a)+127)/255) as u8;
+                                let fg=u32::from(picture.rgba[src+c]);
+                                let bg=u32::from(rgba[dst+c]);
+                                rgba[dst+c]=((fg*a+bg*(255-a)+127)/255) as u8;
                             }
                             rgba[dst+3]=255;
                         }
                     }
-                    if changed {claimed[p]=true;painted+=1;}
+                    if owned || has_art {
+                        claimed[p]=true;
+                        let changed=[0,1,2,3].any(|i|{
+                            let dst=((y*2+i/2)*width+x*2+i%2)*4;
+                            before[i]!=[rgba[dst],rgba[dst+1],rgba[dst+2],rgba[dst+3]]
+                        });
+                        if changed {changed_pixels+=1;}
+                    }
                 }
             }
         }
-        painted
+        changed_pixels
     }
+
 }
 
 #[cfg(test)]
@@ -240,6 +314,26 @@ mod tests {
         assert!(!palette_matches(&live.entries[0],&wrong));
     }
     #[test]
+    fn transparent_hd_art_removes_its_original_rom_silhouette() {
+        let mut live=LiveFighters::default();
+        live.load_catalog(&entry()).unwrap();
+        live.active.push(Matching{index:0,pose:pose()});
+        let transparent=vec![0_u8;4*4*4];
+        live.add_picture(0,4,4,&transparent).unwrap();
+        let mut owners=vec![255;256*4];
+        owners[1*256+1]=5;
+        let layers=vec![0_u8;256*4];
+        let beneath=vec![33;512*8*4];
+        let mut output=vec![77;512*8*4];
+        let changed=live.composite(&owners,&layers,&beneath,&mut output,512,8);
+        assert_eq!(changed,1);
+        let at=(2*512+2)*4;
+        assert_eq!(&output[at..at+4],&[33,33,33,33]);
+        let other=(2*512+6)*4;
+        assert_eq!(&output[other..other+4],&[77,77,77,77]);
+    }
+
+    #[test]
     fn alpha_blend_never_covers_another_ppu_layer_or_sprite() {
         let mut live=LiveFighters::default();
         live.load_catalog(&entry()).unwrap();
@@ -251,7 +345,9 @@ mod tests {
         owners[1*256+1]=5;
         owners[1*256+2]=7; // a different sprite, must not draw over it
         let mut out=vec![5;512*8*4];
-        let changed=live.composite(&owners,&mut out,512,8);
+        let layers=vec![5;256*4];
+        let beneath=vec![13;512*8*4];
+        let changed=live.composite(&owners,&layers,&beneath,&mut out,512,8);
         assert_eq!(changed,1);
         let at=((1*2)*512+1*2)*4;
         assert_eq!(&out[at..at+3], &[240,40,40]);

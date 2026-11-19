@@ -66,10 +66,18 @@ export class LiveHdFighters {
     catch(error){this.status('人物 HD 姿勢匹配資料無法解析：'+error.message);return;}
     this.pulses++;
     const ready=matches.filter(m=>m.ready).length;
+    let probe={poses:0,keyHits:0,paletteRejected:0};
+    try {
+      if(game.fighter_probe)probe=JSON.parse(game.fighter_probe());
+    }catch { /* no optional diagnostic in older runtimes */ }
     this.status(matches.length
-      ? '精確匹配 '+matches.length+' 組戰鬥人物姿勢；已載入 '+ready+
-        ' 組，目前替換 '+(game.hd_fighter_pixels?.()??0)+' 個原版人物像素。'
-      : '當前畫面沒有符合調色盤及來源鍵值的戰鬥人物；保留原版精靈。');
+      ? '戰鬥人物 HD：匹配 '+matches.length+' 組／已載入 '+ready+
+        ' 組；畫面實際改變 '+(game.hd_fighter_pixels?.()??0)+
+        ' 個像素。候選 '+probe.poses+' 組，鍵值吻合 '+probe.keyHits+' 組。'
+      : '戰鬥人物 HD 尚未匹配：檢出 '+probe.poses+
+        ' 組姿勢、來源鍵值吻合 '+probe.keyHits+
+        ' 組、調色盤／尺寸拒絕 '+probe.paletteRejected+
+        ' 組；目前保留原版人物。');
     for(const match of matches) {
       if(this.loading.size>=MAX_CONCURRENT)break;
       const failed=this.failed.get(match.index);
