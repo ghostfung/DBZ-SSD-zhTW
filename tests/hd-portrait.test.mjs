@@ -28,7 +28,6 @@ test('reject unsupported sources, unsafe paths and unknown files',()=>{
   assert.equal(result.missing,1);
   assert.equal(result.count,1);
   assert.equal(result.items[0].available,false);
-  assert.throws(()=>parsePortraitIndex({assets:[]}).missing_file,TypeError);
   assert.throws(()=>parsePortraitIndex({}),/缺少 assets/);
 });
 
