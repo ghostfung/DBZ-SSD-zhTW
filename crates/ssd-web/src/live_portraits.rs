@@ -250,7 +250,8 @@ impl LivePortraits {
     {
         let rows=usize::from(log.height);
         if width!=512 || height!=rows*2 || samples.len()!=rows*WIDTH
-            || rgba.len()!=width*height*4 {return 0;}
+            || rgba.len()!=width*height*4 || !log.vram_writes.is_empty()
+            || !log.cgram_writes.is_empty() {return 0;}
         let mut cache=HashMap::new();
         let mut changed=0;
         for matched in &self.active {
