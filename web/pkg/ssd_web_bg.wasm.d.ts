@@ -18,6 +18,7 @@ export const webgame_hd_fighter_pixels: (a: number) => number;
 export const webgame_hd_map_pixels: (a: number) => number;
 export const webgame_hd_mode: (a: number) => number;
 export const webgame_hd_mode7_pixels: (a: number) => number;
+export const webgame_hd_pending_mask: (a: number) => number;
 export const webgame_hd_portrait_pixels: (a: number) => number;
 export const webgame_hd_special_pixels: (a: number) => number;
 export const webgame_hd_warning: (a: number) => [number, number];

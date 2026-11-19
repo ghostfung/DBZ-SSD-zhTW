@@ -185,6 +185,16 @@ export class WebGame {
         return ret !== 0;
     }
     /**
+     * Bitmask of visible HD art still awaiting local ZIP image decoding.
+     * This prevents six expensive JS/WASM JSON roundtrips on *every* frame
+     * while preserving same-frame requests when a new match appears.
+     * @returns {number}
+     */
+    hd_pending_mask() {
+        const ret = wasm.webgame_hd_pending_mask(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * @returns {number}
      */
     hd_portrait_pixels() {

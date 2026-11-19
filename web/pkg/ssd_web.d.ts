@@ -41,6 +41,12 @@ export class WebGame {
     hd_map_pixels(): number;
     hd_mode7_pixels(): number;
     hd_mode(): boolean;
+    /**
+     * Bitmask of visible HD art still awaiting local ZIP image decoding.
+     * This prevents six expensive JS/WASM JSON roundtrips on *every* frame
+     * while preserving same-frame requests when a new match appears.
+     */
+    hd_pending_mask(): number;
     hd_portrait_pixels(): number;
     hd_special_pixels(): number;
     hd_warning(): string;
@@ -172,6 +178,7 @@ export interface InitOutput {
     readonly webgame_hd_map_pixels: (a: number) => number;
     readonly webgame_hd_mode: (a: number) => number;
     readonly webgame_hd_mode7_pixels: (a: number) => number;
+    readonly webgame_hd_pending_mask: (a: number) => number;
     readonly webgame_hd_portrait_pixels: (a: number) => number;
     readonly webgame_hd_special_pixels: (a: number) => number;
     readonly webgame_hd_warning: (a: number) => [number, number];
