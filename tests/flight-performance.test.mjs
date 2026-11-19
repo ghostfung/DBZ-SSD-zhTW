@@ -18,7 +18,7 @@ test('background art can start loading within the same frame without 90 ms statu
   assert.match(js,/if\(mask&64\)liveHd\.pulse\(true\)/);
   assert.match(bg,/pub fn has_pending_art\(&self\)->bool/);
   assert.match(lib,/pub fn hd_background_pending\(&self\)->bool/);
-  assert.match(lib,/live_backgrounds\.has_pending_art\(\) << 6/);
+  assert.match(lib,/u32::from\(self\.live_backgrounds\.has_pending_art\(\)\) << 6/);
 });
 test('Mode7 verification is frame-local and rejects changes in VRAM or palette',()=>{
   const m=source('crates/ssd-web/src/live_mode7.rs');
