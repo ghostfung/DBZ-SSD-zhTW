@@ -89,7 +89,11 @@ jobs:
             for log in dbz-node.log dbz-rust.log dbz-wasm-check.log dbz-wasm-pack.log; do
               if test -f "$RUNNER_TEMP/$log"; then
                 echo "===== $log ====="
-                grep -E -A 5 '^(error|Error:|FAIL|not ok|[[:space:]]+-->)' "$RUNNER_TEMP/$log" | tail -n 90 || true
+                if [ "$log" = dbz-node.log ]; then
+                  tail -n 130 "$RUNNER_TEMP/$log"
+                else
+                  grep -E -A 5 '^(error|Error:|FAIL|not ok|[[:space:]]+-->)' "$RUNNER_TEMP/$log" | tail -n 90 || true
+                fi
               fi
             done
           } > web/ci-portrait-failure.txt
