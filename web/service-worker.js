@@ -1,6 +1,6 @@
 // Cache app shell and compiled wasm; user-provided ROM/IPS is never cached or uploaded.
-const CACHE = 'dbz-ssd-web-shell-v23';
-const ASSETS = ['./','./index.html','./style.css','./app.mjs','./story-frame-gate.mjs','./hd-frame-gate.mjs','./screen-text.mjs','./hd-live.mjs','./hd-fighter-index.mjs','./hd-fighter-live.mjs','./hd-portrait-index.mjs','./hd-portrait-live.mjs','./audio.mjs','./chinese-overlay.mjs','./hd-import-ui.mjs','./hd-local-assets.mjs','./hd-background-index.mjs','./hd-pack.mjs','./hd-storage.mjs','./sha256-stream.mjs','./rom-check.mjs','./zh-tw.tsv','./zh-tw-page-alignments.tsv','./manifest.webmanifest'];
+const CACHE = 'dbz-ssd-web-shell-v24';
+const ASSETS = ['./','./index.html','./style.css','./app.mjs','./story-frame-gate.mjs','./hd-frame-gate.mjs','./screen-text.mjs','./hd-live.mjs','./hd-fighter-index.mjs','./hd-fighter-live.mjs','./hd-portrait-index.mjs','./hd-portrait-live.mjs','./hd-portrait-gate.mjs','./audio.mjs','./chinese-overlay.mjs','./hd-import-ui.mjs','./hd-local-assets.mjs','./hd-background-index.mjs','./hd-pack.mjs','./hd-storage.mjs','./sha256-stream.mjs','./rom-check.mjs','./zh-tw.tsv','./zh-tw-page-alignments.tsv','./manifest.webmanifest'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
