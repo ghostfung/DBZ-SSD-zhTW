@@ -401,6 +401,44 @@ mod tests {
         assert_eq!(&rgba[..4], &[250,50,10,255]);
         let outside=80*4;
         assert_eq!(&rgba[outside..outside+4], &[0,0,0,0]);
+
+        // Actual PPU tile flips are accepted only if the same ROM source
+        // characters and their mirrored pixel positions remain coherent.
+        for y in 0..32_usize {
+            for x in 0..32_usize {
+                let pixel=&mut samples[y*256+x];
+                pixel.pos=0xc0|((7-(y%8))<<3) as u8|(7-(x%8)) as u8;
+            }
+        }
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1);
+        rgba.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut rgba,512,64),1024);
+        assert_eq!(&rgba[..4], &[250,50,10,255]);
+
+        // A partly occluded portrait may still be unambiguous with nine
+        // exact tiles in three rows and two matching palette colours.
+        for y in 0..32_usize {
+            for x in 0..32_usize {
+                if x/8>=3 || y/8>=3 {
+                    samples[y*256+x]=LiveTilePixel::default();
+                } else {
+                    samples[y*256+x].pos=(((y%8)<<3)|(x%8)) as u8;
+                }
+            }
+        }
+        live.entries[0].palette[1]=Some([255,0,0]);
+        live.entries[0].palette[2]=Some([0,255,0]);
+        let mut log=log;
+        log.cgram_start[1]=0x001f;
+        log.cgram_start[2]=0x03e0;
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1);
+        rgba.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut rgba,512,64),576);
+        assert_eq!(&rgba[..4], &[250,50,10,255]);
+        assert_eq!(&rgba[((8*2)*512+8*2)*4..][..4], &[250,50,10,255]);
+        assert_eq!(&rgba[((8*2)*512+27*2)*4..][..4], &[0,0,0,0]);
     }
 
     #[test]
