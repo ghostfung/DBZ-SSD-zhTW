@@ -118,7 +118,7 @@ $('start').addEventListener('click', async () => {
     hdFrameGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
-    game.set_portrait_hd_enabled($('portrait-hd-toggle').checked);
+    game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
     liveHd.attach(game);
     liveFighters.attach(game);
     livePortraits.attach(game);
@@ -267,7 +267,7 @@ $('fighter-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
 });
 $('portrait-hd-toggle').addEventListener('change',()=>{
-  if(game)game.set_portrait_hd_enabled($('portrait-hd-toggle').checked);
+  if(game)game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
 });
 $('hd-toggle').addEventListener('click', () => {
   hdEnabled = !hdEnabled;
