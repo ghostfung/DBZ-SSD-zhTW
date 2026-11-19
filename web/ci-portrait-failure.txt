@@ -1,4 +1,4 @@
-iPhone web build failed at source 1a4fc53229cffaca78483842822b3adc05476548
+iPhone web build failed at source cbb7e904e132413fcdcc79eb448d8bb49c1827d1
 Only compiler/test output (no ROM, HD assets or credentials).
 ===== dbz-node.log =====
     '  // Begin unlocking Safari audio synchronously on this tap (before loading files/WASM).\n' +
