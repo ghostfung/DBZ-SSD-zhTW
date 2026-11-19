@@ -103,7 +103,7 @@ jobs:
           git commit -m "ci(iphone): record failed portrait build [skip ci]"
           git push origin HEAD:iphone-web-poc
       - name: Publish compiled browser package to isolated test branch
-        if: github.event_name == 'push' && github.ref == 'refs/heads/iphone-web-poc'
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/iphone-web-poc' || github.ref == 'refs/heads/iphone-hd-integration-batch')
         run: |
           set -euo pipefail
           test -s web/pkg/ssd_web_bg.wasm
@@ -114,7 +114,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Another edit may have landed while wasm was compiling; never publish an older build.
-          git fetch --no-tags origin iphone-web-poc
+          test "$GITHUB_REF_NAME" = 'iphone-web-poc' || test "$GITHUB_REF_NAME" = 'iphone-hd-integration-batch'
+          git fetch --no-tags origin "$GITHUB_REF_NAME"
           latest="$(git rev-parse FETCH_HEAD)"
           if [ "$GITHUB_SHA" != "$latest" ]; then
             echo "Newer source commit found ($latest); skip stale package publishing."
@@ -126,7 +127,7 @@ jobs:
             echo 'WASM package unchanged; no commit needed.'
           else
             git commit -m "build(web-poc): publish tested WASM runtime [skip ci]"
-            git push origin HEAD:iphone-web-poc
+            git push origin "HEAD:$GITHUB_REF_NAME"
           fi
       - name: Upload playable-test shell (no ROM, no IPS, no HD assets)
         uses: actions/upload-artifact@v4
