@@ -4,6 +4,7 @@ import {opfsAvailable,saveVerifiedHdPack,readSavedHdPack,clearSavedHdPack} from 
 import {LocalHdAssets} from './hd-local-assets.mjs';
 import {readBackgroundCatalog} from './hd-background-index.mjs';
 import {readFighterCatalog} from './hd-fighter-index.mjs';
+import {readPortraitCatalog} from './hd-portrait-index.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -15,6 +16,7 @@ let sampleEntry=null;
 let library=null;
 let bgCatalog=null;
 let fighterCatalog=null;
+let portraitCatalog=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -139,6 +141,29 @@ async function loadFighterIndex(source) {
   }
 }
 
+async function loadPortraitIndex(source){
+  const label=$('hd-portrait-count');
+  portraitCatalog=null;
+  label.textContent='正在本機 ZIP 讀取 class1/index.json…';
+  try{
+    const catalog=await readPortraitCatalog(source);
+    if(library!==source)return;
+    portraitCatalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='官方肖像素材 '+catalog.count+' 筆，缺少圖片 '+
+      catalog.missing+' 筆、無效索引 '+catalog.ignored+
+      ' 筆；只替換經 ROM 4bpp 圖塊核對的可見肖像。';
+  }catch(error){
+    if(library!==source)return;
+    label.textContent='HD 頭像索引未就緒：'+(error?.message||String(error));
+    document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
+
 function prepareLocalReader(file,info){
   library?.clearCache();
   library=new LocalHdAssets(file,info);
@@ -148,6 +173,7 @@ function prepareLocalReader(file,info){
   refreshAssetList();
   void loadBackgroundIndex(library);
   void loadFighterIndex(library);
+  void loadPortraitIndex(library);
   sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
     ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
 }
@@ -182,7 +208,10 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
   document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
     detail:{catalog:null,assets:null}
   }));
@@ -265,7 +294,10 @@ $('hd-remove').addEventListener('click',async()=>{
     await clearSavedHdPack();
     persisted=false; verified=null; activeFile=null; sampleEntry=null;
     clearPreview();
-    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;
+    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;
+  document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
   document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
     detail:{catalog:null,assets:null}
   }));
