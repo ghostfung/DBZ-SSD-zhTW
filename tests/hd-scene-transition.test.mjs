@@ -47,9 +47,9 @@ test('PPU scan cadence accelerates in scenes with missing HD art, not during sta
   const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
   assert.match(rust,/let interval = if all_ready \{ 12 \} else \{ 4 \}/);
   assert.match(rust,/if !log\.complete \|\| !log\.vram_writes\.is_empty\(\)/);
-  assert.match(app,/const interval = hdPending \|\| \(hdEnabled && \(liveFighters\.assets \|\| livePortraits\.assets\)\) \? 90 : 450/);
+  assert.match(app,/const interval = hdPending \|\| \(hdEnabled && \(liveFighters\.assets \|\| livePortraits\.assets \|\| liveSpecials\.assets \|\| liveMaps\.assets \|\| liveCards\.assets \|\| liveMode7\.assets\)\) \? 90 : 450/);
   assert.match(app,/hdFrameGate\.shouldDefer\(/);
-  assert.match(app,/if \(!storyHold && !hdHold && !portraitHold\)/);
+  assert.match(app,/if \(!storyHold && !hdHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold\)/);
   assert.match(app,/hdFrameGate\.didPresent\(pixels\)/);
   assert.match(app,/hdFrameGate\.reset\(\)/);
 });

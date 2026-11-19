@@ -112,6 +112,73 @@ pub fn live_fighter_poses(log: &FrameLog) -> Vec<LiveFighterPose> {
         }).collect()
 }
 
+/// An exactly keyed non-fighter OAM group, with source PPU sprite ownership.
+/// kind 1 = field/NPC/object (class3), 2 = battle effect (class2).
+/// Neither a battle fighter nor an unverified position-based overlay may
+/// enter this list. Full game-frame integrity is required.
+#[derive(Debug, Clone)]
+pub struct LiveSpecialPose {
+    pub kind: u8,
+    pub key: u64,
+    pub x: i32,
+    pub y: i32,
+    pub width: u16,
+    pub height: u16,
+    pub oam_bits: u128,
+    pub colours: [[u8; 3]; 16],
+}
+
+/// Assemble field groups and effects by the upstream capture's actual OAM
+/// source-key algorithm. The browser then validates dimensions, palettes,
+/// image availability and visible OAM ownership before drawing any art.
+#[must_use]
+pub fn live_special_poses(log: &FrameLog) -> Vec<LiveSpecialPose> {
+    if !log.complete || !log.vram_writes.is_empty() || !log.oam_writes.is_empty()
+        || !log.cgram_writes.is_empty() || log.vram.len() < 0x8000
+        || log.cgram_start.len() < 256 || log.oam_low.len() < 512
+        || log.oam_high.len() < 32
+    { return Vec::new(); }
+    let view=art::poses::View::window();
+    let sprites=art::poses::sprites_in(log,&view);
+    art::poses::poses_in(log,&sprites,&view).into_iter().filter_map(|pose|{
+        let kind=if pose.field && !pose.cut && !pose.fighter && !pose.bg {
+            1_u8
+        } else if !pose.field && !pose.fighter && !pose.bg && !pose.shadow
+            && !pose.rgba.is_empty() {
+            2_u8
+        } else { return None };
+        if pose.sprites==0 || pose.w==0 || pose.h==0 ||
+            pose.w>255 || pose.h>239 {return None;}
+        let start=128+usize::from(pose.palette)*16;
+        let colours=std::array::from_fn(|slot|
+            art::poses::rgb555(log.cgram_start[start+slot]));
+        Some(LiveSpecialPose {
+            kind,key:pose.key,x:pose.org.0,
+            y:pose.org.1+art::poses::ROW_OF_CAPTURE,
+            width:pose.w as u16,height:pose.h as u16,
+            oam_bits:pose.sprites,colours
+        })
+    }).collect()
+}
+
+/// Plane coordinates from the *same* SNES Mode 7 matrix used by the
+/// original renderer, at 2x subpixels. Returns 1/256th map-pixel units.
+/// Never infer an artwork position from the visible frame's RGB values.
+#[must_use]
+pub fn live_mode7_point(regs:&LineRegs,x:i32,y:u16,sx:u8,sy:u8)
+    ->Option<(u32,u32)> {
+    if regs.bg_mode!=7 || regs.forced_blanking || x<0||x>=256 ||
+        sx>1 ||sy>1 {return None;}
+    let plane=mode7::Plane::of(regs);
+    let (mx,my)=plane.map_position(2,(x,i64::from(sx)),(y,i64::from(sy)));
+    let plane_size=1024_i64*256;
+    let wrap=|v:i64|match regs.m7_out_of_bounds {
+        0=>Some(v.rem_euclid(plane_size)),
+        _=>(0..plane_size).contains(&v).then_some(v),
+    };
+    Some((wrap(mx)? as u32,wrap(my)? as u32))
+}
+
 /// Width of the frame the renderer produces (and of the PPU's, without hi-res).
 pub const WIDTH: usize = 256;
 

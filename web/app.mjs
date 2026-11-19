@@ -6,6 +6,10 @@ import {HdFrameGate} from './hd-frame-gate.mjs';
 import {PortraitFrameGate} from './hd-portrait-gate.mjs';
 import {LiveHdFighters} from './hd-fighter-live.mjs';
 import {LiveHdPortraits} from './hd-portrait-live.mjs';
+import {LiveHdSpecials} from './hd-special-live.mjs';
+import {LiveHdMaps} from './hd-map-live.mjs';
+import {LiveHdCards} from './hd-card-live.mjs';
+import {LiveHdMode7} from './hd-mode7-live.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -16,9 +20,17 @@ const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
 const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });
 const livePortraits = new LiveHdPortraits(message => { $('hd-portrait-info').textContent = message; });
+const liveSpecials = new LiveHdSpecials(message => { $('hd-special-info').textContent = message; });
+const liveMaps = new LiveHdMaps(message => { $('hd-map-info').textContent = message; });
+const liveCards = new LiveHdCards(message => { $('hd-card-info').textContent = message; });
+const liveMode7 = new LiveHdMode7(message => { $('hd-mode7-info').textContent = message; });
 const storyFrameGate = new StoryFrameGate(10);
 const hdFrameGate = new HdFrameGate();
 const portraitFrameGate = new PortraitFrameGate();
+const specialFrameGate = new PortraitFrameGate({pendingFrames:24,transitionFrames:4});
+const mapFrameGate = new PortraitFrameGate({pendingFrames:48,transitionFrames:6});
+const cardFrameGate = new PortraitFrameGate({pendingFrames:30,transitionFrames:5});
+const mode7FrameGate = new PortraitFrameGate({pendingFrames:48,transitionFrames:6});
 
 let translationDiag = [], lastDiagSignature = '';
 function sampleTranslationDiagnostics() {
@@ -31,6 +43,12 @@ function sampleTranslationDiagnostics() {
     item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;
     item.hd_fighter_pixels = game.hd_fighter_pixels?.() ?? 0;
     item.hd_portrait_pixels = game.hd_portrait_pixels?.() ?? 0;
+    item.hd_special_pixels = game.hd_special_pixels?.() ?? 0;
+    item.hd_map_pixels = game.hd_map_pixels?.() ?? 0;
+    item.hd_card_pixels = game.hd_card_pixels?.() ?? 0;
+    item.hd_mode7_pixels = game.hd_mode7_pixels?.() ?? 0;
+    item.map_holding = mapFrameGate.isHolding;
+    item.special_holding = specialFrameGate.isHolding;
     item.portrait_holding = portraitFrameGate.isHolding;
     item.portrait_held_frames = portraitFrameGate.heldFramesTotal;
     try { item.portrait_probe = JSON.parse(game.portrait_probe?.() || '{}'); } catch {}
@@ -53,6 +71,22 @@ document.addEventListener('hd-catalog-ready', event => {
 });
 document.addEventListener('hd-fighter-catalog-ready', event => {
   liveFighters.setCatalog(event.detail.catalog, event.detail.assets);
+});
+document.addEventListener('hd-mode7-catalog-ready',event=>{
+  liveMode7.setCatalog(event.detail.catalog,event.detail.assets);
+  mode7FrameGate.reset();
+});
+document.addEventListener('hd-card-catalog-ready', event => {
+  liveCards.setCatalog(event.detail.catalog,event.detail.assets);
+  cardFrameGate.reset();
+});
+document.addEventListener('hd-map-catalog-ready', event => {
+  liveMaps.setCatalog(event.detail.catalog,event.detail.assets);
+  mapFrameGate.reset();
+});
+document.addEventListener('hd-special-catalog-ready', event => {
+  liveSpecials.setCatalog(event.detail.catalog,event.detail.assets);
+  specialFrameGate.reset();
 });
 document.addEventListener('hd-portrait-catalog-ready', event => {
   livePortraits.setCatalog(event.detail.catalog, event.detail.assets);
@@ -123,11 +157,23 @@ $('start').addEventListener('click', async () => {
     storyFrameGate.reset();
     hdFrameGate.reset();
     portraitFrameGate.reset();
+    specialFrameGate.reset();
+    mapFrameGate.reset();
+    cardFrameGate.reset();
+    mode7FrameGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
+    game.set_special_hd_enabled?.($('special-hd-toggle').checked);
+    game.set_map_hd_enabled?.($('map-hd-toggle').checked);
+    game.set_card_hd_enabled?.($('card-hd-toggle').checked);
+    game.set_mode7_hd_enabled?.($('mode7-hd-toggle').checked);
     game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
     liveHd.attach(game);
     liveFighters.attach(game);
+    liveSpecials.attach(game);
+    liveMaps.attach(game);
+    liveCards.attach(game);
+    liveMode7.attach(game);
     livePortraits.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
@@ -151,6 +197,10 @@ function drawFrame() {
     storyFrameGate.reset();
     hdFrameGate.reset();
     portraitFrameGate.reset();
+    specialFrameGate.reset();
+    mapFrameGate.reset();
+    cardFrameGate.reset();
+    mode7FrameGate.reset();
   }
   // A fast advance can expose the next page's native English glyphs before
   // the Rust stateful Chinese renderer has filled that frame. Hold only the
@@ -191,13 +241,69 @@ function drawFrame() {
     pixels:game.hd_portrait_pixels?.()??0,
     key:portraitMatches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
   });
-  if (!storyHold && !hdHold && !portraitHold) {
+  let specialMatches=[];
+  if(enhanced && hdEnabled && liveSpecials.assets &&
+      $('special-hd-toggle').checked && typeof game.special_matches==='function') {
+    try {specialMatches=JSON.parse(game.special_matches());}catch{}
+  }
+  const specialHold=specialFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveSpecials.assets) &&
+      $('special-hd-toggle').checked,
+    pending:specialMatches.some(m=>!m.ready),
+    ready:specialMatches.some(m=>m.ready),
+    pixels:game.hd_special_pixels?.()??0,
+    key:specialMatches.map(m=>m.index+':'+m.key).sort().join('|')
+  });
+  let mapMatches=[];
+  if(enhanced && hdEnabled && liveMaps.assets && $('map-hd-toggle').checked &&
+    typeof game.map_matches==='function'){
+    try{mapMatches=JSON.parse(game.map_matches());}catch{}
+  }
+  const mapHold=mapFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveMaps.assets) &&
+      $('map-hd-toggle').checked,
+    pending:mapMatches.some(m=>!m.ready),
+    ready:mapMatches.some(m=>m.ready),
+    pixels:game.hd_map_pixels?.()??0,
+    key:mapMatches.map(m=>m.index+':'+m.tileX+':'+m.tileY).sort().join('|')
+  });
+  let cardMatches=[];
+  if(enhanced && hdEnabled && liveCards.assets && $('card-hd-toggle').checked &&
+    typeof game.card_matches==='function'){
+    try{cardMatches=JSON.parse(game.card_matches());}catch{}
+  }
+  const cardHold=cardFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveCards.assets) &&
+      $('card-hd-toggle').checked,
+    pending:cardMatches.some(m=>m.layers?.some(l=>!l.ready)),
+    ready:cardMatches.some(m=>m.layers?.some(l=>l.ready)),
+    pixels:game.hd_card_pixels?.()??0,
+    key:cardMatches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
+  });
+  let mode7Matches=[];
+  if(enhanced && hdEnabled && liveMode7.assets && $('mode7-hd-toggle').checked &&
+    typeof game.mode7_matches==='function'){
+    try{mode7Matches=JSON.parse(game.mode7_matches());}catch{}
+  }
+  const mode7Hold=mode7FrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(liveMode7.assets) &&
+      $('mode7-hd-toggle').checked,
+    pending:mode7Matches.some(m=>!m.ready),
+    ready:mode7Matches.some(m=>m.ready),
+    pixels:game.hd_mode7_pixels?.()??0,
+    key:mode7Matches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
+  });
+  if (!storyHold && !hdHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
     ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
     storyFrameGate.didPresent();
     hdFrameGate.didPresent(pixels);
     portraitFrameGate.didPresent();
+    specialFrameGate.didPresent();
+    mapFrameGate.didPresent();
+    cardFrameGate.didPresent();
+    mode7FrameGate.didPresent();
   }
   const native = game.native_translation_active();
   if (native) {
@@ -229,18 +335,26 @@ function requestFrame(now) {
       // A face may enter on a single battle/cutscene frame. Queue locally
       // matched art on that same emulated frame, not 90 ms later.
       if(hdEnabled && livePortraits.assets)livePortraits.pulse(true);
+      if(hdEnabled && liveSpecials.assets)liveSpecials.pulse(true);
+      if(hdEnabled && liveMaps.assets)liveMaps.pulse(true);
+      if(hdEnabled && liveCards.assets)liveCards.pulse(true);
+      if(hdEnabled && liveMode7.assets)liveMode7.pulse(true);
     }
     // Accelerate background catalogue polling only while a new HD layer is
     // missing; 90 ms avoids waiting for the old 450 ms idle interval.
     const hdPending = hdEnabled && liveHd.assets && game.hd_art_pixels()===0;
     // Animated OAM poses may last only a few frames, so poll their catalogue
     // at 90 ms while a local class2 ZIP is attached.
-    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets)) ? 90 : 450;
+    const interval = hdPending || (hdEnabled && (liveFighters.assets || livePortraits.assets || liveSpecials.assets || liveMaps.assets || liveCards.assets || liveMode7.assets)) ? 90 : 450;
     if (now - lastHdPoll >= interval) {
       lastHdPoll = now;
       liveHd.pulse();
       liveFighters.pulse();
       livePortraits.pulse();
+      liveSpecials.pulse();
+      liveMaps.pulse();
+      liveCards.pulse();
+      liveMode7.pulse();
     }
     drawFrame();
     if (now - lastDiagPoll >= 450) {
@@ -295,6 +409,22 @@ $('inframe').addEventListener('change', () => {
 $('fighter-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
 });
+$('mode7-hd-toggle').addEventListener('change',()=>{
+  if(game)game.set_mode7_hd_enabled?.($('mode7-hd-toggle').checked);
+  mode7FrameGate.reset();
+});
+$('card-hd-toggle').addEventListener('change',()=>{
+  if(game)game.set_card_hd_enabled?.($('card-hd-toggle').checked);
+  cardFrameGate.reset();
+});
+$('map-hd-toggle').addEventListener('change',()=>{
+  if(game)game.set_map_hd_enabled?.($('map-hd-toggle').checked);
+  mapFrameGate.reset();
+});
+$('special-hd-toggle').addEventListener('change',()=>{
+  if(game)game.set_special_hd_enabled?.($('special-hd-toggle').checked);
+  specialFrameGate.reset();
+});
 $('portrait-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
   portraitFrameGate.reset();
@@ -307,9 +437,17 @@ $('hd-toggle').addEventListener('click', () => {
   storyFrameGate.reset();
   hdFrameGate.reset();
   portraitFrameGate.reset();
+  specialFrameGate.reset();
+  mapFrameGate.reset();
+  cardFrameGate.reset();
+  mode7FrameGate.reset();
   liveHd.pulse();
   liveFighters.pulse();
   livePortraits.pulse();
+  liveSpecials.pulse();
+  liveMaps.pulse();
+  liveCards.pulse();
+  liveMode7.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
 window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
@@ -330,7 +468,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -362,7 +500,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });

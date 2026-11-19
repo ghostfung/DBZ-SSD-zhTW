@@ -5,6 +5,10 @@ import {LocalHdAssets} from './hd-local-assets.mjs';
 import {readBackgroundCatalog} from './hd-background-index.mjs';
 import {readFighterCatalog} from './hd-fighter-index.mjs';
 import {readPortraitCatalog} from './hd-portrait-index.mjs';
+import {readSpecialCatalog} from './hd-special-index.mjs';
+import {readMapCatalog} from './hd-map-index.mjs';
+import {readCardCatalog} from './hd-card-index.mjs';
+import {readMode7Catalog} from './hd-mode7-index.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -17,6 +21,10 @@ let library=null;
 let bgCatalog=null;
 let fighterCatalog=null;
 let portraitCatalog=null;
+let specialCatalog=null;
+let mapCatalog=null;
+let cardCatalog=null;
+let mode7Catalog=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -141,6 +149,91 @@ async function loadFighterIndex(source) {
   }
 }
 
+async function loadMode7Index(source){
+  const label=$('hd-mode7-count');
+  label.textContent='正在驗證官方 mode7/index.json…';
+  try{
+    const catalog=await readMode7Catalog(source);
+    if(library!==source)return;
+    mode7Catalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='Mode7 HD 平面 '+catalog.count+' 組；未支援 '+catalog.ignored+
+      ' 組；只在 ROM/VRAM 平面與 256 色調色盤一致時顯示。';
+  }catch(e){
+    if(library!==source)return;
+    label.textContent='Mode7 索引錯誤：'+(e?.message||e);
+    document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
+async function loadCardIndex(source){
+  const label=$('hd-card-count');
+  label.textContent='正在讀取本機 cards/index.json…';
+  try{
+    const catalog=await readCardCatalog(source);
+    if(library!==source)return;
+    cardCatalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='官方卡牌／UI 圖塊 '+catalog.count+
+      ' 筆；未匹配素材 '+catalog.missing+'，無效 '+catalog.ignored+
+      '。依 ROM 2bpp 鍵值匹配，base／roles 分層處理。';
+  }catch(e){
+    if(library!==source)return;
+    cardCatalog=null;mode7Catalog=null;
+    label.textContent='卡牌索引未就緒：'+(e?.message||e);
+    document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
+async function loadMapIndex(source){
+  const label=$('hd-map-count');
+  label.textContent='正在驗證本機 maps/index.json…';
+  try{
+    const catalog=await readMapCatalog(source);
+    if(library!==source)return;
+    mapCatalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-map-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='官方 HD 地圖 '+catalog.count+' 個佈局；無效 '+
+      catalog.ignored+' 個；'+(catalog.optional?'本 ZIP 無地圖圖檔。':
+      '啟動後由 ROM 指標及 BG2 校驗。');
+  }catch(error){
+    if(library!==source)return;
+    label.textContent='地圖 HD 索引無法讀取：'+(error?.message||String(error));
+    document.dispatchEvent(new CustomEvent('hd-map-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
+async function loadSpecialIndex(source){
+  const label=$('hd-special-count');
+  label.textContent='正在讀取 class3 地圖物件及 class2 戰鬥特效索引…';
+  try {
+    const catalog=await readSpecialCatalog(source);
+    if(library!==source)return;
+    specialCatalog=catalog;
+    document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
+      detail:{catalog,assets:source}
+    }));
+    label.textContent='地圖／特效來源索引 '+catalog.count+
+      ' 筆；'+(catalog.missingOptional?'此美術包無 class3（可選）索引。':
+      '只在 SNES OAM 精確匹配後載入圖片。');
+  }catch(error){
+    if(library!==source)return;
+    specialCatalog=null;mapCatalog=null;
+    label.textContent='物件／特效索引未就緒：'+(error?.message||String(error));
+    document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
+}
 async function loadPortraitIndex(source){
   const label=$('hd-portrait-count');
   portraitCatalog=null;
@@ -149,7 +242,19 @@ async function loadPortraitIndex(source){
     const catalog=await readPortraitCatalog(source);
     if(library!==source)return;
     portraitCatalog=catalog;
-    document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+    document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-map-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
       detail:{catalog,assets:source}
     }));
     label.textContent='官方肖像素材 '+catalog.count+' 筆，缺少圖片 '+
@@ -174,6 +279,10 @@ function prepareLocalReader(file,info){
   void loadBackgroundIndex(library);
   void loadFighterIndex(library);
   void loadPortraitIndex(library);
+  void loadSpecialIndex(library);
+  void loadMapIndex(library);
+  void loadCardIndex(library);
+  void loadMode7Index(library);
   sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
     ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
 }
@@ -208,7 +317,7 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
   document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
     detail:{catalog:null,assets:null}
   }));
@@ -294,7 +403,19 @@ $('hd-remove').addEventListener('click',async()=>{
     await clearSavedHdPack();
     persisted=false; verified=null; activeFile=null; sampleEntry=null;
     clearPreview();
-    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;
+    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;
+  document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-map-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
+  document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
+    detail:{catalog:null,assets:null}
+  }));
   document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
     detail:{catalog:null,assets:null}
   }));

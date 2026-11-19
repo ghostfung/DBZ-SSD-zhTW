@@ -2,7 +2,7 @@ name: DBZ iPhone Web POC (WASM)
 
 on:
   push:
-    branches: [iphone-web-poc]
+    branches: [iphone-web-poc, iphone-hd-integration-batch]
     paths:
       - 'crates/ssd-web/**'
       - 'crates/ssd-hd/**'
@@ -59,7 +59,7 @@ jobs:
           set -o pipefail
           node --test tests/*.test.mjs 2>&1 | tee "$RUNNER_TEMP/dbz-node.log"
       - name: Verify browser JavaScript syntax
-        run: node --check web/app.mjs && node --check web/story-frame-gate.mjs && node --check web/hd-frame-gate.mjs && node --check web/chinese-overlay.mjs && node --check web/hd-pack.mjs && node --check web/hd-import-ui.mjs && node --check web/sha256-stream.mjs && node --check web/hd-storage.mjs && node --check web/hd-local-assets.mjs && node --check web/hd-background-index.mjs && node --check web/hd-live.mjs && node --check web/hd-portrait-index.mjs && node --check web/hd-portrait-live.mjs && node --check web/hd-portrait-gate.mjs && node --check web/screen-text.mjs
+        run: node --check web/app.mjs && node --check web/story-frame-gate.mjs && node --check web/hd-frame-gate.mjs && node --check web/chinese-overlay.mjs && node --check web/hd-pack.mjs && node --check web/hd-import-ui.mjs && node --check web/sha256-stream.mjs && node --check web/hd-storage.mjs && node --check web/hd-local-assets.mjs && node --check web/hd-background-index.mjs && node --check web/hd-live.mjs && node --check web/hd-portrait-index.mjs && node --check web/hd-portrait-live.mjs && node --check web/hd-portrait-gate.mjs && node --check web/hd-special-index.mjs && node --check web/hd-special-live.mjs && node --check web/hd-map-index.mjs && node --check web/hd-map-live.mjs && node --check web/hd-card-index.mjs && node --check web/hd-card-live.mjs && node --check web/hd-mode7-index.mjs && node --check web/hd-mode7-live.mjs && node --check web/screen-text.mjs
       - name: Test browser bridge's native OAM pose and alpha-mask rules
         run: |
           set -o pipefail

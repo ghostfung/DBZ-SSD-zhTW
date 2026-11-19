@@ -11,10 +11,18 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 mod live_bg;
 mod live_fighters;
+mod live_specials;
+mod live_maps;
+mod live_cards;
+mod live_mode7;
 mod live_portraits;
 use live_portraits::LivePortraits;
 use live_bg::LiveBackgrounds;
 use live_fighters::LiveFighters;
+use live_specials::LiveSpecials;
+use live_maps::LiveMaps;
+use live_cards::LiveCards;
+use live_mode7::LiveMode7;
 
 /// Keep every page ever observed at a frame boundary briefly: the message
 /// engine sometimes points to the next string while the last page remains
@@ -82,6 +90,18 @@ pub struct WebGame {
     live_fighters: LiveFighters,
     hd_fighter_pixels: u32,
     hd_fighter_enabled: bool,
+    live_specials: LiveSpecials,
+    hd_special_pixels: u32,
+    hd_special_enabled: bool,
+    live_maps: LiveMaps,
+    hd_map_pixels: u32,
+    hd_map_enabled: bool,
+    live_cards:LiveCards,
+    hd_card_enabled:bool,
+    hd_card_pixels:u32,
+    live_mode7:LiveMode7,
+    hd_mode7_enabled:bool,
+    hd_mode7_pixels:u32,
     live_portraits: LivePortraits,
     hd_portrait_pixels: u32,
     hd_portrait_enabled: bool,
@@ -115,6 +135,11 @@ impl WebGame {
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
             live_fighters: LiveFighters::default(), hd_fighter_pixels: 0,
             hd_fighter_enabled: true,
+            live_specials: LiveSpecials::default(),
+            hd_special_pixels: 0, hd_special_enabled: true,
+            live_maps: LiveMaps::default(), hd_map_pixels:0, hd_map_enabled:true,
+            live_cards:LiveCards::default(),hd_card_enabled:true,hd_card_pixels:0,
+            live_mode7:LiveMode7::default(),hd_mode7_enabled:true,hd_mode7_pixels:0,
             live_portraits: LivePortraits::default(),
             hd_portrait_pixels: 0, hd_portrait_enabled: true })
     }
@@ -134,6 +159,12 @@ impl WebGame {
         // The previous-frame WRAM is the primary source of the page that
         // started this PPU frame (WideRun semantics). Keep short-lived page
         // candidates so we can confirm what actually remained visible later.
+        // NMI prepares the PPU frame from the field state at its start.
+        // Do not read the next map/camera after run_frame(), which can already
+        // be on another scene during transitions.
+        let field_state=if self.hd_enabled && self.live_maps.has_entries() {
+            ssd_hd::world::FieldState::from_wram(self.machine.wram())
+        } else {None};
         let mut started = None;
         if self.hd_enabled && self.native_overlay.is_some() {
             started = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
@@ -168,6 +199,10 @@ impl WebGame {
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_special_pixels = 0;
+        self.hd_map_pixels = 0;
+        self.hd_card_pixels = 0;
+        self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
@@ -182,15 +217,45 @@ impl WebGame {
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
+                        // Field map art is bound by the ROM map layout and
+                        // independently checked against live PPU BG2 tilemap.
+                        self.live_maps.refresh(&self.rom,field_state,log);
+                        if self.hd_map_enabled {
+                            self.hd_map_pixels=self.live_maps.composite(
+                                log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
+                                self.hd_width as usize,self.hd_height as usize);
+                        }
+                        // Mode7 art is keyed to an exact VRAM plane and
+                        // original palette, and sampled with the SNES HDMA
+                        // matrix per scanline and subpixel. No fixed scale.
+                        if self.live_mode7.has_entries() {
+                            if self.machine.frame_count()%4==0 {
+                                self.live_mode7.refresh(log);
+                            }
+                            if self.hd_mode7_enabled {
+                                self.hd_mode7_pixels=self.live_mode7.composite(
+                                    log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
+                                    self.hd_width as usize,self.hd_height as usize);
+                            }
+                        }
                         // Reuse the desktop renderer's two-pass strategy:
                         // hide only validated fighter OAM sprites, reconstruct
                         // the genuine PPU pixels beneath them and reapply HD
                         // background art. Then draw the transparent HD pose.
                         // No guessed rectangles or solid colour masking.
                         self.live_fighters.refresh(log);
-                        let hidden=if self.hd_fighter_enabled {
+                        self.live_specials.refresh(log);
+                        let fighters=if self.hd_fighter_enabled {
                             self.live_fighters.ready_oam_bits()
                         } else { 0 };
+                        // A fighter already owns every one of its OAM
+                        // pieces. Never allow a class3 sprite or class2
+                        // effect to claim one of those pieces again.
+                        self.live_specials.exclude_oam(fighters);
+                        let specials=if self.hd_special_enabled {
+                            self.live_specials.ready_oam_bits()
+                        } else { 0 };
+                        let hidden=fighters|specials;
                         if hidden != 0 {
                             let original_oam=self.hd_renderer.oam_ids().to_vec();
                             let original_layers=self.hd_renderer.layer_ids().to_vec();
@@ -202,11 +267,20 @@ impl WebGame {
                                     log,&below_layers,&mut below.rgba,
                                     self.hd_width as usize,self.hd_height as usize,
                                 );
-                                self.hd_fighter_pixels=self.live_fighters.composite(
-                                    &original_oam,&original_layers,&below.rgba,
-                                    &mut self.hd_pixels,
-                                    self.hd_width as usize,self.hd_height as usize,
-                                );
+                                if self.hd_fighter_enabled {
+                                    self.hd_fighter_pixels=self.live_fighters.composite(
+                                        &original_oam,&original_layers,&below.rgba,
+                                        &mut self.hd_pixels,
+                                        self.hd_width as usize,self.hd_height as usize,
+                                    );
+                                }
+                                if self.hd_special_enabled {
+                                    self.hd_special_pixels=self.live_specials.composite(
+                                        &original_oam,&original_layers,&below.rgba,
+                                        &mut self.hd_pixels,
+                                        self.hd_width as usize,self.hd_height as usize,
+                                    );
+                                }
                             }
                         }
                         // Class1 faces: compare real winning 4bpp PPU source
@@ -222,6 +296,18 @@ impl WebGame {
                                 self.hd_portrait_pixels=self.live_portraits.composite(
                                     log,self.hd_renderer.portrait_pixels(),
                                     &mut self.hd_pixels,
+                                    self.hd_width as usize,self.hd_height as usize);
+                            }
+                        }
+                        // Card/UI 2bpp art uses a unique ROM tile hash and
+                        // the PPU's winning BG tile, not a guessed card box.
+                        if self.live_cards.has_entries() {
+                            if self.machine.frame_count()%3==0 {
+                                self.live_cards.refresh(log,self.hd_renderer.portrait_pixels());
+                            }
+                            if self.hd_card_enabled {
+                                self.hd_card_pixels=self.live_cards.composite(
+                                    log,self.hd_renderer.portrait_pixels(),&mut self.hd_pixels,
                                     self.hd_width as usize,self.hd_height as usize);
                             }
                         }
@@ -546,12 +632,75 @@ impl WebGame {
         self.hd_fighter_enabled=enabled;
     }
 
+    /// Only verified class3 sprites and class2 effects, never a named
+    /// character or a guessed screen rectangle.
+    pub fn set_special_index(&mut self, json:&str)->Result<u32,JsValue>{
+        self.live_specials.load_catalog(json)
+            .map(|n|n as u32).map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn special_matches(&self)->String{self.live_specials.matches_json()}
+    pub fn special_probe(&self)->String{self.live_specials.probe_json()}
+    pub fn set_special_art(&mut self,index:usize,width:u32,height:u32,rgba:&[u8])
+        ->Result<(),JsValue>{
+        self.live_specials.add_picture(index,width as usize,height as usize,rgba)
+            .map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn hd_special_pixels(&self)->u32{self.hd_special_pixels}
+    pub fn set_special_hd_enabled(&mut self,enabled:bool){self.hd_special_enabled=enabled;}
+
+    pub fn set_map_index(&mut self,json:&str)->Result<u32,JsValue>{
+        self.live_maps.load_catalog(json)
+            .map(|n|n as u32).map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn map_matches(&self)->String{self.live_maps.matches_json()}
+    pub fn map_probe(&self)->String{self.live_maps.probe_json()}
+    pub fn set_map_tile(&mut self,index:usize,x:usize,y:usize,width:u32,height:u32,rgba:&[u8])
+        ->Result<(),JsValue>{
+        self.live_maps.add_picture(index,x,y,width as usize,height as usize,rgba)
+            .map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn hd_map_pixels(&self)->u32{self.hd_map_pixels}
+    pub fn set_map_hd_enabled(&mut self,enabled:bool){self.hd_map_enabled=enabled;}
+
+    pub fn set_mode7_index(&mut self,json:&str)->Result<u32,JsValue>{
+        self.live_mode7.load_catalog(json)
+            .map(|n|n as u32).map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn mode7_matches(&self)->String{self.live_mode7.matches_json()}
+    pub fn mode7_probe(&self)->String{self.live_mode7.probe_json()}
+    pub fn set_mode7_tile(&mut self,index:usize,x:usize,y:usize,width:u32,height:u32,
+        rgba:&[u8])->Result<(),JsValue>{
+        self.live_mode7.add_tile(index,x,y,width as usize,height as usize,rgba)
+            .map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn hd_mode7_pixels(&self)->u32{self.hd_mode7_pixels}
+    pub fn set_mode7_hd_enabled(&mut self,on:bool){self.hd_mode7_enabled=on;}
+
+    /// Source-keyed official card and UI tile art, layers blended through
+    /// the ROM's PPU palettes (base and roles).
+    pub fn set_card_index(&mut self,json:&str)->Result<u32,JsValue>{
+        let count=self.live_cards.load_catalog(json,&self.rom)
+            .map_err(|e|JsValue::from_str(&e))?;
+        self.hd_renderer.set_portrait_tracking(
+            self.live_cards.has_entries()||self.live_portraits.has_entries());
+        Ok(count as u32)
+    }
+    pub fn card_matches(&self)->String{self.live_cards.matches_json()}
+    pub fn card_probe(&self)->String{self.live_cards.probe_json()}
+    pub fn set_card_art(&mut self,index:usize,layer:u8,width:u32,height:u32,
+        rgba:&[u8])->Result<(),JsValue>{
+        self.live_cards.add_art(index,layer,width as usize,height as usize,rgba)
+            .map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn hd_card_pixels(&self)->u32{self.hd_card_pixels}
+    pub fn set_card_hd_enabled(&mut self,enabled:bool){self.hd_card_enabled=enabled;}
+
     /// Load validated class1 metadata; the palette-index source pixels are
     /// reconstructed from the user's own ROM, never from remote services.
     pub fn set_portrait_index(&mut self, json: &str) -> Result<u32, JsValue> {
         let n=self.live_portraits.load_catalog(json,&self.rom)
             .map_err(|e|JsValue::from_str(&e))?;
-        self.hd_renderer.set_portrait_tracking(n>0);
+        self.hd_renderer.set_portrait_tracking(n>0||self.live_cards.has_entries());
         Ok(n as u32)
     }
 
@@ -574,7 +723,7 @@ impl WebGame {
         self.hd_enabled = enabled;
         self.machine.set_line_log(enabled);
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
-        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries());
+        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries()||self.live_cards.has_entries());
         self.native_painted = false;
         self.native_page_hint = None;
         self.native_page_key = None;
@@ -590,6 +739,10 @@ impl WebGame {
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_special_pixels = 0;
+        self.hd_map_pixels = 0;
+        self.hd_card_pixels = 0;
+        self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
@@ -632,7 +785,7 @@ impl WebGame {
         self.previous_page = None;
         self.hd_pixels.clear();
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
-        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries());
+        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries()||self.live_cards.has_entries());
         self.native_painted = false;
         self.native_page_hint = None;
         self.native_page_key = None;
@@ -648,6 +801,10 @@ impl WebGame {
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_special_pixels = 0;
+        self.hd_map_pixels = 0;
+        self.hd_card_pixels = 0;
+        self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))

@@ -47,6 +47,22 @@
           <p class="hd-import-note">此處只顯示官方素材索引。遊戲啟動並開啟 HD 2x 後，會由 Rust PPU 核對 VRAM 與圖層設定；只有相符背景才會嘗試套用。</p>
         </div>
         <div class="hd-catalog">
+          <strong>Mode 7 飛行與旋轉場景 HD</strong>
+          <p id="hd-mode7-count" class="hd-import-note">匯入後讀取 mode7/index.json，需 VRAM 平面與調色盤完全驗證。</p>
+        </div>
+        <div class="hd-catalog">
+          <strong>卡牌／UI 字形 HD（cards）</strong>
+          <p id="hd-card-count" class="hd-import-note">匯入後讀取 cards/index.json，以 ROM 2bpp 圖塊精確核對 base／roles 美術。</p>
+        </div>
+        <div class="hd-catalog">
+          <strong>探索地圖 HD（maps）</strong>
+          <p id="hd-map-count" class="hd-import-note">匯入後讀取 maps/index.json，以 ROM 指標與 PPU BG2 雙重檢查。</p>
+        </div>
+        <div class="hd-catalog">
+          <strong>地圖 NPC／場景物件（class3）、戰鬥特效（class2）</strong>
+          <p id="hd-special-count" class="hd-import-note">匯入驗證後將讀取 class3、class2 索引；只使用原作者的精確 source_key。</p>
+        </div>
+        <div class="hd-catalog">
           <strong>人物頭像 HD（class1）</strong>
           <p id="hd-portrait-count" class="hd-import-note">匯入後將讀取 class1/index.json，與玩家 ROM 的原始圖塊進行核對。</p>
         </div>
@@ -82,6 +98,14 @@
         <p id="hd-fighter-info" class="hd-import-note" aria-live="polite">人物 HD 尚未載入。</p>
         <label class="check-option"><input id="portrait-hd-toggle" type="checkbox" checked/> 人物頭像 HD（class1 實驗）</label>
         <p id="hd-portrait-info" class="hd-import-note" aria-live="polite">頭像 HD 尚未載入。</p>
+        <label class="check-option"><input id="special-hd-toggle" type="checkbox" checked/> 地圖人物／戰鬥特效 HD（實驗）</label>
+        <p id="hd-special-info" class="hd-import-note" aria-live="polite">物件／特效 HD 尚未載入。</p>
+        <label class="check-option"><input id="map-hd-toggle" type="checkbox" checked/> 探索地圖 HD（ROM／BG2 校驗）</label>
+        <p id="hd-map-info" class="hd-import-note" aria-live="polite">地圖 HD 尚未載入。</p>
+        <label class="check-option"><input id="card-hd-toggle" type="checkbox" checked/> 卡牌／UI HD（實驗）</label>
+        <p id="hd-card-info" class="hd-import-note" aria-live="polite">卡牌 HD 尚未載入。</p>
+        <label class="check-option"><input id="mode7-hd-toggle" type="checkbox" checked/> Mode 7 飛行 HD（實驗）</label>
+        <p id="hd-mode7-info" class="hd-import-note" aria-live="polite">Mode 7 HD 尚未載入。</p>
       </div>
       <div id="translation-card" class="translation-card" hidden>
         <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>
