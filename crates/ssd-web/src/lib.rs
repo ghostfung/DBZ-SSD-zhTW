@@ -213,7 +213,8 @@ impl WebGame {
                         // tile hashes against the player's ROM streams. Only
                         // verified local HD artwork may replace those pixels.
                         if self.live_portraits.has_entries() {
-                            if self.machine.frame_count() % 4 == 0 {
+                            let cadence=if self.live_portraits.needs_attention() {2} else {4};
+                            if self.machine.frame_count() % cadence == 0 {
                                 self.live_portraits.refresh(
                                     log, self.hd_renderer.portrait_pixels());
                             }
