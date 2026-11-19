@@ -3,6 +3,7 @@ import {SnesAudio} from './audio.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
 import {HdFrameGate} from './hd-frame-gate.mjs';
+import {PortraitFrameGate} from './hd-portrait-gate.mjs';
 import {LiveHdFighters} from './hd-fighter-live.mjs';
 import {LiveHdPortraits} from './hd-portrait-live.mjs';
 const $ = id => document.getElementById(id);
@@ -17,6 +18,7 @@ const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textCo
 const livePortraits = new LiveHdPortraits(message => { $('hd-portrait-info').textContent = message; });
 const storyFrameGate = new StoryFrameGate(10);
 const hdFrameGate = new HdFrameGate();
+const portraitFrameGate = new PortraitFrameGate();
 
 let translationDiag = [], lastDiagSignature = '';
 function sampleTranslationDiagnostics() {
@@ -29,6 +31,9 @@ function sampleTranslationDiagnostics() {
     item.hd_presentation_held_frames = hdFrameGate.heldFramesTotal;
     item.hd_fighter_pixels = game.hd_fighter_pixels?.() ?? 0;
     item.hd_portrait_pixels = game.hd_portrait_pixels?.() ?? 0;
+    item.portrait_holding = portraitFrameGate.isHolding;
+    item.portrait_held_frames = portraitFrameGate.heldFramesTotal;
+    try { item.portrait_probe = JSON.parse(game.portrait_probe?.() || '{}'); } catch {}
     // Only log changes (page key, detected glyph positions or fallback), rather
     // than holding 60 large JSON objects per second in mobile Safari memory.
     const signature = JSON.stringify([item.start_key,item.end_key,item.late_page,item.visible_page_fallback,item.visible_page_score,item.untranslated_visible_key,item.changed_glyph_samples,item.selected_expected_english,item.story_translation_pending,item.presentation_holding,item.presentation_held_frames,item.hd_presentation_holding,item.hd_presentation_held_frames,item.glyphs]);
@@ -51,6 +56,7 @@ document.addEventListener('hd-fighter-catalog-ready', event => {
 });
 document.addEventListener('hd-portrait-catalog-ready', event => {
   livePortraits.setCatalog(event.detail.catalog, event.detail.assets);
+  portraitFrameGate.reset();
 });
 
 function soundUi(message) {
@@ -116,6 +122,7 @@ $('start').addEventListener('click', async () => {
     translationDiag = []; lastDiagSignature = '';
     storyFrameGate.reset();
     hdFrameGate.reset();
+    portraitFrameGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
     game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
@@ -143,6 +150,7 @@ function drawFrame() {
     canvas.width=w; canvas.height=h;
     storyFrameGate.reset();
     hdFrameGate.reset();
+    portraitFrameGate.reset();
   }
   // A fast advance can expose the next page's native English glyphs before
   // the Rust stateful Chinese renderer has filled that frame. Hold only the
@@ -166,12 +174,30 @@ function drawFrame() {
     enabled:enhanced && hdEnabled && Boolean(liveHd.assets),
     pixels,pending:pendingArt
   });
-  if (!storyHold && !hdHold) {
+  // Only a verified on-screen class1 candidate may delay a raw portrait.
+  // This is an independent, bounded presentation hold: music, input and
+  // emulator clocks continue, including if the ZIP or art is missing.
+  let portraitMatches=[];
+  if(enhanced && hdEnabled && livePortraits.assets &&
+      $('portrait-hd-toggle').checked && typeof game.portrait_matches==='function'){
+    try { portraitMatches=JSON.parse(game.portrait_matches()); }
+    catch { portraitMatches=[]; }
+  }
+  const portraitHold=portraitFrameGate.shouldDefer(game.frame_count(),{
+    enabled:enhanced && hdEnabled && Boolean(livePortraits.assets) &&
+      $('portrait-hd-toggle').checked,
+    pending:portraitMatches.some(m=>!m.ready),
+    ready:portraitMatches.some(m=>m.ready),
+    pixels:game.hd_portrait_pixels?.()??0,
+    key:portraitMatches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
+  });
+  if (!storyHold && !hdHold && !portraitHold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
     ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba),w,h),0,0);
     storyFrameGate.didPresent();
     hdFrameGate.didPresent(pixels);
+    portraitFrameGate.didPresent();
   }
   const native = game.native_translation_active();
   if (native) {
@@ -200,6 +226,9 @@ function requestFrame(now) {
       // Synchronise the message with the PPU from the same emulation frame.
       // The former 80 ms timer displayed bare English before Chinese.
       updateTranslation();
+      // A face may enter on a single battle/cutscene frame. Queue locally
+      // matched art on that same emulated frame, not 90 ms later.
+      if(hdEnabled && livePortraits.assets)livePortraits.pulse(true);
     }
     // Accelerate background catalogue polling only while a new HD layer is
     // missing; 90 ms avoids waiting for the old 450 ms idle interval.
@@ -268,6 +297,7 @@ $('fighter-hd-toggle').addEventListener('change',()=>{
 });
 $('portrait-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
+  portraitFrameGate.reset();
 });
 $('hd-toggle').addEventListener('click', () => {
   hdEnabled = !hdEnabled;
@@ -276,6 +306,7 @@ $('hd-toggle').addEventListener('click', () => {
   if (game) game.set_hd_mode(hdEnabled);
   storyFrameGate.reset();
   hdFrameGate.reset();
+  portraitFrameGate.reset();
   liveHd.pulse();
   liveFighters.pulse();
   livePortraits.pulse();
@@ -299,7 +330,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -331,7 +362,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
