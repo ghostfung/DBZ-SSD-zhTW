@@ -11,6 +11,8 @@ use serde_json::json;
 use wasm_bindgen::prelude::*;
 mod live_bg;
 mod live_fighters;
+mod live_portraits;
+use live_portraits::LivePortraits;
 use live_bg::LiveBackgrounds;
 use live_fighters::LiveFighters;
 
@@ -80,6 +82,9 @@ pub struct WebGame {
     live_fighters: LiveFighters,
     hd_fighter_pixels: u32,
     hd_fighter_enabled: bool,
+    live_portraits: LivePortraits,
+    hd_portrait_pixels: u32,
+    hd_portrait_enabled: bool,
 }
 
 #[wasm_bindgen]
@@ -109,7 +114,9 @@ impl WebGame {
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
             live_fighters: LiveFighters::default(), hd_fighter_pixels: 0,
-            hd_fighter_enabled: true })
+            hd_fighter_enabled: true,
+            live_portraits: LivePortraits::default(),
+            hd_portrait_pixels: 0, hd_portrait_enabled: true })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -161,6 +168,7 @@ impl WebGame {
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_portrait_pixels = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
                 match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
@@ -199,6 +207,21 @@ impl WebGame {
                                     &mut self.hd_pixels,
                                     self.hd_width as usize,self.hd_height as usize,
                                 );
+                            }
+                        }
+                        // Class1 faces: compare real winning 4bpp PPU source
+                        // tile hashes against the player's ROM streams. Only
+                        // verified local HD artwork may replace those pixels.
+                        if self.live_portraits.has_entries() {
+                            if self.machine.frame_count() % 4 == 0 {
+                                self.live_portraits.refresh(
+                                    log, self.hd_renderer.portrait_pixels());
+                            }
+                            if self.hd_portrait_enabled {
+                                self.hd_portrait_pixels=self.live_portraits.composite(
+                                    log,self.hd_renderer.portrait_pixels(),
+                                    &mut self.hd_pixels,
+                                    self.hd_width as usize,self.hd_height as usize);
                             }
                         }
                         // Compare the page identified from WRAM with the actual
@@ -522,6 +545,27 @@ impl WebGame {
         self.hd_fighter_enabled=enabled;
     }
 
+    /// Load validated class1 metadata; the palette-index source pixels are
+    /// reconstructed from the user's own ROM, never from remote services.
+    pub fn set_portrait_index(&mut self, json: &str) -> Result<u32, JsValue> {
+        let n=self.live_portraits.load_catalog(json,&self.rom)
+            .map_err(|e|JsValue::from_str(&e))?;
+        self.hd_renderer.set_portrait_tracking(n>0);
+        Ok(n as u32)
+    }
+
+    pub fn portrait_matches(&self)->String {self.live_portraits.matches_json()}
+    pub fn portrait_probe(&self)->String {self.live_portraits.probe_json()}
+    pub fn set_portrait_art(&mut self,index:usize,width:u32,height:u32,rgba:&[u8])
+        ->Result<(),JsValue> {
+        self.live_portraits.add_picture(index,width as usize,height as usize,rgba)
+            .map_err(|e|JsValue::from_str(&e))
+    }
+    pub fn hd_portrait_pixels(&self)->u32 {self.hd_portrait_pixels}
+    pub fn set_portrait_hd_enabled(&mut self,enabled:bool) {
+        self.hd_portrait_enabled=enabled;
+    }
+
     /// Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
     /// Unsupported frames fall back to Classic without affecting emulator state.
     pub fn set_hd_mode(&mut self, enabled: bool) {
@@ -529,6 +573,7 @@ impl WebGame {
         self.hd_enabled = enabled;
         self.machine.set_line_log(enabled);
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
+        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries());
         self.native_painted = false;
         self.native_page_hint = None;
         self.native_page_key = None;
@@ -544,6 +589,7 @@ impl WebGame {
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_portrait_pixels = 0;
         self.hd_pixels.clear();
         self.hd_width = 0;
         self.hd_height = 0;
@@ -585,6 +631,7 @@ impl WebGame {
         self.previous_page = None;
         self.hd_pixels.clear();
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
+        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries());
         self.native_painted = false;
         self.native_page_hint = None;
         self.native_page_key = None;
@@ -600,6 +647,7 @@ impl WebGame {
         self.native_story_ascii_cells = 0;
         self.hd_art_pixels = 0;
         self.hd_fighter_pixels = 0;
+        self.hd_portrait_pixels = 0;
         self.machine.load_state(state)
             .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
     }
