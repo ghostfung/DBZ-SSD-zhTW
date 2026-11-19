@@ -36,6 +36,7 @@ export class WebGame {
      */
     hd_fighter_pixels(): number;
     hd_mode(): boolean;
+    hd_portrait_pixels(): number;
     hd_warning(): string;
     height(): number;
     load_state(state: Uint8Array): void;
@@ -56,6 +57,8 @@ export class WebGame {
      * Input is the user's local Japanese Rev 1 or Klepto 1.02 ROM. ROM/IPS never leave the device.
      */
     constructor(rom: Uint8Array, ips: Uint8Array);
+    portrait_matches(): string;
+    portrait_probe(): string;
     save_state(): Uint8Array;
     /**
      * AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -84,6 +87,13 @@ export class WebGame {
      * Unsupported frames fall back to Classic without affecting emulator state.
      */
     set_hd_mode(enabled: boolean): void;
+    set_portrait_art(index: number, width: number, height: number, rgba: Uint8Array): void;
+    set_portrait_hd_enabled(enabled: boolean): void;
+    /**
+     * Load validated class1 metadata; the palette-index source pixels are
+     * reconstructed from the user's own ROM, never from remote services.
+     */
+    set_portrait_index(json: string): number;
     /**
      * Whether a story dialogue frame contains untranslated PPU letters
      * that should be deferred briefly before Safari presents it.
@@ -125,6 +135,7 @@ export interface InitOutput {
     readonly webgame_hd_art_pixels: (a: number) => number;
     readonly webgame_hd_fighter_pixels: (a: number) => number;
     readonly webgame_hd_mode: (a: number) => number;
+    readonly webgame_hd_portrait_pixels: (a: number) => number;
     readonly webgame_hd_warning: (a: number) => [number, number];
     readonly webgame_height: (a: number) => number;
     readonly webgame_load_state: (a: number, b: number, c: number) => [number, number];
@@ -132,6 +143,8 @@ export interface InitOutput {
     readonly webgame_menu_translations: (a: number) => [number, number];
     readonly webgame_native_translation_active: (a: number) => number;
     readonly webgame_new: (a: number, b: number, c: number, d: number) => [number, number, number];
+    readonly webgame_portrait_matches: (a: number) => [number, number];
+    readonly webgame_portrait_probe: (a: number) => [number, number];
     readonly webgame_save_state: (a: number) => [number, number];
     readonly webgame_set_audio_rate: (a: number, b: number) => [number, number];
     readonly webgame_set_background_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
@@ -140,6 +153,9 @@ export interface InitOutput {
     readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
+    readonly webgame_set_portrait_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
+    readonly webgame_set_portrait_hd_enabled: (a: number, b: number) => void;
+    readonly webgame_set_portrait_index: (a: number, b: number, c: number) => [number, number, number];
     readonly webgame_story_translation_pending: (a: number) => number;
     readonly webgame_tick: (a: number, b: number) => [number, number];
     readonly webgame_translation_diagnostics: (a: number) => [number, number];

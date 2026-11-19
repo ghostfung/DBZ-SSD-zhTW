@@ -134,6 +134,13 @@ export class WebGame {
         return ret !== 0;
     }
     /**
+     * @returns {number}
+     */
+    hd_portrait_pixels() {
+        const ret = wasm.webgame_hd_portrait_pixels(this.__wbg_ptr);
+        return ret >>> 0;
+    }
+    /**
      * @returns {string}
      */
     hd_warning() {
@@ -222,6 +229,36 @@ export class WebGame {
         this.__wbg_ptr = ret[0];
         WebGameFinalization.register(this, this.__wbg_ptr, this);
         return this;
+    }
+    /**
+     * @returns {string}
+     */
+    portrait_matches() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_portrait_matches(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
+     * @returns {string}
+     */
+    portrait_probe() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_portrait_probe(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * @returns {Uint8Array}
@@ -314,6 +351,41 @@ export class WebGame {
      */
     set_hd_mode(enabled) {
         wasm.webgame_set_hd_mode(this.__wbg_ptr, enabled);
+    }
+    /**
+     * @param {number} index
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_portrait_art(index, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_portrait_art(this.__wbg_ptr, index, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
+     * @param {boolean} enabled
+     */
+    set_portrait_hd_enabled(enabled) {
+        wasm.webgame_set_portrait_hd_enabled(this.__wbg_ptr, enabled);
+    }
+    /**
+     * Load validated class1 metadata; the palette-index source pixels are
+     * reconstructed from the user's own ROM, never from remote services.
+     * @param {string} json
+     * @returns {number}
+     */
+    set_portrait_index(json) {
+        const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_portrait_index(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
     }
     /**
      * Whether a story dialogue frame contains untranslated PPU letters
