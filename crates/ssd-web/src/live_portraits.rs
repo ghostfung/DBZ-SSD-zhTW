@@ -346,7 +346,7 @@ mod tests {
         live.add_picture(0,64,64,&image).unwrap();
         assert_eq!(live.composite(&log,&samples,&mut rgba,512,64),1024);
         assert_eq!(&rgba[..4], &[250,50,10,255]);
-        let outside=(40*4);
+        let outside=80*4;
         assert_eq!(&rgba[outside..outside+4], &[0,0,0,0]);
     }
 
