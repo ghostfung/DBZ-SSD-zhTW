@@ -11,10 +11,11 @@ import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v41';
+import {HdPresentationBudget} from './hd-presentation-budget.mjs';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v42';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='hd-batch-variants-v41';
+const BUILD_ID='hd-perf-luma-v42';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -23,6 +24,8 @@ let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const frameMetrics = new FrameMetrics();
+const transientHoldBudget = new HdPresentationBudget();
+let perfHistory=[];
 const hdSceneTrace = new HdSceneTrace();
 let lastPresentedFrame=null,lastPresentation=null;
 const transitionArtifactGate = new TransitionArtifactGate({maxFrames:5});
@@ -83,6 +86,10 @@ document.addEventListener('hd-coverage-runtime-snapshot',event=>{
     const core=game?.browser_build_tag?.()??null;
     event.detail.build={client:BUILD_ID,core,matched:core===BUILD_ID};
     event.detail.recentSceneTrace=hdSceneTrace.report();
+    // Two-second browser timing windows, bounded to the most recent minute.
+    // No ROM, HD files, save data, device IDs or pixel arrays are exported.
+    event.detail.framePerformance={windowMs:2000,
+      windows:perfHistory.slice(),transientHoldBudget:transientHoldBudget.summary()};
   }
 });
 
@@ -211,7 +218,7 @@ $('start').addEventListener('click', async () => {
     $('setup').hidden = true;
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
-    frameMetrics.reset();
+    frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
     hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
     averageTickMs=0;
     transitionArtifactGate.reset();
@@ -285,8 +292,10 @@ function drawFrame() {
     try{fighterMatches=JSON.parse(game.fighter_matches());}catch{}
   }
   const fighterHold=fighterFrameGate.shouldDefer(game.frame_count(),{
+    // No matched pose means no HD silhouette to preserve; do not freeze
+    // an unrelated preceding frame during fast-moving field animations.
     enabled:enhanced && hdEnabled && Boolean(liveFighters.assets) &&
-      $('fighter-hd-toggle').checked,
+      $('fighter-hd-toggle').checked && fighterMatches.length>0,
     pending:fighterMatches.some(m=>!m.ready),
     ready:fighterMatches.some(m=>m.ready),
     pixels:game.hd_fighter_pixels?.()??0,
@@ -306,8 +315,10 @@ function drawFrame() {
     try {specialMatches=JSON.parse(game.special_matches());}catch{}
   }
   const specialHold=specialFrameGate.shouldDefer(game.frame_count(),{
+    // Many transient OAM effects disappear naturally between poses.
+    // A disappeared effect must not freeze the entire picture on handoff.
     enabled:enhanced && hdEnabled && Boolean(liveSpecials.assets) &&
-      $('special-hd-toggle').checked,
+      $('special-hd-toggle').checked && specialMatches.length>0,
     pending:specialMatches.some(m=>!m.ready),
     ready:specialMatches.some(m=>m.ready),
     pixels:game.hd_special_pixels?.()??0,
@@ -346,7 +357,7 @@ function drawFrame() {
   }
   const mode7Hold=mode7FrameGate.shouldDefer(game.frame_count(),{
     enabled:enhanced && hdEnabled && Boolean(liveMode7.assets) &&
-      $('mode7-hd-toggle').checked,
+      $('mode7-hd-toggle').checked && mode7Matches.length>0,
     pending:mode7Matches.some(m=>!m.ready),
     ready:mode7Matches.some(m=>m.ready),
     pixels:game.hd_mode7_pixels?.()??0,
@@ -356,6 +367,13 @@ function drawFrame() {
     ['fighter',fighterHold],['portrait',portraitHold],['special',specialHold],
     ['map',mapHold],['cards',cardHold],['mode7',mode7Hold]]
     .filter(([,held])=>held).map(([name])=>name);
+  // Keep important background/translation hand-offs unchanged. For
+  // transient sprites, cap both consecutive frozen frames and the rolling
+  // amount of frozen video, even if different HD poses keep arriving.
+  const transientOnly=holdReasons.length>0&&!storyHold&&!hdHold;
+  const allowTransient=transientHoldBudget.allow(game.frame_count(),transientOnly);
+  const bypassedTransient=transientOnly&&!allowTransient;
+  if(bypassedTransient)holdReasons.length=0;
   if (holdReasons.length===0) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
@@ -386,7 +404,8 @@ function drawFrame() {
     }
   }
   lastPresentation={displayedFrame:lastPresentedFrame,
-    held:holdReasons.length>0,reasons:holdReasons};
+    held:holdReasons.length>0,reasons:holdReasons,
+    bypassedTransient};
   const native = game.native_translation_active();
   if (native) {
     // The Rust renderer already paints Chinese in the final RGBA pixels.
@@ -473,6 +492,8 @@ function requestFrame(now) {
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
     if(perf){
+      perfHistory.push({frame:game.frame_count(),...perf});
+      if(perfHistory.length>30)perfHistory.shift();
       $('frame-perf').textContent=FrameMetrics.describe(perf)+
         '；轉場異常影格已保護 '+transitionArtifactGate.heldFramesTotal;
       // One aggregated JSON report per two seconds, not per frame.
@@ -596,7 +617,8 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -628,7 +650,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));hdSceneTrace.reset();storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
