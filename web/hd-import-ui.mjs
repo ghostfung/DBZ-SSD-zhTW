@@ -141,7 +141,9 @@ async function loadFighterIndex(source) {
       detail:{catalog,assets:source}
     }));
     label.textContent='官方戰鬥姿勢索引 '+catalog.count.toLocaleString('en-US')+
-      ' 筆；'+catalog.noPalette+' 筆缺少可核對的調色盤；'+catalog.missing.length+
+      ' 筆；擴展人物姿勢 '+catalog.variantCount+' 張（無效 '+catalog.variantIgnored+
+      '、缺圖 '+catalog.variantMissing+'、需條件驗證 '+catalog.variantConditional+'）；'+
+      catalog.noPalette+' 筆缺少可核對的調色盤；'+catalog.missing.length+
       ' 筆無法安全套用。彩色素材須核對調色盤；灰階 luma 僅在精確 OAM 來源鍵值及尺寸可唯一確認時使用原始畫素上色。';
   } catch(error) {
     if(library!==source)return;
