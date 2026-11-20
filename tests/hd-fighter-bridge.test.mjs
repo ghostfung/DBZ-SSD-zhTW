@@ -37,5 +37,5 @@ test('fighter catalogue and art come only from local ZIP and exclude missing pal
  assert.match(app,/liveFighters\.detach\(\)/);
  assert.doesNotMatch(app,/fetch\(.+class2/);
  assert.match(read('web/hd-fighter-live.mjs'),/this\.decoder\(assets,match\.art\)/);
- assert.match(read('web/hd-fighter-index.mjs'),/!entry\.luma && colourCount>=2 && hasFile\(art\)/);
+ assert.match(read('web/hd-fighter-index.mjs'),/luma \? entry\.id\.startsWith\('battle-'\) : colourCount>=2/);
 });
