@@ -179,7 +179,8 @@ impl LiveFighters {
                 let lookup=&self.lookup;
                 let mut has_battle_art=|key,width,height| {
                     lookup.get(&key).is_some_and(|indices| indices.iter().any(|&i|
-                        entries[i].id.starts_with("battle-")
+                        (entries[i].id.starts_with("battle-")
+                            || entries[i].id.starts_with("field-fg-"))
                             && entries[i].width==width && entries[i].height==height))
                 };
                 ssd_hd::live_field_fighter_poses(log,&mut has_battle_art)
@@ -193,7 +194,8 @@ impl LiveFighters {
                     self.palette_rejections+=1;
                     continue;
                 };
-                if !self.entries[index].id.starts_with("battle-")
+                if !(self.entries[index].id.starts_with("battle-")
+                    || self.entries[index].id.starts_with("field-fg-"))
                     || (owned & pose.oam_bits)!=0 {continue;}
                 owned|=pose.oam_bits;
                 self.active.push(Matching {index,pose});
