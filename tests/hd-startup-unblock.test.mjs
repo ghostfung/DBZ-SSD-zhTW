@@ -16,8 +16,8 @@ test('startup shows a distinct stage and restores button on WASM failure',()=>{
 
 test('WASM uses proven wasm-pack URL loader, not WebKit intercepted Response',()=>{
  const app=source('web/app.mjs'),sw=source('web/service-worker.js');
- assert.match(app,/ssd_web\.js\?build=v45/);
- assert.match(app,/ssd_web_bg\.wasm\?build=v45/);
+ assert.match(app,/ssd_web\.js\?build=v46/);
+ assert.match(app,/ssd_web_bg\.wasm\?build=v46/);
  assert.match(app,/mod\.default\(\{module_or_path:wasmUrl\}\)/);
  assert.doesNotMatch(app,/module_or_path:wasmResponse/);
  assert.doesNotMatch(app,/new AbortController\(\)/);
@@ -32,12 +32,12 @@ test('legacy service workers are retired before file selection',()=>{
  assert.match(html,/registration\.unregister\(\)/);
  assert.match(html,/if \(removed && wasControlled\) location\.reload\(\)/);
  assert.ok(html.indexOf('registration.unregister')<html.indexOf('id="hd-zip"'));
- assert.match(html,/app\.mjs\?build=v45/);
+ assert.match(html,/app\.mjs\?build=v46/);
 });
 
 test('v42 display optimization survives and V44 core build matches client',()=>{
  const app=source('web/app.mjs'),rust=source('crates/ssd-web/src/lib.rs');
  assert.match(app,/const transientOnly=holdReasons\.length>0&&!storyHold&&!hdHold/);
  assert.match(app,/event\.detail\.framePerformance=/);
- assert.match(rust,/dbz-hd-tw-pwa-v45/);
+ assert.match(rust,/dbz-hd-tw-pwa-v46/);
 });

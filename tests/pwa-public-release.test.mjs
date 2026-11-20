@@ -37,9 +37,30 @@ test('release UI shows game, buttons and language only when playing',()=>{
   assert.equal([...html.matchAll(new RegExp('id="'+id+'"','g'))].length,1);
  }
  assert.match(css,/\.playing #game > :not\(\.screen\):not\(\.controls\):not\(\.playbar\)/);
- assert.match(css,/grid-template-areas:"dpad screen actions" "bar bar bar"/);
+ assert.match(css,/grid-template-areas:"dpad screen actions"/);
  assert.match(html,/apple-mobile-web-app-capable/);
  const manifest=JSON.parse(src('web/manifest.webmanifest'));
  assert.equal(manifest.display,'standalone');
  assert.equal(manifest.orientation,'any');
+});
+
+test('PWA launch and safe-area controls remain visible, original art is used',()=>{
+ const html=src('web/index.html'),css=src('web/style.css');
+ for(const id of ['launch-cover','title-cover','setup-files','setup-edit','save','state-file']){
+  assert.equal([...html.matchAll(new RegExp('id="'+id+'"','g'))].length,1);
+ }
+ assert.match(html,/id="title-cover" src="\.\/dbz-title\.webp"/);
+ assert.match(html,/apple-touch-icon\.png/);
+ assert.match(css,/max\(56px,env\(safe-area-inset-top\)\)/);
+ assert.match(css,/max\(66px,calc\(env\(safe-area-inset-left\) \+ 12px\)\)/);
+ assert.match(css,/grid-template-areas:"dpad screen actions"/);
+ assert.match(css,/position:absolute/);
+ const app=src('web/app.mjs');
+ assert.match(app,/refreshLaunchCover\(\)/);
+ assert.match(app,/globalThis\.hdRestorePromise/);
+ assert.match(src('web/hd-import-ui.mjs'),/正在自動保存/);
+ assert.match(app,/\$\('state-file'\)\.addEventListener\('change'/);
+ assert.match(app,/\$\('save'\)\.addEventListener\('click'/);
+ const manifest=JSON.parse(src('web/manifest.webmanifest'));
+ assert.equal(manifest.icons[0].src,'./apple-touch-icon.png');
 });
