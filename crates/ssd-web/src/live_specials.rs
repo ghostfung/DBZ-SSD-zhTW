@@ -49,6 +49,7 @@ pub(crate) struct LiveSpecials {
     probes: usize,
     key_hits: usize,
     palette_rejections: usize,
+    cgram_writes: usize,
 }
 
 fn palette_matches(entry: &Entry, pose: &LiveSpecialPose) -> bool {
@@ -104,6 +105,7 @@ impl LiveSpecials {
         self.probes=0;
         self.key_hits=0;
         self.palette_rejections=0;
+        self.cgram_writes=0;
         Ok(self.entries.len())
     }
 
@@ -112,6 +114,9 @@ impl LiveSpecials {
         self.probes=0;
         self.key_hits=0;
         self.palette_rejections=0;
+        // Expose how many CGRAM writes the observed frame contains. Prior
+        // versions rejected all class2 FX on any such write.
+        self.cgram_writes=log.cgram_writes.len();
         if self.lookup.is_empty() { return; }
         // The original engine handles both standard OAM palettes 1-2 and
         // formations that render enemies with palettes 3-7. Exact source
@@ -147,6 +152,7 @@ impl LiveSpecials {
     pub(crate) fn probe_json(&self) -> String {
         serde_json::json!({
             "poses":self.probes, "keyHits":self.key_hits,
+            "cgramWrites":self.cgram_writes,
             "paletteRejected":self.palette_rejections,
             "matched":self.active.len(),
             "lumaMatched":self.active.iter().filter(|m|self.entries[m.index].luma).count(),
