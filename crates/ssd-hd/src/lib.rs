@@ -112,6 +112,61 @@ pub fn live_fighter_poses(log: &FrameLog) -> Vec<LiveFighterPose> {
         }).collect()
 }
 
+
+/// Additional *catalogue-gated* fighter candidates assembled using the
+/// upstream field-group/refine-field rules. Opening cutscenes may rotate OAM
+/// entries or split a person into separate runs, even when their pixel array
+/// exists in the official class2 battle catalogue.
+///
+/// This does not identify characters by position, colour, or frame history:
+/// only complete source-key + source-size matches supplied by the caller are
+/// returned. An unrelated field NPC can never be promoted without that key.
+/// Refuse partially written PPU frames, and cap the combinatorial refinement
+/// work to avoid stalling an iPhone during a busy scene.
+#[must_use]
+pub fn live_field_fighter_poses(
+    log: &FrameLog,
+    has_art: &mut dyn FnMut(u64, u16, u16) -> bool,
+) -> Vec<LiveFighterPose> {
+    if !log.complete || !log.vram_writes.is_empty() || !log.oam_writes.is_empty()
+        || log.vram.len() < 0x8000 || log.cgram_start.len() < 256
+        || log.oam_low.len() < 512 || log.oam_high.len() < 32
+    {
+        return Vec::new();
+    }
+    let view = art::poses::View::window();
+    let sprites = art::poses::sprites_in(log, &view);
+    let fields: Vec<_> = art::poses::poses_in(log, &sprites, &view)
+        .into_iter().filter(|p| p.field && !p.bg && !p.shadow).collect();
+    if fields.is_empty() || fields.len() > 12 {
+        return Vec::new();
+    }
+    let mut known = |pose: &art::poses::Pose| {
+        pose.field && !pose.cut && !pose.bg && !pose.shadow
+            && pose.sprites != 0 && pose.w > 0 && pose.h > 0
+            && pose.w <= 255 && pose.h <= 239
+            && has_art(pose.key, pose.w as u16, pose.h as u16)
+    };
+    // The upstream refinement rejoins OAM groups whose ordering has rotated,
+    // and peels away small unrelated pieces only if the remaining figure and
+    // leftover satisfy the catalogue. It never chooses a nearest-looking art.
+    let refined = art::poses::refine_field(fields, &sprites, log, &view, &mut known);
+    refined.into_iter().filter(|pose| known(pose)).map(|pose| {
+        let start = 128 + usize::from(pose.palette) * 16;
+        let colours = std::array::from_fn(|slot|
+            art::poses::rgb555(log.cgram_start[start + slot]));
+        LiveFighterPose {
+            key: pose.key,
+            x: pose.org.0,
+            y: pose.org.1 + art::poses::ROW_OF_CAPTURE,
+            width: pose.w as u16,
+            height: pose.h as u16,
+            oam_bits: pose.sprites,
+            colours,
+        }
+    }).collect()
+}
+
 /// An exactly keyed non-fighter OAM group, with source PPU sprite ownership.
 /// kind 1 = field/NPC/object (class3), 2 = battle effect (class2).
 /// Neither a battle fighter nor an unverified position-based overlay may
