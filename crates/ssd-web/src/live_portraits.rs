@@ -55,6 +55,7 @@ pub(crate) struct LivePortraits {
     recognised: u32,
     weak: u32,
     palette_rejected: u32,
+    source_write_rejected: u32,
     reason: &'static str,
 }
 
@@ -107,6 +108,41 @@ fn palette_distance(entry: &Entry, sample: LiveTilePixel, cgram: &[u16]) -> Opti
     (count==0 || sum <= 150).then_some(count)
 }
 
+/// A cutscene may stream unrelated glyphs or animate unrelated palettes
+/// mid-frame. Reject a portrait only when a write overlaps one of its
+/// *verified visible* source tiles or its own CGRAM bank. Global write flags
+/// used to blank otherwise unchanged faces during dialogue animations.
+fn source_changed_for_portrait(
+    log: &FrameLog, samples: &[LiveTilePixel], entry: &Entry, x: usize, y: usize,
+) -> bool {
+    if log.vram_writes.is_empty() && log.cgram_writes.is_empty() { return false; }
+    let mut cache=HashMap::new();
+    let mut tile_words=HashSet::new();
+    let mut palettes=HashSet::new();
+    for cy in 0..32_usize {
+        for cx in 0..32_usize {
+            let p=samples[(y+cy)*WIDTH+x+cx];
+            if p.layer==0 || p.bpp!=4 {continue;}
+            let dx=if p.pos&0x40!=0 {7-(p.pos&7)} else {p.pos&7};
+            let dy=if p.pos&0x80!=0 {7-((p.pos>>3)&7)} else {(p.pos>>3)&7};
+            if usize::from(dx)!=cx%8 || usize::from(dy)!=cy%8
+                || current_key(&log.vram,p,&mut cache)
+                    !=Some(entry.keys[(cy/8)*4+cx/8])
+            { continue; }
+            tile_words.insert(usize::from(p.address));
+            palettes.insert((if p.layer==5 {128} else {0})
+                +usize::from(p.palette)*16);
+        }
+    }
+    log.vram_writes.iter().any(|write| {
+        let at=write.address as usize;
+        tile_words.iter().any(|base|at>=*base && at<*base+16)
+    }) || log.cgram_writes.iter().any(|write| {
+        let at=write.index as usize;
+        palettes.iter().any(|base|at>=*base && at<*base+16)
+    })
+}
+
 impl LivePortraits {
     pub(crate) fn load_catalog(&mut self, json: &str, rom: &[u8]) -> Result<usize,String> {
         let incoming:Vec<Incoming>=serde_json::from_str(json)
@@ -143,6 +179,7 @@ impl LivePortraits {
         self.recognised=0;
         self.weak=0;
         self.palette_rejected=0;
+        self.source_write_rejected=0;
         self.reason="尚未掃描";
         Ok(self.entries.len())
     }
@@ -166,15 +203,10 @@ impl LivePortraits {
         self.recognised=0;
         self.weak=0;
         self.palette_rejected=0;
+        self.source_write_rejected=0;
         self.reason="尚未匹配";
         if self.lookup.is_empty(){self.reason="沒有可用的 class1 ROM 圖塊";return;}
         if !log.complete {self.reason="PPU 畫面紀錄未完整";return;}
-        if !log.vram_writes.is_empty(){
-            self.reason="本幀 VRAM 中途更新，安全略過";return;
-        }
-        if !log.cgram_writes.is_empty(){
-            self.reason="本幀調色盤中途更新，安全略過";return;
-        }
         if samples.len()!=WIDTH*usize::from(log.height){
             self.reason="PPU 圖塊追蹤資料不足";return;
         }
@@ -245,6 +277,9 @@ impl LivePortraits {
             if (palette_count==0 && matched<13) || (matched<10 && palette_count<2) {
                 self.weak+=1;continue;
             }
+            if source_changed_for_portrait(log,samples,e,x,y) {
+                self.source_write_rejected+=1;continue;
+            }
             found.push((matched,Matched{index,x,y}));
         }
         found.sort_by_key(|(score,_)|std::cmp::Reverse(*score));
@@ -261,6 +296,7 @@ impl LivePortraits {
         self.reason=if self.recognised>0 {"已驗證可見頭像"}
             else if self.probes==0 {"沒有對應的可見 4bpp 圖塊"}
             else if self.palette_rejected>0 {"來源圖塊存在，但調色盤不吻合"}
+            else if self.source_write_rejected>0 {"人物圖塊本幀有更新，安全略過"}
             else {"來源圖塊存在，但有效輪廓不足"};
     }
 
@@ -277,6 +313,7 @@ impl LivePortraits {
         serde_json::json!({"candidate":self.probes,"matched":self.recognised,
             "ready":self.active.iter().filter(|m|self.pictures.contains_key(&m.index)).count(),
             "weak":self.weak,"paletteRejected":self.palette_rejected,
+            "sourceWriteRejected":self.source_write_rejected,
             "reason":self.reason}).to_string()
     }
 
@@ -299,13 +336,17 @@ impl LivePortraits {
     {
         let rows=usize::from(log.height);
         if width!=512 || height!=rows*2 || samples.len()!=rows*WIDTH
-            || rgba.len()!=width*height*4 || !log.vram_writes.is_empty()
-            || !log.cgram_writes.is_empty() {return 0;}
+            || rgba.len()!=width*height*4 {return 0;}
         let mut cache=HashMap::new();
         let mut changed=0;
         for matched in &self.active {
             let Some(img)=self.pictures.get(&matched.index) else {continue;};
             let entry=&self.entries[matched.index];
+            // A previously matched face may be reused on an alternate scan
+            // cadence, but never across a write to that face's actual source.
+            if source_changed_for_portrait(log,samples,entry,matched.x,matched.y) {
+                continue;
+            }
             for cy in 0..32_usize {
                 for cx in 0..32_usize {
                     let x=matched.x+cx;
@@ -443,6 +484,67 @@ mod tests {
         assert_eq!(&rgba[..4], &[250,50,10,255]);
         assert_eq!(&rgba[((8*2)*512+8*2)*4..][..4], &[250,50,10,255]);
         assert_eq!(&rgba[((8*2)*512+27*2)*4..][..4], &[0,0,0,0]);
+    }
+
+    #[test]
+    fn dialogue_updates_elsewhere_do_not_blank_an_unchanged_class1_face() {
+        let mut log=FrameLog{
+            complete:true,height:32,h_hi_res:false,v_hi_res:false,
+            entries:Vec::new(),cgram_start:vec![0;256],
+            cgram_writes:Vec::new(),vram:vec![0;32768],
+            vram_writes:Vec::new(),oam_low:vec![0;512],
+            oam_high:vec![0;32],oam_writes:Vec::new(),
+        };
+        let mut keys=[0_u64;16];
+        for (cell,key) in keys.iter_mut().enumerate() {
+            log.vram[cell*16]=(cell+1) as u16;
+            let mut tile=[0_u8;32];
+            tile[..2].copy_from_slice(&((cell+1) as u16).to_le_bytes());
+            *key=tile_key(&tile);
+        }
+        let mut samples=vec![LiveTilePixel::default();256*32];
+        for y in 0..32_usize {
+            for x in 0..32_usize {
+                let cell=(y/8)*4+x/8;
+                samples[y*256+x]=LiveTilePixel{
+                    address:(cell*16) as u16,
+                    pos:(((y%8)<<3)|(x%8)) as u8,
+                    palette:0,layer:1,bpp:4,
+                };
+            }
+        }
+        let mut live=LivePortraits::default();
+        live.entries.push(Entry{id:"face".into(),art:"class1/face.png".into(),
+            keys,palette:vec![None;16]});
+        for (cell,key) in keys.iter().enumerate(){
+            live.lookup.entry(*key).or_default().push((0,cell));
+        }
+        log.vram_writes.push(ssd_oracle::VramWrite{
+            entry:0,address:4096,value:123,
+        });
+        log.cgram_writes.push(ssd_oracle::CgramWrite{
+            entry:0,index:64,value:123,
+        });
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1,"unrelated text and palette updates cannot blank a portrait");
+        let mut image=vec![0;64*64*4];
+        for px in image.chunks_exact_mut(4){
+            px.copy_from_slice(&[200,90,40,255]);
+        }
+        live.add_picture(0,64,64,&image).unwrap();
+        let mut output=vec![0;512*64*4];
+        assert_eq!(live.composite(&log,&samples,&mut output,512,64),1024);
+
+        log.vram_writes[0].address=16;
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),0,"a changed source tile must not be reused");
+        // Even on a stale 2-frame-cadence match, composite must fail closed.
+        log.vram_writes[0].address=4096;
+        live.refresh(&log,&samples);
+        log.cgram_writes[0].index=1;
+        output.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut output,512,64),0,
+            "source palette writes must never produce the wrong HD face");
     }
 
     #[test]
