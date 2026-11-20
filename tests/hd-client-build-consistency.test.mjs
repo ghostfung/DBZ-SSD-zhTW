@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 import {HdSceneTrace} from '../web/hd-coverage-runtime.mjs';
 const src=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('Safari shell goes network-first and JS and WASM have matching build IDs',()=>{
- assert.match(src('web/service-worker.js'),/fetch\(request,\{cache:'no-store'\}\)/);
- assert.match(src('web/index.html'),/app\.mjs\?build=v42/);
+ assert.match(src('web/service-worker.js'),/fetch\(request,\{cache:isWasm\?'default':'no-store'\}\)/);
+ assert.match(src('web/index.html'),/app\.mjs\?build=v43/);
  assert.match(src('web/app.mjs'),/game\.browser_build_tag\?\.\(\)/);
  assert.match(src('crates/ssd-web/src/lib.rs'),/pub fn browser_build_tag\(&self\) -> String/);
 });

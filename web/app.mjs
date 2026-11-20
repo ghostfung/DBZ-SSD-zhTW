@@ -12,10 +12,10 @@ import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v42';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v43';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='hd-perf-luma-v42';
+const BUILD_ID='hd-startup-unblock-v43';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -147,26 +147,59 @@ romInput.addEventListener('change', async () => {
   $('start').disabled = check.kind === 'invalid' || check.kind === 'unknown';
 });
 
-async function ensureEngine() {
+// Make the 18 MiB WASM load visible. It must never be blocked by the
+// service worker's local cache write. Explicit versioned URLs prevent stale
+// iOS Safari HTTP-cache responses from mixing two different browser cores.
+async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
-    const mod = await import('./pkg/ssd_web.js');
-    await mod.default();
+    await phase('正在載入遊戲程式模組…');
+    const mod = await import('./pkg/ssd_web.js?build=v43');
+    await phase('正在下載 WebAssembly 遊戲核心（約 18 MB）…');
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v43',import.meta.url);
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),45000);
+    let wasmResponse;
+    try {
+      wasmResponse=await fetch(wasmUrl,{cache:'default',signal:controller.signal});
+    } finally { clearTimeout(timeout); }
+    if(!wasmResponse.ok)throw Error('WASM 檔案載入失敗（HTTP '+wasmResponse.status+'）');
+    if(!/^application\/wasm\b/i.test(wasmResponse.headers.get('content-type')||''))
+      throw Error('WASM 伺服器傳回的不是遊戲核心（Content-Type：'+
+        (wasmResponse.headers.get('content-type')||'未知')+'）');
+    await phase('已取得 WASM，正在編譯並啟動模擬器…');
+    // wasm-pack accepts a Response here; it can compile progressively
+    // with instantiateStreaming instead of creating another 18 MiB buffer.
+    await mod.default({module_or_path:wasmResponse});
     moduleReady = mod;
     return mod;
   } catch (error) {
-    throw Error(`瀏覽器頁面已就緒，但尚未成功編譯 Rust WebAssembly 遊戲核心。\n${error.message}`);
+    throw Error('WASM 初始化失敗：'+(error?.name==='AbortError'?
+      '網路下載超時。請檢查網路後重試。':error?.message||String(error)));
   }
 }
 
 $('start').addEventListener('click', async () => {
-  // Begin unlocking Safari audio synchronously on this tap (before loading files/WASM).
+  // Safari audio unlock must begin synchronously inside the user's tap.
   unlockAudio();
+  const button=$('start'),originalLabel='啟動本機遊戲';
+  let currentStage='讀取遊戲檔案';
+  const phase=async message=>{
+    currentStage=message;
+    button.textContent=message;
+    setStatus('啟動進度：'+message);
+    // Let Safari paint the status before a potentially expensive WASM or
+    // ROM operation, otherwise users only see a disabled button.
+    await new Promise(resolve=>setTimeout(resolve,0));
+  };
   try {
-    $('start').disabled = true;
+    button.disabled = true;
+    if(!romInput.files?.[0])throw Error('未選取遊戲 ROM，請先選擇 ROM 檔案');
+    await phase('正在讀取 ROM／IPS…');
     const rom = new Uint8Array(await romInput.files[0].arrayBuffer());
     const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);
-    const { WebGame } = await ensureEngine();
+    const { WebGame } = await ensureEngine(phase);
+    await phase('正在建立遊戲核心…');
     game = new WebGame(rom, ips);
     const coreBuild=game.browser_build_tag?.()??null;
     if(coreBuild!==BUILD_ID){
@@ -176,6 +209,7 @@ $('start').addEventListener('click', async () => {
     }
     $('build-status').textContent='頁面／WASM 一致：'+BUILD_ID;
     // Translation remains on-device: the TSV loads from this site, never from the user's ROM.
+    await phase('正在載入繁體中文翻譯…');
     const translationResponse = await fetch('./zh-tw.tsv');
     if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
     // Do not edit Ming Liu's licensed source TSV. Small, independently
@@ -206,6 +240,7 @@ $('start').addEventListener('click', async () => {
     game.set_card_hd_enabled?.($('card-hd-toggle').checked);
     game.set_mode7_hd_enabled?.($('mode7-hd-toggle').checked);
     game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
+    await phase('正在套用 HD 美術索引…');
     liveHd.attach(game);
     liveFighters.attach(game);
     liveSpecials.attach(game);
@@ -217,6 +252,7 @@ $('start').addEventListener('click', async () => {
     soundUi();
     $('setup').hidden = true;
     $('game').hidden = false;
+    button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
     hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
@@ -226,8 +262,15 @@ $('start').addEventListener('click', async () => {
     $('hd-phase-perf').textContent='HD 分段耗時：正在採樣…';
     raf = requestAnimationFrame(requestFrame);
   } catch (error) {
-    $('start').disabled = false;
-    setStatus(String(error));
+    button.disabled=false;
+    button.textContent=originalLabel;
+    setStatus('遊戲啟動失敗（'+currentStage+'）：'+(error?.message||String(error)));
+    // A failed translation, index or version check must not leave a
+    // partially initialized WebGame alive across the next start attempt.
+    if(!running && game){
+      try {game.free?.();} catch {}
+      game=null;
+    }
   }
 });
 
