@@ -1,5 +1,6 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs';
+import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
 import {HdFrameGate} from './hd-frame-gate.mjs';
@@ -12,16 +13,38 @@ import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v44';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v45';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='hd-safari-network-v44';
+const BUILD_ID='dbz-hd-tw-pwa-v45';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
+let savedRom=null,savedIps=null;
+let language='zh-tw';
+try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
+const translationCache=new Map();
+function updateLanguageButton(){
+  $('locale-toggle').textContent=language==='zh-hk'?'香港繁中':'台灣繁中';
+  $('locale-toggle').setAttribute('aria-label','文字版本：'+$('locale-toggle').textContent+'，點按切換');
+}
+async function getTranslation(code){
+  if(!['zh-tw','zh-hk'].includes(code))throw Error('不支援的翻譯版本');
+  if(translationCache.has(code))return translationCache.get(code);
+  const [translationResponse,alignResponse]=await Promise.all([
+    fetch('./'+code+'.tsv'),fetch('./zh-tw-page-alignments.tsv')
+  ]);
+  if(!translationResponse.ok)throw Error('翻譯檔不存在（HTTP '+translationResponse.status+'）');
+  if(!alignResponse.ok)throw Error('繁體中文分頁對齊檔載入失敗');
+  const contents=(await translationResponse.text()).trimEnd()+'\n'+
+    (await alignResponse.text()).trim();
+  translationCache.set(code,contents);
+  return contents;
+}
+
 const STEP = 1000/60.0988;
 const frameMetrics = new FrameMetrics();
 const transientHoldBudget = new HdPresentationBudget();
@@ -140,12 +163,67 @@ function unlockAudio() {
 const setStatus = msg => { $('status').textContent = msg; };
 const romInput = $('rom'), ipsInput = $('ips');
 
+function displayStoredFiles(){
+  $('local-files-status').textContent=savedRom
+    ? '已保存 ROM：'+savedRom.name+(savedIps?'；IPS：'+savedIps.name:'；無 IPS')+
+      '。下次從同一個 PWA 網址開啟，不用再選遊戲檔案。'
+    : '首次使用請選 ROM，日文 Rev 1 ROM 另需選 IPS。';
+}
 romInput.addEventListener('change', async () => {
-  if (!romInput.files?.[0]) return;
-  const check = inspectRom(await romInput.files[0].arrayBuffer());
-  setStatus(`${check.label}\n${check.crc ? `CRC32: ${check.crc}` : ''}`);
-  $('start').disabled = check.kind === 'invalid' || check.kind === 'unknown';
+  const file=romInput.files?.[0];
+  if(!file)return;
+  try {
+    const check=inspectRom(await file.arrayBuffer());
+    setStatus(`${check.label}\n${check.crc ? `CRC32: ${check.crc}` : ''}`);
+    const valid=check.kind!=='invalid'&&check.kind!=='unknown';
+    $('start').disabled=!valid;
+    if(!valid)return;
+    // Changing the ROM must not automatically reuse an old game's IPS.
+    savedRom=null;savedIps=null;ipsInput.value='';
+    await deleteGameFile('ips').catch(()=>{});
+    try {
+      await saveGameFile('rom',file);
+      savedRom=await readGameFile('rom');
+      displayStoredFiles();
+    }catch(error){
+      setStatus(check.label+'。ROM 可於本次開啟使用，但保存失敗：'+error.message);
+    }
+  }catch(error){$('start').disabled=true;setStatus('ROM 檢查失敗：'+error.message);}
 });
+ipsInput.addEventListener('change',async()=>{
+  const file=ipsInput.files?.[0];
+  if(!file)return;
+  try{
+    await saveGameFile('ips',file);
+    savedIps=await readGameFile('ips');
+    displayStoredFiles();
+  }catch(error){
+    setStatus('IPS 可於本次開啟使用，但保存失敗：'+error.message);
+  }
+});
+$('clear-game-files').addEventListener('click',async()=>{
+  await Promise.all([deleteGameFile('rom'),deleteGameFile('ips')]).catch(error=>
+    setStatus('本機遊戲檔案清理失敗：'+error.message));
+  savedRom=null;savedIps=null;romInput.value='';ipsInput.value='';
+  $('start').disabled=true;$('game-files-details').open=true;
+  displayStoredFiles();
+});
+void (async()=>{
+  try {
+    const [rom,ips]=await Promise.all([readGameFile('rom'),readGameFile('ips')]);
+    // Never override a new selection while an IndexedDB load was in flight.
+    if(rom&&!romInput.files?.length){
+      const check=inspectRom(await rom.blob.arrayBuffer());
+      if(check.kind!=='invalid'&&check.kind!=='unknown'){
+        savedRom=rom;savedIps=ips;
+        $('start').disabled=false;
+        $('game-files-details').open=false;
+        setStatus('已從 PWA 本機載入遊戲 ROM，可直接開始遊戲。');
+      }
+    }
+  }catch(error){setStatus('本機遊戲檔案無法恢復：'+error.message+'；請重新選擇 ROM。');}
+  displayStoredFiles();
+})();
 
 // Make the 18 MiB WASM load visible. It must never be blocked by the
 // service worker's local cache write. Explicit versioned URLs prevent stale
@@ -154,12 +232,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v44');
+    const mod = await import('./pkg/ssd_web.js?build=v45');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v44',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v45',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -184,10 +262,11 @@ $('start').addEventListener('click', async () => {
   };
   try {
     button.disabled = true;
-    if(!romInput.files?.[0])throw Error('未選取遊戲 ROM，請先選擇 ROM 檔案');
+    if(!romInput.files?.[0]&&!savedRom)throw Error('未選取遊戲 ROM，請先選擇 ROM 檔案');
     await phase('正在讀取 ROM／IPS…');
-    const rom = new Uint8Array(await romInput.files[0].arrayBuffer());
-    const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);
+    const rom = new Uint8Array(await (romInput.files?.[0]??savedRom.blob).arrayBuffer());
+    const ipsFile=ipsInput.files?.[0]??savedIps?.blob;
+    const ips = ipsFile ? new Uint8Array(await ipsFile.arrayBuffer()) : new Uint8Array(0);
     const { WebGame } = await ensureEngine(phase);
     await phase('正在建立遊戲核心…');
     game = new WebGame(rom, ips);
@@ -198,17 +277,9 @@ $('start').addEventListener('click', async () => {
         (coreBuild??'舊版未標記')+'。請重新開啟最新測試網址。');
     }
     $('build-status').textContent='頁面／WASM 一致：'+BUILD_ID;
-    // Translation remains on-device: the TSV loads from this site, never from the user's ROM.
-    await phase('正在載入繁體中文翻譯…');
-    const translationResponse = await fetch('./zh-tw.tsv');
-    if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
-    // Do not edit Ming Liu's licensed source TSV. Small, independently
-    // reviewed page alignments are appended only in this iPhone prototype.
-    const alignResponse = await fetch('./zh-tw-page-alignments.tsv');
-    if (!alignResponse.ok) throw Error('繁體中文分頁對齊檔未部署（HTTP '+alignResponse.status+'）。');
-    const primary = await translationResponse.text();
-    const alignments = await alignResponse.text();
-    const translatedRows = game.load_translation(primary.trimEnd() + '\n' + alignments.trim());
+    // Official TW/HK translations, both sourced from Ming Liu's tables.
+    await phase('正在載入'+(language==='zh-hk'?'香港':'台灣')+'繁體中文譯文…');
+    const translatedRows=game.load_translation(await getTranslation(language));
     $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
     translationKey = '';
     currentDialogue = null;
@@ -242,6 +313,7 @@ $('start').addEventListener('click', async () => {
     soundUi();
     $('setup').hidden = true;
     $('game').hidden = false;
+    document.body.classList.add('playing');
     button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
@@ -609,9 +681,26 @@ $('portrait-hd-toggle').addEventListener('change',()=>{
   if(game)game.set_portrait_hd_enabled?.($('portrait-hd-toggle').checked);
   portraitFrameGate.reset();
 });
+$('locale-toggle').addEventListener('click',async()=>{
+  if(!game)return;
+  const button=$('locale-toggle'),next=language==='zh-hk'?'zh-tw':'zh-hk';
+  button.disabled=true;
+  try {
+    const count=game.load_translation(await getTranslation(next));
+    language=next;
+    try {localStorage.setItem('dbz-hd-language',language);}catch{}
+    updateLanguageButton();
+    $('translation-count').textContent='已載入 '+count+' 筆'+button.textContent+'譯文';
+    translationKey='';currentDialogue=null;
+    storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
+  }catch(error){
+    window.alert('語言切換失敗：'+(error?.message||error));
+  }finally{button.disabled=false;}
+});
+updateLanguageButton();
 $('hd-toggle').addEventListener('click', () => {
   hdEnabled = !hdEnabled;
-  $('hd-toggle').textContent = hdEnabled ? '關閉 HD 2x' : '啟用 HD 2x';
+  $('hd-toggle').textContent = hdEnabled ? 'HD 2x' : '原版';
   $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
   if (game) game.set_hd_mode(hdEnabled);
   storyFrameGate.reset();
@@ -651,7 +740,7 @@ $('sound').addEventListener('click', async () => {
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
 const stop=()=>{hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
-lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
