@@ -92,7 +92,7 @@ test('audit must remain collapsed away from the mobile controller',()=>{
  const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
  assert.ok(html.indexOf('class="controls"')<
    html.indexOf('id="hd-coverage-build"'));
- assert.match(html,/<details id="game-diagnostics" class="game-diagnostics">/);
+ assert.match(html,/<details id="game-diagnostics" class="game-diagnostics" hidden>/);
  assert.match(html,/id="hd-coverage-export"[^>]*disabled/);
 });
 

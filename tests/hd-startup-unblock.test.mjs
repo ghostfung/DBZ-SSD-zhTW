@@ -32,7 +32,7 @@ test('legacy service workers are retired before file selection',()=>{
  assert.match(html,/registration\.unregister\(\)/);
  assert.match(html,/if \(removed && wasControlled\) location\.reload\(\)/);
  assert.ok(html.indexOf('registration.unregister')<html.indexOf('id="hd-zip"'));
- assert.match(html,/app\.mjs\?build=v44/);
+ assert.match(html,/app\.mjs\?build=v45/);
 });
 
 test('v42 display optimization survives and V44 core build matches client',()=>{
