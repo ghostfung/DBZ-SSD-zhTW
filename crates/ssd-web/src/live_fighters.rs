@@ -131,7 +131,7 @@ impl LiveFighters {
                 let ok_name=variant.art.starts_with("variants/")
                     && (variant.art.ends_with(".png") || variant.art.ends_with(".webp"))
                     && variant.art.len()<=240 && !variant.art.contains("..")
-                    && !variant.art.contains('\\\\');
+                    && !variant.art.contains('\\');
                 if !entry.available || entry.luma || !ok_name
                     || variant.margin>96 || variant.margin%4!=0 {
                     return Err(format!("人物 {} 的擴展圖不安全",entry.id));
