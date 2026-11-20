@@ -188,15 +188,23 @@ pub struct LiveSpecialPose {
 /// image availability and visible OAM ownership before drawing any art.
 #[must_use]
 pub fn live_special_poses(log: &FrameLog) -> Vec<LiveSpecialPose> {
+    // Class2 RGBA effect keys are derived from the actual scanline colours;
+    // the upstream Palettes::of(log) already applies CGRAM writes at their
+    // corresponding PPU entries. Rejecting *all* effects whenever a palette
+    // write occurs causes the opening flight HD to vanish mid-animation.
+    // VRAM/OAM writes still invalidate source pose membership and stay gated.
     if !log.complete || !log.vram_writes.is_empty() || !log.oam_writes.is_empty()
-        || !log.cgram_writes.is_empty() || log.vram.len() < 0x8000
-        || log.cgram_start.len() < 256 || log.oam_low.len() < 512
-        || log.oam_high.len() < 32
+        || log.vram.len() < 0x8000 || log.cgram_start.len() < 256
+        || log.oam_low.len() < 512 || log.oam_high.len() < 32
     { return Vec::new(); }
     let view=art::poses::View::window();
     let sprites=art::poses::sprites_in(log,&view);
     art::poses::poses_in(log,&sprites,&view).into_iter().filter_map(|pose|{
-        let kind=if pose.field && !pose.cut && !pose.fighter && !pose.bg {
+        // Field/class3 keys use palette *indices*, not RGB, and cannot
+        // prove on-scanline colour stability. Continue to skip field art
+        // during palette writes, while allowing source-colour-keyed effects.
+        let kind=if pose.field && !pose.cut && !pose.fighter && !pose.bg
+            && log.cgram_writes.is_empty() {
             1_u8
         } else if !pose.field && !pose.fighter && !pose.bg && !pose.shadow
             && !pose.rgba.is_empty() {
