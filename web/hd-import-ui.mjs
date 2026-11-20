@@ -513,7 +513,7 @@ globalThis.hdRestorePromise=(async()=>{
       busyMode(false);
       status('HD 美術包已從 iPhone 本機儲存區恢復，並重新通過 SHA-256 驗證。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片。可直接開始 HD 遊戲，無須重選 ZIP。');
     } else {
-      status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；只驗證並不會自動保存。');
+      status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；驗證完成後會自動嘗試保存，成功時下次可免重選。');
     }
   }catch(e){status('本機 HD 快取無法完整驗證：'+e.message+'。請重新選擇原始 ZIP；檔案不會上傳。');}
 })();
