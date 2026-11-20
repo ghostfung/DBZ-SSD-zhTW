@@ -8,6 +8,8 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>七龍珠Z 超賽亞傳說 · HD 繁體中文版</title>
   <link rel="manifest" href="manifest.webmanifest"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
+  <link rel="icon" type="image/png" href="apple-touch-icon.png"/>
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
@@ -24,13 +26,20 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v45"/>
+  <link rel="stylesheet" href="style.css?build=v46"/>
 </head>
 <body>
   <main>
     <h1>七龍珠Z 超賽亞傳說 <small>HD 繁體中文版</small></h1>
     <p class="notice">將此網頁透過 Safari「分享 → 加入主畫面」，即可像 App 一樣使用。遊戲檔案只在本機儲存與運行。</p>
     <section id="setup">
+      <div id="launch-cover" class="launch-cover">
+        <img id="title-cover" src="./dbz-title.webp" width="886" height="782"
+          alt="七龍珠Z 超賽亞傳說遊戲標題畫面" decoding="async"/>
+        <button id="start" type="button" disabled>啟動遊戲</button>
+      </div>
+      <button id="setup-edit" type="button" hidden>管理遊戲檔案</button>
+      <div id="setup-files">
       <details id="game-files-details" open>
         <summary>遊戲 ROM／IPS（首次匯入後保存在本機）</summary>
         <div class="setup-file-fields">
@@ -45,7 +54,7 @@
         <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
           <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
         </label>
-        <p class="hd-import-note">約 462 MiB。驗證後本次遊玩可直接使用；若想下次免重選，可嘗試儲存整包至 PWA 本機空間，但 iPhone 可能因儲存額度拒絕。Safari 無法永久記住「檔案」App 的 ZIP 路徑。</p>
+        <p class="hd-import-note">約 462 MiB。驗證成功後自動嘗試保存到這台 iPhone，下次開啟可自動重新驗證。若 iOS 拒絕保存，仍可在本次遊玩，但下次需要重新選取原始 ZIP。</p>
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
           <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
@@ -94,25 +103,25 @@
           <p id="hd-fighter-count" class="hd-import-note">匯入後將讀取 class2/index.json。僅精確匹配的戰鬥人物會替換原始精靈像素；招式特效、人物輪廓擴大及場景物件仍待整合。</p>
         </div>
         <details class="hd-storage-experimental">
-          <summary>保存 HD 素材供下次開啟（受 iPhone 容量限制）</summary>
-          <p class="hd-import-note">將驗證過的 ZIP 分成 2 MiB 小段保存在 Safari 專屬空間。寫入完成後才會確認保存成功；如果 iOS 拒絕，仍可正常從原始 ZIP 遊玩，但下次要重新選取。請保留原檔備份。</p>
+          <summary>HD 素材本機保存管理（自動保存）</summary>
+          <p class="hd-import-note">驗證成功後將會自動分段保存。若失敗仍可直接使用本次已驗證的 ZIP；Safari 不能永久記住「檔案」App 的檔案路徑。請保留原檔備份。</p>
           <div class="hd-import-buttons">
-            <button id="hd-cache" type="button" disabled>嘗試儲存整份 ZIP</button>
+            <button id="hd-cache" type="button" disabled>重新嘗試保存 ZIP</button>
             <button id="hd-remove" type="button">清除 HD 本機快取</button>
           </div>
         </details>
         <progress id="hd-progress" max="100" value="0" hidden></progress>
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
         <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note"><strong>目前階段：</strong>可按需讀取 ZIP，符合 PPU 匹配條件的背景以原生 2x 像素套用；繁體中文由 Rust 原生渲染。人物及其他完整 HD 美術、16:9 仍未完成。Safari 重新開啟分頁後可能需要重新選取 ZIP。</p>
+        <p class="hd-import-note">ROM、IPS 及 HD 美術包只在 iPhone 本機使用，不會上傳。</p>
       </div>
-      <button id="start" disabled>啟動本機遊戲</button>
+      </div>
       <output id="status" aria-live="polite">等待載入。</output>
     </section>
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats" hidden><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v45；WASM 啟動時核對</p>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v46；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -130,10 +139,10 @@
         <button data-bit="3" class="playbar-key">Start</button>
         <button id="hd-toggle" type="button">原版</button>
         <button id="locale-toggle" type="button">台灣繁中</button>
+        <button id="save" type="button">匯出進度</button>
+        <label class="upload playbar-upload">匯入進度<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
       </div>
       <div class="utility" hidden>
-        <button id="save">匯出即時存檔</button>
-        <label class="upload">匯入存檔<input id="state-file" type="file" accept=".sav,.bin"/></label>
         <button id="sound" type="button">啟用聲音</button><button id="translation-debug" type="button" title="匯出文字診斷">匯出文字診斷</button>
         <button id="stop">停止</button>
       </div>
@@ -179,7 +188,7 @@
       繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
       </p>
   </main>
-  <script type="module" src="app.mjs?build=v45"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v45"></script>
+  <script type="module" src="app.mjs?build=v46"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v46"></script>
 </body>
 </html>
