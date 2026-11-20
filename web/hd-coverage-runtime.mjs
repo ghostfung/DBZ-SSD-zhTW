@@ -56,3 +56,73 @@ export function attachHdRuntimeSnapshot(report,game){
     hdActive:true,frame,categories
   };
 }
+
+/**
+ * Small, private diagnostic window for short-lived HD regressions. Store only
+ * matcher IDs, source hashes, counts and reasons -- never ROM bytes, save
+ * states, screenshots, or the user's ZIP contents.
+ *
+ * A single-frame export can show a successful HD pose even though the next
+ * animation pose fails. Sampling at 10 Hz for ~18 seconds distinguishes these
+ * without a continuous 60 Hz WASM/JSON/DOM workload on iPhone Safari.
+ */
+export class HdSceneTrace {
+  constructor({stepFrames=6,maxSamples=180}={}){
+    if(!Number.isInteger(stepFrames)||stepFrames<1||
+       !Number.isInteger(maxSamples)||maxSamples<1||maxSamples>240)
+      throw new RangeError('HD scene trace limits');
+    this.stepFrames=stepFrames;this.maxSamples=maxSamples;this.reset();
+  }
+  reset(){this.lastFrame=null;this.samples=[];}
+  capture(game){
+    if(!game || game.hd_active?.()!==true)return false;
+    const frame=game.frame_count?.();
+    if(!Number.isFinite(frame)||frame<=0)return false;
+    if(this.lastFrame!==null&&frame<this.lastFrame)this.reset();
+    if(this.lastFrame!==null&&frame-this.lastFrame<this.stepFrames)return false;
+    this.lastFrame=frame;
+    const read=(name)=>{
+      if(typeof game[name]!=='function')return null;
+      try{return JSON.parse(game[name]());}catch{return null;}
+    };
+    const part=(matchesName,probeName,pixelsName)=>{
+      const matches=read(matchesName);
+      const probe=read(probeName);
+      const pixels=game[pixelsName]?.();
+      const list=Array.isArray(matches)?matches.slice(0,12):null;
+      const ready=list?.filter(m=>m?.ready===true).length??null;
+      return {
+        matched:list?.length??null,
+        ready,
+        pixels:Number.isFinite(pixels)?pixels:null,
+        // Official IDs/keys help distinguish an unindexed animation pose
+        // from a decoded artwork and a failed composite. No pixel payloads.
+        items:list?.map(m=>({
+          id:String(m.id??'').slice(0,100),
+          key:typeof m.key==='string'?m.key.slice(0,16):null,
+          ready:m.ready===true,
+          luma:m.luma===true
+        }))??null,
+        probe:probe&&typeof probe==='object'&&!Array.isArray(probe)
+          ?Object.fromEntries(Object.entries(probe).filter(([key,value])=>
+            ['poses','keyHits','paletteRejected','candidate','weak',
+             'sourceWriteRejected','reason','matched','ready','lumaMatched'].includes(key)
+            && (typeof value==='number'||typeof value==='string'))) :null
+      };
+    };
+    this.samples.push({frame,
+      fighter:part('fighter_matches','fighter_probe','hd_fighter_pixels'),
+      portrait:part('portrait_matches','portrait_probe','hd_portrait_pixels'),
+      special:part('special_matches','special_probe','hd_special_pixels')
+    });
+    if(this.samples.length>this.maxSamples)this.samples.shift();
+    return true;
+  }
+  report(){
+    return {
+      scope:'recent_sampled_frames',
+      explanation:'最近遊玩影格的約 10Hz 配對快照；不代表遊戲覆蓋率，無 ROM／存檔／圖片資料',
+      samples:this.samples.slice()
+    };
+  }
+}
