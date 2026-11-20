@@ -3,6 +3,7 @@
 // an indexed source has actually appeared during gameplay.
 import {parseBackgroundIndex} from './hd-background-index.mjs';
 import {parseFighterIndex} from './hd-fighter-index.mjs';
+import {parseVariantIndex} from './hd-variant-index.mjs';
 import {parsePortraitIndex} from './hd-portrait-index.mjs';
 import {parseSpecialIndex} from './hd-special-index.mjs';
 import {parseCardIndex} from './hd-card-index.mjs';
@@ -78,6 +79,7 @@ export async function buildHdCoverageAudit(assets,{version='v0.3.9'}={}){
     imageFiles:assets.images?.length??null,
     categories:[],unsupported:[],runtime:null
   };
+  let fighterItems=[];
   for(const [key,path,field] of TYPES){
     if(!assets.has(path)){
       report.categories.push(summary({key,path,raw:0,status:'index_absent',
@@ -92,7 +94,10 @@ export async function buildHdCoverageAudit(assets,{version='v0.3.9'}={}){
       if(entries.length>25000)throw Error('索引筆數超過盤點上限');
       const cat=path.slice(0,path.indexOf('/'));
       const fs=gatherFiles(raw,cat,x=>assets.has(x));
-      const p=indexed(raw,key,x=>assets.has(x));
+      const p=key==='variants'
+        ?parseVariantIndex(raw,fighterItems,x=>assets.has(x))
+        :indexed(raw,key,x=>assets.has(x));
+      if(key==='battle_pose')fighterItems=p.items;
       const extra=[];
       if(key==='battle_pose'){
         const luma=entries.filter(x=>x?.luma===true).length;
@@ -110,17 +115,19 @@ export async function buildHdCoverageAudit(assets,{version='v0.3.9'}={}){
           filesPresent:tips.filter(x=>assets.has(imgPath('cards',x?.image))).length,
           reason:'提示圖片需獨立的選單觸發時機與合成管線'});
       }else if(key==='variants'){
-        report.unsupported.push({kind:'variants',entries:entries.length,
-          filesPresent:fs.found,
-          reason:'需核對原作者 pose-art 對應與遊戲條件 when，尚未接入'});
+        if(p.conditional)report.unsupported.push({kind:'variants/conditional_when',
+          entries:p.conditional,filesPresent:p.conditional,
+          reason:'附條件的角色特效需要上游 WRAM 條件，不允許無條件貼圖'});
+        extra.push({reason:'擴展姿勢來源符合人物 class2 ID',count:p.count});
+        if(p.missing)extra.push({reason:'擴展姿勢檔案不存在',count:p.missing});
       }
       if(p.ignored)extra.push({reason:'索引格式或來源安全條件不符',count:p.ignored});
       report.categories.push(summary({key,path,raw:entries.length,
-        status:key==='variants'?'not_implemented':'indexed',
-        parsed:key==='variants'?0:p.items.length,
+        status:'indexed',
+        parsed:key==='variants'?p.count:p.items.length,
         artFiles:fs.total,present:fs.found,missing:fs.missing,
         blockers:extra,examples:[...fs.examples,...fs.invalid].slice(0,12),
-        note:key==='variants'?'只能驗證檔案存在，未實作姿勢條件比對':
+        note:key==='variants'?'已按官方 class2 ID 與 always 條件接入；實際是否出現仍需遊戲驗收':
           '索引可讀不代表任何遊戲影格已有匹配；請結合 runtime 快照'}));
     }catch(e){
       report.categories.push(summary({key,path,status:'index_error',
@@ -133,8 +140,8 @@ export async function buildHdCoverageAudit(assets,{version='v0.3.9'}={}){
     kind:'menu_picture',entries:null,filesPresent:null,
     reason:'原作者以角色／物品的原始圖塊組合與配色重建選單，不能視作獨立 ZIP 圖檔數量'
   },{
-    kind:'16:9_and_extended_sprites',entries:null,filesPresent:null,
-    reason:'目前 512×478 輸出及人物原始輪廓限制，非純索引問題'
+    kind:'16:9_and_general_extended_sprites',entries:null,filesPresent:null,
+    reason:'支援官方 27 張擴展姿勢；其他非變體人物輪廓與 16:9 寬螢幕渲染仍需上游相容引擎'
   });
   return report;
 }

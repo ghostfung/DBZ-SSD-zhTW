@@ -12,7 +12,7 @@ export function parseVariantIndex(raw,fighters,has=()=>true){
     if(typeof art!=='string'||art.length>160||!allowed.has(art)||
       !['always','kaioken'].includes(when)||!Number.isInteger(margin)||
       margin<0||margin>96||margin%4!==0||typeof file!=='string'||
-      file.length>220||!SAFE.test(file)||file.includes('..')){ignored++;continue;}
+      file.length>220||!SAFE.test(file)||file.includes('/')||file.includes('..')){ignored++;continue;}
     const slot=art+':'+when;
     if(seen.has(slot)){ignored++;continue;}
     seen.add(slot);
