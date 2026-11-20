@@ -13,7 +13,7 @@ export class LiveHdFighters {
     this.catalog=[];
     this.game=null;
     this.generation=0;
-    this.loading=new Map();
+    this.loading=new Map();this.loadingVariants=new Map();
     this.failed=new Map();
     this.decoded=new Map();
     this.cacheBytes=0;
@@ -23,7 +23,7 @@ export class LiveHdFighters {
     this.generation++;
     this.assets=assets||null;
     this.catalog=catalog?.items||[];
-    this.loading.clear();
+    this.loading.clear();this.loadingVariants.clear();
     this.failed.clear();
     this.decoded.clear();
     this.cacheBytes=0;
@@ -35,14 +35,14 @@ export class LiveHdFighters {
   attach(game) {
     this.generation++;
     this.game=game;
-    this.loading.clear();
+    this.loading.clear();this.loadingVariants.clear();
     this.failed.clear();
     if(this.assets) game.set_fighter_index(JSON.stringify(this.catalog));
   }
   detach() {
     this.generation++;
     this.game=null;
-    this.loading.clear();
+    this.loading.clear();this.loadingVariants.clear();
     this.failed.clear();
   }
   remember(name,picture) {
@@ -85,6 +85,32 @@ export class LiveHdFighters {
          (!failed || (failed.times<2 && this.pulses>=failed.after))) {
         void this.load(match,game);
       }
+      if(match.ready && match.variant && !match.variantReady &&
+         !this.loadingVariants.has(match.index))void this.loadVariant(match,game);
+    }
+  }
+  async loadVariant(match,target){
+    const generation=this.generation;
+    const token={generation,index:match.index};
+    const art=match.variant?.art;
+    if(typeof art!=='string'||!art.startsWith('variants/'))return;
+    this.loadingVariants.set(match.index,token);
+    try{
+      let picture=this.decoded.get(art);
+      if(!picture){
+        picture=await this.decoder(this.assets,art);
+        if(generation!==this.generation||this.game!==target)return;
+        this.remember(art,picture);
+      }
+      const current=JSON.parse(target.fighter_matches());
+      if(generation!==this.generation||this.game!==target||
+          !current.some(m=>m.index===match.index&&m.variant?.art===art&&!m.variantReady))return;
+      target.set_fighter_variant(match.index,picture.width,picture.height,picture.rgba);
+    }catch(error){
+      if(generation===this.generation&&this.game===target)
+        this.status('HD 擴展姿勢無法載入 '+match.id+'：'+(error?.message||error));
+    }finally{
+      if(this.loadingVariants.get(match.index)===token)this.loadingVariants.delete(match.index);
     }
   }
   async load(match,target) {
@@ -108,6 +134,8 @@ export class LiveHdFighters {
         item.art===match.art && !item.ready))return;
       target.set_fighter_art(match.index,picture.width,picture.height,picture.rgba);
       this.failed.delete(match.index);
+      if(match.variant&&!this.loadingVariants.has(match.index))
+        void this.loadVariant(match,target);
     } catch(error) {
       if(generation===this.generation && this.game===target) {
         const message=error?.message||String(error);
