@@ -48,17 +48,22 @@ export function parseFighterIndex(data,hasFile=()=>true) {
       }
     }
     const colourCount=palette.filter(Boolean).length;
-    if(colourCount<2)noPalette++;
+    if(colourCount<2 && !entry.luma)noPalette++;
     const art='class2/'+entry.file;
-    // Luma art is a greyscale transfer material, not directly usable RGB.
+    // Greyscale transfer is not plain RGB: its hue must come from the exact
+    // current PPU OAM pixels, and the Rust compositor enforces ownership.
+    // Fighter luma is limited to official battle pose IDs; effects use the
+    // separate class2 special compositor.
     const knownWrong=WRONG_OBJECTS.has(entry.id+':'+
       entry.source_key.padStart(16,'0').toLowerCase());
-    const available=!knownWrong && !entry.luma && colourCount>=2 && hasFile(art);
+    const luma=entry.luma===true;
+    const available=!knownWrong && hasFile(art) &&
+      (luma ? entry.id.startsWith('battle-') : colourCount>=2);
     if(!available)missing.push(art);
     items.push({
       id:entry.id,key:entry.source_key.padStart(16,'0').toLowerCase(),
       width,height,art,available,palette,
-      luma:Boolean(entry.luma)
+      luma
     });
   }
   return {items,count:items.length,missing,ignored,noPalette};

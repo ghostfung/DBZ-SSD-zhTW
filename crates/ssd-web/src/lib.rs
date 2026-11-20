@@ -17,6 +17,7 @@ mod live_cards;
 mod live_mode7;
 mod live_portraits;
 mod hd_profile;
+mod hd_luma;
 use hd_profile::Profile;
 use live_portraits::LivePortraits;
 use live_bg::LiveBackgrounds;

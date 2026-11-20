@@ -7,6 +7,7 @@
 //! still require the upstream two-pass art renderer.
 use serde::Deserialize;
 use ssd_hd::LiveFighterPose;
+use crate::hd_luma;
 use ssd_oracle::FrameLog;
 use std::collections::HashMap;
 
@@ -24,6 +25,8 @@ struct Entry {
     height: u16,
     art: String,
     available: bool,
+    #[serde(default)]
+    luma: bool,
     palette: Vec<Option<[u8; 3]>>,
 }
 
@@ -31,6 +34,7 @@ struct Entry {
 struct Picture {
     width: usize,
     rgba: Vec<u8>,
+    luma_ref: u8,
 }
 
 #[derive(Clone)]
@@ -64,6 +68,30 @@ fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
     // An unspecified palette does not prove that two different fighters'
     // colours agree (e.g. Super Saiyan hair variants).
     used >= 2
+}
+
+/// A pose's exact 64-bit source key and dimensions are mandatory. Choose
+/// exactly one matching colour asset; if there is no colour-exact candidate,
+/// allow exactly one greyscale transfer asset for the same source. Multiple
+/// indistinguishable candidates are never chosen by catalogue order.
+fn choose_pose(entries:&[Entry],indices:&[usize],pose:&LiveFighterPose)->Option<usize>{
+    let sized:Vec<usize>=indices.iter().copied()
+        .filter(|&i|entries[i].width==pose.width && entries[i].height==pose.height)
+        .collect();
+    let exact:Vec<usize>=sized.iter().copied()
+        .filter(|&i|!entries[i].luma&&palette_matches(&entries[i],pose))
+        .collect();
+    match exact.as_slice() {
+        [only]=>return Some(*only),
+        [_,_,..]=>return None,
+        _=>{}
+    }
+    let greys:Vec<usize>=sized.iter().copied()
+        .filter(|&i|entries[i].luma).collect();
+    match greys.as_slice() {
+        [only]=>Some(*only),
+        _=>None,
+    }
 }
 
 impl LiveFighters {
@@ -116,11 +144,7 @@ impl LiveFighters {
             self.probes+=1;
             let Some(indices)=self.lookup.get(&pose.key) else { continue };
             self.key_hits+=1;
-            let selected=indices.iter().copied().find(|&index| {
-                let entry=&self.entries[index];
-                entry.width == pose.width && entry.height == pose.height
-                    && palette_matches(entry,&pose)
-            });
+            let selected=choose_pose(&self.entries,indices,&pose);
             if let Some(index)=selected {
                 self.active.push(Matching {index,pose});
                 if self.active.len()>=MAX_POSES { break; }
@@ -135,6 +159,7 @@ impl LiveFighters {
             "poses":self.probes, "keyHits":self.key_hits,
             "paletteRejected":self.palette_rejections,
             "matched":self.active.len(),
+            "lumaMatched":self.active.iter().filter(|m|self.entries[m.index].luma).count(),
             "ready":self.active.iter()
                 .filter(|p| self.pictures.contains_key(&p.index)).count(),
         }).to_string()
@@ -157,6 +182,7 @@ impl LiveFighters {
             serde_json::json!({
                 "index":matched.index, "id":entry.id, "art":entry.art,
                 "ready":self.pictures.contains_key(&matched.index),
+                "luma":entry.luma,
                 "key":entry.key,
             })
         }).collect();
@@ -180,7 +206,10 @@ impl LiveFighters {
         {
             return Err(format!("人物 HD 圖像尺寸錯誤：{}",entry.id));
         }
-        self.pictures.insert(index,Picture { width,rgba:rgba.to_vec() });
+        let luma_ref=if entry.luma {hd_luma::reference(rgba)} else {255};
+        self.pictures.insert(index,Picture {
+            width,rgba:rgba.to_vec(),luma_ref
+        });
         // Keep only a small number of prepared pictures in WASM. JS retains
         // an independent LRU of 2x images for the next encounter.
         if self.pictures.len()>12 {
@@ -208,6 +237,7 @@ impl LiveFighters {
         let mut claimed=vec![false;cells];
         for matched in &self.active {
             let Some(picture)=self.pictures.get(&matched.index) else {continue};
+            let luma=self.entries[matched.index].luma;
             let pose=&matched.pose;
             let (left,top)=(pose.x,pose.y);
             let (right,bottom)=(left+i32::from(pose.width),top+i32::from(pose.height));
@@ -244,7 +274,9 @@ impl LiveFighters {
                         }
                         adjacent
                     } else {false};
-                    if !owned && !near {continue;}
+                    // A greyscale silhouette needs the *original source*
+                    // colour. Never invent one for a background-only overhang.
+                    if !owned && (!near || luma) {continue;}
                     let image_x=(x as i32-left) as usize*2;
                     let image_y=(y as i32-top) as usize*2;
                     // A pixel with absolutely no HD coverage may still need
@@ -267,10 +299,17 @@ impl LiveFighters {
                             let a=u32::from(picture.rgba[src+3]);
                             if a==0 {continue;}
                             has_art=true;
-                            for c in 0..3 {
-                                let fg=u32::from(picture.rgba[src+c]);
+                            let tinted=if luma {
+                                hd_luma::colour(
+                                    [before[sy*2+sx][0],before[sy*2+sx][1],
+                                     before[sy*2+sx][2]],
+                                    &picture.rgba[src..src+3],picture.luma_ref)
+                            }else {
+                                [picture.rgba[src],picture.rgba[src+1],picture.rgba[src+2]]
+                            };
+                            for (c,fg) in tinted.into_iter().enumerate(){
                                 let bg=u32::from(rgba[dst+c]);
-                                rgba[dst+c]=((fg*a+bg*(255-a)+127)/255) as u8;
+                                rgba[dst+c]=((u32::from(fg)*a+bg*(255-a)+127)/255) as u8;
                             }
                             rgba[dst+3]=255;
                         }
@@ -360,4 +399,57 @@ mod tests {
         let other=((1*2)*512+2*2)*4;
         assert_eq!(&out[other..other+3], &[5,5,5]);
     }
+    #[test]
+    fn unique_exact_key_luma_tints_from_visible_oam_pixel_not_background(){
+        let mut live=LiveFighters::default();
+        let only=serde_json::json!([{
+            "id":"battle-test","key":"abcd","width":2,"height":2,
+            "art":"class2/grey.png","available":true,"luma":true,
+            "palette":vec![serde_json::Value::Null;16]
+        }]).to_string();
+        live.load_catalog(&only).unwrap();
+        assert_eq!(choose_pose(&live.entries,&[0],&pose()),Some(0));
+        live.active.push(Matching{index:0,pose:pose()});
+        let mut art=vec![0_u8;4*4*4];
+        for (i,p) in art.chunks_exact_mut(4).enumerate(){
+            let brightness=if i%2==0 {70}else{180};
+            p.copy_from_slice(&[brightness,brightness,brightness,255]);
+        }
+        live.add_picture(0,4,4,&art).unwrap();
+        let mut owners=vec![255;256*4];
+        owners[1*256+1]=5;
+        let layers=vec![0_u8;256*4];
+        let beneath=vec![20;512*8*4];
+        let mut out=vec![0_u8;512*8*4];
+        for p in out.chunks_exact_mut(4){p.copy_from_slice(&[50,185,70,255]);}
+        let changed=live.composite(&owners,&layers,&beneath,&mut out,512,8);
+        assert_eq!(changed,1);
+        let at=(2*512+2)*4;
+        assert!(out[at+1]>out[at], "original green hue must be retained");
+        assert!(out[at+1]>out[at+2], "must not render greyscale");
+        assert!(out[at+1]<185, "dark HD pixel must shade source");
+        let other=((2*512)+6)*4;
+        assert_eq!(&out[other..other+3], &[50,185,70]);
+    }
+    #[test]
+    fn luma_rejects_ambiguous_source_key_and_prefers_palette_exact_colour(){
+        let mut live=LiveFighters::default();
+        let raw=serde_json::json!([
+            {"id":"battle-luma","key":"abcd","width":2,"height":2,
+             "art":"class2/grey.png","available":true,"luma":true,
+             "palette":vec![serde_json::Value::Null;16]},
+            {"id":"battle-second-luma","key":"abcd","width":2,"height":2,
+             "art":"class2/grey2.png","available":true,"luma":true,
+             "palette":vec![serde_json::Value::Null;16]}
+        ]).to_string();
+        live.load_catalog(&raw).unwrap();
+        assert_eq!(choose_pose(&live.entries,&[0,1],&pose()),None);
+        live.entries[1].luma=false;
+        live.entries[1].palette[1]=Some([255,0,0]);
+        live.entries[1].palette[2]=Some([0,255,0]);
+        assert_eq!(choose_pose(&live.entries,&[0,1],&pose()),Some(1));
+        let mut changed=pose();changed.colours[1]=[0,0,255];
+        assert_eq!(choose_pose(&live.entries,&[0,1],&changed),Some(0));
+    }
+
 }

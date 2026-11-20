@@ -14,9 +14,18 @@ test('official class2 source_key and palette bind to safe local ZIP art',()=>{
  assert.equal(r.items[0].available,true);
  assert.equal(r.items[0].art,'class2/goku.png');
 });
-test('luma palette-transfer art is not treated as RGB art',()=>{
- const r=parseFighterIndex({assets_list:[entry({luma:true})]},()=>true);
- assert.equal(r.items[0].available,false);
+test('luma shape is eligible only for exact fighter-pose ownership, not rendered as grey RGB',()=>{
+ const r=parseFighterIndex({assets_list:[entry({
+   luma:true,palette_indexes_used:{}
+ })]},()=>true);
+ assert.equal(r.items[0].available,true);
+ assert.equal(r.items[0].luma,true);
+ assert.equal(r.noPalette,0);
+ const effect=parseFighterIndex({assets_list:[entry({
+   id:'fgfx-unknown',luma:true,palette_indexes_used:{}
+ })]},()=>true);
+ assert.equal(effect.items[0].available,false,
+   'class2 effects are delegated to special OAM RGBA matcher');
 });
 test('no palette evidence, missing file and path traversal never activate an HD pose',()=>{
  const r=parseFighterIndex({assets_list:[

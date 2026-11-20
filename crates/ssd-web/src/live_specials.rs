@@ -3,6 +3,7 @@
 //! This stage supports only PPU-visible OAM pixels, never stretched art.
 use serde::Deserialize;
 use ssd_hd::LiveSpecialPose;
+use crate::hd_luma;
 use ssd_oracle::FrameLog;
 use std::collections::HashMap;
 
@@ -21,6 +22,8 @@ struct Entry {
     height: u16,
     art: String,
     available: bool,
+    #[serde(default)]
+    luma: bool,
     palette: Vec<Option<[u8; 3]>>,
 }
 
@@ -28,6 +31,7 @@ struct Entry {
 struct Picture {
     width: usize,
     rgba: Vec<u8>,
+    luma_ref: u8,
 }
 
 #[derive(Clone)]
@@ -145,6 +149,7 @@ impl LiveSpecials {
             "poses":self.probes, "keyHits":self.key_hits,
             "paletteRejected":self.palette_rejections,
             "matched":self.active.len(),
+            "lumaMatched":self.active.iter().filter(|m|self.entries[m.index].luma).count(),
             "ready":self.active.iter()
                 .filter(|p| self.pictures.contains_key(&p.index)).count(),
         }).to_string()
@@ -170,6 +175,7 @@ impl LiveSpecials {
             serde_json::json!({
                 "index":matched.index, "id":entry.id, "art":entry.art,
                 "ready":self.pictures.contains_key(&matched.index),
+                "luma":entry.luma,
                 "key":entry.key, "kind":entry.kind,
             })
         }).collect();
@@ -193,7 +199,10 @@ impl LiveSpecials {
         {
             return Err(format!("人物 HD 圖像尺寸錯誤：{}",entry.id));
         }
-        self.pictures.insert(index,Picture { width,rgba:rgba.to_vec() });
+        let luma_ref=if entry.luma {hd_luma::reference(rgba)} else {255};
+        self.pictures.insert(index,Picture {
+            width,rgba:rgba.to_vec(),luma_ref
+        });
         // Keep only a small number of prepared pictures in WASM. JS retains
         // an independent LRU of 2x images for the next encounter.
         if self.pictures.len()>12 {
@@ -221,6 +230,7 @@ impl LiveSpecials {
         let mut claimed=vec![false;cells];
         for matched in &self.active {
             let Some(picture)=self.pictures.get(&matched.index) else {continue};
+            let luma=self.entries[matched.index].luma;
             let pose=&matched.pose;
             let (left,top)=(pose.x,pose.y);
             let (right,bottom)=(left+i32::from(pose.width),top+i32::from(pose.height));
@@ -266,10 +276,20 @@ impl LiveSpecials {
                             let a=u32::from(picture.rgba[src+3]);
                             if a==0 {continue;}
                             has_art=true;
-                            for c in 0..3 {
-                                let fg=u32::from(picture.rgba[src+c]);
+                            // Luma art is a luminance stencil of an exact
+                            // source RGBA effect, not a grey RGB replacement.
+                            // Recover the original OAM colour saved above.
+                            let tinted=if luma {
+                                hd_luma::colour(
+                                    [before[sy*2+sx][0],before[sy*2+sx][1],
+                                     before[sy*2+sx][2]],
+                                    &picture.rgba[src..src+3],picture.luma_ref)
+                            }else{
+                                [picture.rgba[src],picture.rgba[src+1],picture.rgba[src+2]]
+                            };
+                            for (c,fg) in tinted.into_iter().enumerate(){
                                 let bg=u32::from(rgba[dst+c]);
-                                rgba[dst+c]=((fg*a+bg*(255-a)+127)/255) as u8;
+                                rgba[dst+c]=((u32::from(fg)*a+bg*(255-a)+127)/255) as u8;
                             }
                             rgba[dst+3]=255;
                         }
@@ -364,4 +384,34 @@ mod tests {
         let other=((1*2)*512+2*2)*4;
         assert_eq!(&out[other..other+3], &[5,5,5]);
     }
+    #[test]
+    fn exact_rgba_effect_luma_uses_current_sprite_hue(){
+        let mut live=LiveSpecials::default();
+        let raw=serde_json::json!([{
+            "id":"effect-test","kind":2,"key":"abcd","width":2,"height":2,
+            "art":"class2/grey.png","available":true,"luma":true,
+            "palette":vec![serde_json::Value::Null;16]
+        }]).to_string();
+        live.load_catalog(&raw).unwrap();
+        live.active.push(Matching{index:0,pose:pose()});
+        let mut grey=vec![0_u8;4*4*4];
+        for (i,p) in grey.chunks_exact_mut(4).enumerate(){
+            let v=if i%2==0 {80}else{200};
+            p.copy_from_slice(&[v,v,v,255]);
+        }
+        live.add_picture(0,4,4,&grey).unwrap();
+        let mut owners=vec![255;256*4];owners[1*256+1]=5;
+        let layers=vec![0;256*4];
+        let beneath=vec![13;512*8*4];
+        let mut rgba=vec![0;512*8*4];
+        for p in rgba.chunks_exact_mut(4){p.copy_from_slice(&[200,80,30,255]);}
+        assert_eq!(live.composite(&owners,&layers,&beneath,&mut rgba,512,8),1);
+        let dst=(2*512+2)*4;
+        assert!(rgba[dst]>rgba[dst+1]);
+        assert!(rgba[dst+1]>rgba[dst+2]);
+        assert!(rgba[dst]<200);
+        let other=(2*512+6)*4;
+        assert_eq!(&rgba[other..other+3],&[200,80,30]);
+    }
+
 }

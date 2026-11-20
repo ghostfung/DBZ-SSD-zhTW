@@ -40,10 +40,13 @@ export function parseSpecialIndex(data,kind,hasFile=()=>true){
     const numberOfColors=palette.filter(Boolean).length;
     if(kind===1&&numberOfColors<2)noPalette++;
     const knownWrong=WRONG.has(id+':'+normalized);
-    const available=!knownWrong&&!item.luma&&
-      (kind===2||numberOfColors>=2)&&hasFile(art);
+    // For class2 effects the exact RGBA source key already includes colour;
+    // class3 field OAM remains palette-verified and luma-unsupported.
+    const luma=item.luma===true;
+    const available=!knownWrong&&(kind===2 || !luma&&numberOfColors>=2)
+      &&hasFile(art);
     if(!available)missing++;
-    items.push({id,kind,key:normalized,width,height,art,available,palette});
+    items.push({id,kind,key:normalized,width,height,art,available,palette,luma});
   }
   return {items,count:items.length,ignored,missing,noPalette};
 }

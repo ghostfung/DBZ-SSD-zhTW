@@ -146,11 +146,16 @@ export function formatHdCoverageAudit(report){
       '/'+c.referencedImages+'｜缺 '+c.missingImages;
   });
   const missing=report.categories.reduce((n,c)=>n+c.missingImages,0);
+  const runtime=report.runtime?.status==='sampled' ?
+    '已附目前一個有效 HD 影格快照（不代表全遊戲覆蓋率）。':
+    report.runtime?.status==='not_sampled' ?
+      '遊戲 HD 快照未採樣：'+report.runtime.reason :
+      '尚未取得遊戲影格快照。';
   return ['HD 素材盤點（只核對本機 ZIP 索引；不等於實際遊戲覆蓋率）',
     '圖片檔總數：'+(report.imageFiles??'未知'),
     ...rows,'缺少被索引參照的圖片：'+missing,
     '未接入：'+report.unsupported.map(x=>x.kind+
       (x.entries===null?'':'（'+x.entries+' 筆）')).join('、'),
-    report.runtime?'已附目前遊戲畫面快照。':'尚未取得遊戲影格快照。'
+    runtime
   ].join('\n');
 }
