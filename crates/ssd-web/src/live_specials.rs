@@ -319,6 +319,46 @@ impl LiveSpecials {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unrelated_cgram_writes_do_not_blank_an_exact_rgba_effect() {
+        // A single visible palette-3 OAM object. Other 127 sprites are
+        // parked off-screen, so the matcher has one unambiguous RGBA pose.
+        let mut sprites=ssd_oracle::SpriteLine::default();
+        sprites.blank=false;
+        let entries=(1..=224).map(|scanline| ssd_oracle::LineEntry {
+            scanline,from_pixel:0,
+            regs:ssd_oracle::LineRegs::default(),
+            sprites,
+        }).collect();
+        let mut log=ssd_oracle::FrameLog {
+            complete:true,height:224,h_hi_res:false,v_hi_res:false,
+            entries,cgram_start:vec![0;256],cgram_writes:Vec::new(),
+            vram:vec![0;32768],vram_writes:Vec::new(),
+            oam_low:vec![0;512],oam_high:vec![0;32],oam_writes:Vec::new(),
+        };
+        for slot in log.oam_low.chunks_exact_mut(4) {
+            slot[1]=240;
+        }
+        log.oam_low[0]=32; // x
+        log.oam_low[1]=40; // y
+        log.oam_low[2]=0;  // tile
+        log.oam_low[3]=6;  // OBJ palette 3: not a battle fighter
+        for row in 0..8 {log.vram[row]=0x00ff;}
+        log.cgram_start[128+3*16+1]=0x7fff;
+        let initial=ssd_hd::live_special_poses(&log);
+        let effects:Vec<_>=initial.iter().filter(|pose|pose.kind==2).collect();
+        assert!(!effects.is_empty(),"synthetic OAM must yield a real RGBA effect");
+        let source_keys:Vec<_>=effects.iter().map(|p|p.key).collect();
+        log.cgram_writes.push(ssd_oracle::CgramWrite {
+            entry:100,index:0,value:0x03e0
+        }); // background colour after the effect; not its palette
+        let after=ssd_hd::live_special_poses(&log);
+        let actual:Vec<_>=after.iter().filter(|pose|pose.kind==2).map(|p|p.key).collect();
+        assert_eq!(actual,source_keys,
+            "unrelated per-frame CGRAM writes cannot blank a verified effect");
+    }
+
     fn entry() -> String {
         let mut pal=vec![serde_json::Value::Null;16];
         pal[1]=serde_json::json!([255,0,0]);
