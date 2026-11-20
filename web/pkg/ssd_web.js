@@ -1,4 +1,6 @@
 /* @ts-self-types="./ssd_web.d.ts" */
+import * as import1 from "./snippets/ssd-web-78d3277d0c70cc4b/inline0.js"
+
 
 export class WebGame {
     __destroy_into_raw() {
@@ -192,9 +194,6 @@ export class WebGame {
         return ret !== 0;
     }
     /**
-     * Bitmask of visible HD art still awaiting local ZIP image decoding.
-     * This prevents six expensive JS/WASM JSON roundtrips on *every* frame
-     * while preserving same-frame requests when a new match appears.
      * @returns {number}
      */
     hd_pending_mask() {
@@ -207,6 +206,27 @@ export class WebGame {
     hd_portrait_pixels() {
         const ret = wasm.webgame_hd_portrait_pixels(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    /**
+     * Bitmask of visible HD art still awaiting local ZIP image decoding.
+     * This prevents six expensive JS/WASM JSON roundtrips on *every* frame
+     * while preserving same-frame requests when a new match appears.
+     * Average and maximum sampled phase times since the last read. A
+     * read resets counters, so each iPhone screenshot reflects the current
+     * scene rather than an old battle stall.
+     * @returns {string}
+     */
+    hd_profile_report() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_hd_profile_report(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
     }
     /**
      * @returns {number}
@@ -804,6 +824,7 @@ function __wbg_get_imports() {
     return {
         __proto__: null,
         "./ssd_web_bg.js": import0,
+        "./snippets/ssd-web-78d3277d0c70cc4b/inline0.js": import1,
     };
 }
 
