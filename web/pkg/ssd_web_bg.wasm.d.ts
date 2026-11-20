@@ -47,6 +47,7 @@ export const webgame_set_card_index: (a: number, b: number, c: number) => [numbe
 export const webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
 export const webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
 export const webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];
+export const webgame_set_fighter_variant: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
 export const webgame_set_hd_mode: (a: number, b: number) => void;
 export const webgame_set_map_hd_enabled: (a: number, b: number) => void;
 export const webgame_set_map_index: (a: number, b: number, c: number) => [number, number, number];

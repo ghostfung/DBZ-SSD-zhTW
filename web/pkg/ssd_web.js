@@ -552,6 +552,21 @@ export class WebGame {
         return ret[0] >>> 0;
     }
     /**
+     * Safely decoded, official enlarged class2 pose; never a guessed overlay.
+     * @param {number} index
+     * @param {number} width
+     * @param {number} height
+     * @param {Uint8Array} rgba
+     */
+    set_fighter_variant(index, width, height, rgba) {
+        const ptr0 = passArray8ToWasm0(rgba, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.webgame_set_fighter_variant(this.__wbg_ptr, index, width, height, ptr0, len0);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
+    }
+    /**
      * Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
      * Unsupported frames fall back to Classic without affecting emulator state.
      * @param {boolean} enabled

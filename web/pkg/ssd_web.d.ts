@@ -115,6 +115,10 @@ export class WebGame {
      */
     set_fighter_index(json: string): number;
     /**
+     * Safely decoded, official enlarged class2 pose; never a guessed overlay.
+     */
+    set_fighter_variant(index: number, width: number, height: number, rgba: Uint8Array): void;
+    /**
      * Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
      * Unsupported frames fall back to Classic without affecting emulator state.
      */
@@ -216,6 +220,7 @@ export interface InitOutput {
     readonly webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_fighter_variant: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_hd_mode: (a: number, b: number) => void;
     readonly webgame_set_map_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_map_index: (a: number, b: number, c: number) => [number, number, number];
