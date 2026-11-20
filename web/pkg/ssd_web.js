@@ -30,6 +30,22 @@ export class WebGame {
         }
     }
     /**
+     * Detect stale Safari JS/WASM mixes; contains no user or ROM information.
+     * @returns {string}
+     */
+    browser_build_tag() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+            const ret = wasm.webgame_browser_build_tag(this.__wbg_ptr);
+            deferred1_0 = ret[0];
+            deferred1_1 = ret[1];
+            return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+            wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+    }
+    /**
      * @returns {string}
      */
     card_matches() {

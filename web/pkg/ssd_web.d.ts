@@ -8,6 +8,10 @@ export class WebGame {
      * Matches use the live PPU registers and VRAM content hash.
      */
     background_matches(): string;
+    /**
+     * Detect stale Safari JS/WASM mixes; contains no user or ROM information.
+     */
+    browser_build_tag(): string;
     card_matches(): string;
     card_probe(): string;
     /**
@@ -168,6 +172,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_webgame_free: (a: number, b: number) => void;
     readonly webgame_background_matches: (a: number) => [number, number];
+    readonly webgame_browser_build_tag: (a: number) => [number, number];
     readonly webgame_card_matches: (a: number) => [number, number];
     readonly webgame_card_probe: (a: number) => [number, number];
     readonly webgame_current_dialogue: (a: number) => [number, number];

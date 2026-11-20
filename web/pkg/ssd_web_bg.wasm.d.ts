@@ -3,6 +3,7 @@
 export const memory: WebAssembly.Memory;
 export const __wbg_webgame_free: (a: number, b: number) => void;
 export const webgame_background_matches: (a: number) => [number, number];
+export const webgame_browser_build_tag: (a: number) => [number, number];
 export const webgame_card_matches: (a: number) => [number, number];
 export const webgame_card_probe: (a: number) => [number, number];
 export const webgame_current_dialogue: (a: number) => [number, number];
