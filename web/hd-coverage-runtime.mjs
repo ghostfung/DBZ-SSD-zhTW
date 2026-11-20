@@ -106,8 +106,15 @@ export class HdSceneTrace {
         probe:probe&&typeof probe==='object'&&!Array.isArray(probe)
           ?Object.fromEntries(Object.entries(probe).filter(([key,value])=>
             ['poses','keyHits','paletteRejected','candidate','weak',
-             'sourceWriteRejected','reason','matched','ready','lumaMatched'].includes(key)
-            && (typeof value==='number'||typeof value==='string'))) :null
+             'sourceWriteRejected','reason','matched','ready','lumaMatched',
+             'fallbackPoses','fallbackKeyHits'].includes(key)
+            && (typeof value==='number'||typeof value==='string')))
+            // Exact source-key fingerprints only: never ROM data or textures.
+            .concat(Array.isArray(probe.unindexedKeys)?[[
+              'unindexedKeys',probe.unindexedKeys.filter(value=>
+                typeof value==='string' &&
+                /^[0-9a-f]{16}\/\d{1,3}x\d{1,3}$/i.test(value)).slice(0,3)
+            ]]:[])) :null
       };
     };
     this.samples.push({frame,
