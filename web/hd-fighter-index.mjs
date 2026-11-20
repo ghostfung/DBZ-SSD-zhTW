@@ -7,6 +7,7 @@ const IMAGE=/^[^\\/][^\\]*\.(?:png|webp)$/i;
 const COLOUR=/^#[\da-f]{6}$/i;
 const safe=(name)=>typeof name==='string' && name.length<=220
   && IMAGE.test(name) && !name.split('/').some(x=>x==='..'||x==='.');
+import {parseVariantIndex} from './hd-variant-index.mjs';
 const positive=(x,max)=>Number.isInteger(x)&&x>0&&x<=max;
 
 // Keep the same known incorrect identity mappings excluded by the desktop
@@ -72,5 +73,17 @@ export function parseFighterIndex(data,hasFile=()=>true) {
 export async function readFighterCatalog(assets){
   // Official class2 index may be larger than the 2 MiB background index.
   const raw=await assets.readJson('class2/index.json',{maxBytes:8*1024*1024});
-  return parseFighterIndex(raw,name=>assets.has(name));
+  const catalog=parseFighterIndex(raw,name=>assets.has(name));
+  let variantCount=0,variantIgnored=0,variantMissing=0,variantConditional=0;
+  if(assets.has('variants/index.json')){
+    const index=await assets.readJson('variants/index.json',{maxBytes:512*1024});
+    const variants=parseVariantIndex(index,catalog.items,name=>assets.has(name));
+    for(const entry of catalog.items){
+      const variant=variants.byId.get(entry.id);
+      if(variant)entry.variant=variant;
+    }
+    variantCount=variants.count;variantIgnored=variants.ignored;
+    variantMissing=variants.missing;variantConditional=variants.conditional;
+  }
+  return {...catalog,variantCount,variantIgnored,variantMissing,variantConditional};
 }
