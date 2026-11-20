@@ -26,7 +26,7 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v46"/>
+  <link rel="stylesheet" href="style.css?build=v47"/>
 </head>
 <body>
   <main>
@@ -114,6 +114,7 @@
         <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
         <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
         <p class="hd-import-note">ROM、IPS 及 HD 美術包只在 iPhone 本機使用，不會上傳。</p>
+        <p class="hd-import-note"><a href="./credits.html" target="_blank" rel="noopener noreferrer">開源與譯文授權資料</a></p>
       </div>
       </div>
       <output id="status" aria-live="polite">等待載入。</output>
@@ -121,7 +122,7 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats" hidden><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v46；WASM 啟動時核對</p>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v47；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -130,8 +131,10 @@
           <button data-bit="5" class="down" aria-label="下">▼</button>
         </div>
         <div class="actions">
-          <button data-bit="9">X</button><button data-bit="1">Y</button>
-          <button data-bit="8">A</button><button data-bit="0">B</button>
+          <button data-bit="9" class="sfc-x" aria-label="X，藍色">X</button>
+          <button data-bit="1" class="sfc-y" aria-label="Y，綠色">Y</button>
+          <button data-bit="8" class="sfc-a" aria-label="A，紅色">A</button>
+          <button data-bit="0" class="sfc-b" aria-label="B，黃色">B</button>
         </div>
       </div>
       <div class="playbar">
@@ -141,9 +144,11 @@
         <button id="locale-toggle" type="button">台灣繁中</button>
         <button id="save" type="button">匯出進度</button>
         <label class="upload playbar-upload">匯入進度<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
+        <button id="sound" type="button" hidden>恢復聲音</button>
+        <output id="play-toast" role="status" aria-live="polite" hidden></output>
       </div>
       <div class="utility" hidden>
-        <button id="sound" type="button">啟用聲音</button><button id="translation-debug" type="button" title="匯出文字診斷">匯出文字診斷</button>
+        <button id="translation-debug" type="button" title="匯出文字診斷">匯出文字診斷</button>
         <button id="stop">停止</button>
       </div>
       <p id="sound-status" class="audio-status" aria-live="polite">啟動時嘗試開啟聲音；如無聲請按「啟用聲音」。</p>
@@ -183,12 +188,8 @@
       </div>
       </details>
     </section>
-    <p class="footer">ROM、IPS、存檔只在本機處理，不上傳伺服器。
-
-      繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
-      </p>
-  </main>
-  <script type="module" src="app.mjs?build=v46"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v46"></script>
+   </main>
+  <script type="module" src="app.mjs?build=v47"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v47"></script>
 </body>
 </html>

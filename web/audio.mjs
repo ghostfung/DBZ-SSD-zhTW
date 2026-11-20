@@ -29,6 +29,16 @@ export class SnesAudio {
     return this.sampleRate;
   }
 
+  async resumeAfterInterruption() {
+    // A File picker suspends AudioContext on iOS. The stored state may also
+    // reset PCM queues; keep the user's intentional mute preference.
+    if(!this.enabled||!this.context||this.context.state==='closed')return false;
+    if(this.context.state!=='running')await this.context.resume();
+    if(this.context.state!=='running')return false;
+    this.reset();
+    return true;
+  }
+
   async mute() {
     this.enabled = false;
     this.reset();

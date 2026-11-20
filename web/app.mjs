@@ -13,10 +13,10 @@ import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v46';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v46';
+const BUILD_ID='dbz-hd-tw-pwa-v47';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -158,8 +158,36 @@ document.addEventListener('hd-portrait-catalog-ready', event => {
 });
 
 function soundUi(message) {
-  $('sound').textContent = sound.enabled && sound.state === 'running' ? '靜音' : '啟用聲音';
-  $('sound-status').textContent = message || (sound.enabled && sound.state === 'running' ? `聲音已啟用 · ${sound.sampleRate} Hz` : '未啟用聲音');
+  const ready=sound.enabled && sound.state==='running';
+  // Normal play remains uncluttered. Reveal a one-tap recovery button only
+  // if iOS suspends audio during a File picker or OS interruption.
+  $('sound').hidden=!game||ready;
+  $('sound').textContent='恢復聲音';
+  $('sound-status').textContent=message||
+    (ready?`聲音已啟用 · ${sound.sampleRate} Hz`:'聲音已暫停，點「恢復聲音」');
+}
+async function restoreAudioAfterInterruption() {
+  if(!game)return false;
+  if(!sound.enabled){
+    soundUi('聲音未啟用；點「恢復聲音」允許 Safari 播放');
+    return false;
+  }
+  try {
+    const ready=await sound.resumeAfterInterruption();
+    if(ready)game.set_audio_rate(sound.sampleRate);
+    soundUi(ready?'聲音已恢復':undefined);
+    return ready;
+  }catch(error){
+    soundUi('iPhone 尚未允許聲音恢復：'+(error?.message||error));
+    return false;
+  }
+}
+let toastTimeout;
+function gameToast(message){
+  const toast=$('play-toast');
+  clearTimeout(toastTimeout);
+  toast.textContent=message;toast.hidden=false;
+  toastTimeout=setTimeout(()=>{toast.hidden=true;},2800);
 }
 
 function unlockAudio() {
@@ -260,12 +288,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v46');
+    const mod = await import('./pkg/ssd_web.js?build=v47');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v46',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v47',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -279,13 +307,14 @@ $('start').addEventListener('click', async () => {
   // Safari audio unlock must begin synchronously inside the user's tap.
   unlockAudio();
   const button=$('start'),originalLabel='啟動遊戲';
+  const compactLaunch=$('setup').classList.contains('launch-ready');
   $('setup').classList.add('launching');
   $('setup').classList.remove('launch-failed');
   let currentStage='讀取遊戲檔案';
   const phase=async message=>{
     currentStage=message;
-    button.textContent=message;
-    setStatus('啟動進度：'+message);
+    button.textContent=compactLaunch?'正在啟動遊戲…':message;
+    setStatus(compactLaunch?'正在啟動遊戲…':'啟動進度：'+message);
     // Let Safari paint the status before a potentially expensive WASM or
     // ROM operation, otherwise users only see a disabled button.
     await new Promise(resolve=>setTimeout(resolve,0));
@@ -300,7 +329,9 @@ $('start').addEventListener('click', async () => {
     // Cached HD ZIP may still be hashing when the player presses Start.
     // Wait for completed verification before attaching any HD catalogs.
     if(globalThis.hdRestorePromise){
-      await phase('正在確認本機 HD 美術包…');
+      // ZIP is already saved; hash in the background, not as a second
+      // user-facing import wizard on the compact return-visit screen.
+      await phase('正在準備本機遊戲素材…');
       await globalThis.hdRestorePromise;
     }
     const { WebGame } = await ensureEngine(phase);
@@ -774,12 +805,10 @@ for(const btn of document.querySelectorAll('button[data-bit]')) {
 }
 $('sound').addEventListener('click', async () => {
   try {
-    if (sound.enabled && sound.state === 'running') {
-      await sound.mute();
-      soundUi('已靜音');
-    } else {
-      await unlockAudio();
-    }
+    // Explicit tap is required if iOS denied automatic AudioContext.resume().
+    await unlockAudio();
+    if(game)game.set_audio_rate(sound.sampleRate);
+    soundUi();
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
 const stop=()=>{hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
@@ -804,8 +833,11 @@ document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
   else if(!document.hidden&&game&&!running){
     running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
-    if(sound.state !== 'running') soundUi('Safari 已暫停聲音，請按「啟用聲音」');
+    void restoreAudioAfterInterruption();
   }
+});
+window.addEventListener('pageshow',()=>{
+  if(game)void restoreAudioAfterInterruption();
 });
 $('save').addEventListener('click',()=>{
   if(!game)return;
@@ -814,10 +846,21 @@ $('save').addEventListener('click',()=>{
   const a=document.createElement('a');a.href=url;a.download='dbz-ssd-web.sav';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 $('state-file').addEventListener('change',async e=>{
-  if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
-  catch(err){window.alert(String(err));}
-  e.target.value='';
+  const file=e.target.files?.[0];
+  if(!game||!file)return;
+  try {
+    game.load_state(new Uint8Array(await file.arrayBuffer()));
+    hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
+    storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
+    fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
+    cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();
+    sound.reset();translationKey='';updateTranslation();
+    // The native core preserves host audio rate, but mobile file selection
+    // may leave AudioContext suspended. Resume and reassert its sample rate.
+    const restored=await restoreAudioAfterInterruption();
+    gameToast(restored?'讀取進度成功':'讀取進度成功；如無聲請點「恢復聲音」');
+  }catch(err){gameToast('讀取進度失敗：'+(err?.message||err));}
+  finally {e.target.value='';}
 });
 // Do not register a Service Worker. Large WASM streaming must bypass it.
 // Legacy registrations from v41-v43 are retired before the user selects files

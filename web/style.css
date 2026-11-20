@@ -211,3 +211,44 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
  .playing #game .playbar button,.playing #game .playbar .playbar-upload{
   font-size:clamp(9px,1.45vw,12px);min-height:30px;padding:4px 1px;border-radius:7px}
 }
+
+
+/* v47 — Super Famicom coloured diamond keys, retaining the original input bits */
+.playing #game .actions{
+  display:grid;grid-template-columns:repeat(3,min(12vw,49px));
+  grid-template-rows:repeat(3,min(12vw,49px));gap:3px;
+  align-items:center;justify-items:center;
+}
+.playing #game .actions button{width:100%;height:100%;padding:0;border-radius:50%;
+  border:2px solid rgba(255,255,255,.32);font-weight:800;
+  text-shadow:0 1px 1px rgba(0,0,0,.2);box-shadow:0 2px 4px rgba(0,0,0,.28)}
+.playing #game .actions .sfc-x{grid-column:2;grid-row:1;background:#366bc5;color:white}
+.playing #game .actions .sfc-y{grid-column:1;grid-row:2;background:#248e51;color:white}
+.playing #game .actions .sfc-a{grid-column:3;grid-row:2;background:#df4e38;color:white}
+.playing #game .actions .sfc-b{grid-column:2;grid-row:3;background:#edc33d;color:#28241a;text-shadow:none}
+.playing #game .actions button:active,
+.playing #game .actions button.pressed{filter:brightness(.77);transform:scale(.94)}
+.playing #game #sound{background:#4b644d}
+.playing #game #play-toast{position:absolute;z-index:4;left:50%;bottom:calc(100% + 5px);
+  width:max-content;max-width:75vw;transform:translateX(-50%);padding:5px 10px;
+  border:1px solid #6a82aa;border-radius:8px;font-size:12px;
+  background:#1b2740;color:#e4f2ff;pointer-events:none}
+.playing #game .playbar{position:relative}
+@media (orientation:landscape) and (max-height:650px){
+  /* Preserve the native game rectangle. Move the pad away from its left
+     edge and shrink the right utility group so neither overlaps the canvas. */
+  .playing #game{column-gap:max(11px,1.2vw)}
+  .playing #game .dpad{transform:translateX(-26px)}
+  .playing #game .actions{
+    grid-template-columns:repeat(3,min(4.8vw,43px));
+    grid-template-rows:repeat(3,min(4.8vw,43px));gap:3px;
+    align-self:end;justify-self:center
+  }
+  .playing #game .playbar{position:absolute;
+    width:clamp(152px,19.5vw,172px);max-width:172px;
+    right:max(9px,env(safe-area-inset-right));top:max(7px,env(safe-area-inset-top));
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}
+  .playing #game .playbar button,
+  .playing #game .playbar .playbar-upload{font-size:clamp(9px,1.35vw,11px);
+    padding:3px 1px;min-height:28px}
+}
