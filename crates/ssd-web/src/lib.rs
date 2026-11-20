@@ -662,6 +662,14 @@ impl WebGame {
             .map_err(|err|JsValue::from_str(&err))
     }
 
+    /// Safely decoded, official enlarged class2 pose; never a guessed overlay.
+    pub fn set_fighter_variant(&mut self,index:usize,width:u32,height:u32,rgba:&[u8])
+        ->Result<(),JsValue>
+    {
+        self.live_fighters.add_variant(index,width as usize,height as usize,rgba)
+            .map_err(|err|JsValue::from_str(&err))
+    }
+
     /// SNES pixels with confirmed visible fighter OAM pixels replaced.
     pub fn hd_fighter_pixels(&self) -> u32 { self.hd_fighter_pixels }
 
