@@ -6,7 +6,8 @@ const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('fast-flight pacing limits expensive HD catch-up bursts',()=>{
   const s=source('web/app.mjs');
   assert.match(s,/accumulator \+= Math\.min\(rafGap, STEP\*2\)/);
-  assert.match(s,/while\(accumulator >= STEP && n < 2\)/);
+  assert.match(s,/while\(accumulator >= STEP && n < maxCatchup\)/);
+  assert.match(s,/const maxCatchup=averageTickMs>=STEP\*\.90 \? 1 : 2/);
   assert.match(s,/if \(n\) drawFrame\(\)/);
   assert.match(s,/const perf=frameMetrics\.add/);
   assert.match(s,/FrameMetrics\.describe\(perf\)/);

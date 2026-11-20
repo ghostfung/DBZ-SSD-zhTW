@@ -11,13 +11,16 @@ import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
+import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
+let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const frameMetrics = new FrameMetrics();
+const transitionArtifactGate = new TransitionArtifactGate({maxFrames:5});
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
 const liveFighters = new LiveHdFighters(message => { $('hd-fighter-info').textContent = message; });
@@ -166,6 +169,7 @@ $('start').addEventListener('click', async () => {
     mapFrameGate.reset();
     cardFrameGate.reset();
     mode7FrameGate.reset();
+    transitionArtifactGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
     game.set_special_hd_enabled?.($('special-hd-toggle').checked);
@@ -186,6 +190,8 @@ $('start').addEventListener('click', async () => {
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();
+    averageTickMs=0;
+    transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
     raf = requestAnimationFrame(requestFrame);
   } catch (error) {
@@ -211,6 +217,7 @@ function drawFrame() {
     mapFrameGate.reset();
     cardFrameGate.reset();
     mode7FrameGate.reset();
+    transitionArtifactGate.reset();
   }
   // A fast advance can expose the next page's native English glyphs before
   // the Rust stateful Chinese renderer has filled that frame. Hold only the
@@ -323,20 +330,29 @@ function drawFrame() {
   if (!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
-    if (!frameBytes || frameBytes.length!==rgba.length) {
-      frameBytes=new Uint8ClampedArray(rgba.length);
-      frameImage=new ImageData(frameBytes,w,h);
+    // A loaded HD background can still be composited over an incomplete
+    // transition PPU frame: sparse pixels / lone sprites over black.
+    // Bound the hold to five simulation frames. Do not pause emulation, and
+    // let real all-black fades pass through without interruption.
+    const artifactHold=transitionArtifactGate.shouldDefer(
+      game.frame_count(),rgba,w,h,enhanced && hdEnabled);
+    if(!artifactHold){
+      if (!frameBytes || frameBytes.length!==rgba.length) {
+        frameBytes=new Uint8ClampedArray(rgba.length);
+        frameImage=new ImageData(frameBytes,w,h);
+      }
+      frameBytes.set(rgba);
+      ctx.putImageData(frameImage,0,0);
+      transitionArtifactGate.didPresent(rgba,w,h);
+      storyFrameGate.didPresent();
+      hdFrameGate.didPresent(pixels);
+      portraitFrameGate.didPresent();
+      fighterFrameGate.didPresent();
+      specialFrameGate.didPresent();
+      mapFrameGate.didPresent();
+      cardFrameGate.didPresent();
+      mode7FrameGate.didPresent();
     }
-    frameBytes.set(rgba);
-    ctx.putImageData(frameImage,0,0);
-    storyFrameGate.didPresent();
-    hdFrameGate.didPresent(pixels);
-    portraitFrameGate.didPresent();
-    fighterFrameGate.didPresent();
-    specialFrameGate.didPresent();
-    mapFrameGate.didPresent();
-    cardFrameGate.didPresent();
-    mode7FrameGate.didPresent();
   }
   const native = game.native_translation_active();
   if (native) {
@@ -364,11 +380,20 @@ function requestFrame(now) {
     const rafGap=now-lastTick;
     accumulator += Math.min(rafGap, STEP*2);
     let n = 0;
+    // A slow HD render cannot catch up by running two expensive frames in
+    // the same RAF. Adaptive cap avoids 43 ms simulation bursts while fast
+    // frames still recover up to two missed steps.
+    const maxCatchup=averageTickMs>=STEP*.90 ? 1 : 2;
     const simulationStart=performance.now();
-    while(accumulator >= STEP && n < 2) {
+    while(accumulator >= STEP && n < maxCatchup) {
       game.tick(held);countFrames++;n++;accumulator -= STEP;
     }
     const simulationMs=performance.now()-simulationStart;
+    if(n){
+      const perFrame=simulationMs/n;
+      averageTickMs=averageTickMs===0 ? perFrame :
+        averageTickMs*.75+perFrame*.25;
+    }
     if (n) {
       sound.enqueue(game.drain_audio());
       // Synchronise the message with the PPU from the same emulation frame.
@@ -413,7 +438,8 @@ function requestFrame(now) {
     if (n) drawFrame();
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
-    if(perf)$('frame-perf').textContent=FrameMetrics.describe(perf);
+    if(perf)$('frame-perf').textContent=FrameMetrics.describe(perf)+
+      '；轉場異常影格已保護 '+transitionArtifactGate.heldFramesTotal;
     if (now - lastDiagPoll >= 900) {
       lastDiagPoll = now;
       sampleTranslationDiagnostics();
@@ -500,6 +526,7 @@ $('hd-toggle').addEventListener('click', () => {
   mapFrameGate.reset();
   cardFrameGate.reset();
   mode7FrameGate.reset();
+  transitionArtifactGate.reset();
   liveHd.pulse();
   liveFighters.pulse();
   livePortraits.pulse();
@@ -559,7 +586,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
