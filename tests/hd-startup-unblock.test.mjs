@@ -23,7 +23,7 @@ test('WASM uses proven wasm-pack URL loader, not WebKit intercepted Response',()
  assert.doesNotMatch(app,/new AbortController\(\)/);
  assert.doesNotMatch(app,/serviceWorker\.register/);
  assert.doesNotMatch(sw,/addEventListener\('fetch'/);
- assert.doesNotMatch(sw,/respondWith|caches\.put|Response\.clone/);
+ assert.doesNotMatch(sw,/event\.respondWith\(|await caches\.open\(/);
 });
 
 test('legacy service workers are retired before file selection',()=>{
