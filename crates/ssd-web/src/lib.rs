@@ -150,7 +150,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "hd-startup-unblock-v43".into() }
+    pub fn browser_build_tag(&self) -> String { "hd-safari-network-v44".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {

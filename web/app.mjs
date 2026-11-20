@@ -12,10 +12,10 @@ import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v43';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v44';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='hd-startup-unblock-v43';
+const BUILD_ID='hd-safari-network-v44';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -154,23 +154,13 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v43');
-    await phase('正在下載 WebAssembly 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v43',import.meta.url);
-    const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),45000);
-    let wasmResponse;
-    try {
-      wasmResponse=await fetch(wasmUrl,{cache:'default',signal:controller.signal});
-    } finally { clearTimeout(timeout); }
-    if(!wasmResponse.ok)throw Error('WASM 檔案載入失敗（HTTP '+wasmResponse.status+'）');
-    if(!/^application\/wasm\b/i.test(wasmResponse.headers.get('content-type')||''))
-      throw Error('WASM 伺服器傳回的不是遊戲核心（Content-Type：'+
-        (wasmResponse.headers.get('content-type')||'未知')+'）');
-    await phase('已取得 WASM，正在編譯並啟動模擬器…');
-    // wasm-pack accepts a Response here; it can compile progressively
-    // with instantiateStreaming instead of creating another 18 MiB buffer.
-    await mod.default({module_or_path:wasmResponse});
+    const mod = await import('./pkg/ssd_web.js?build=v44');
+    // Use the wasm-pack loader from the previously working v41 release.
+    // Its versioned URL can stream normally, with no manually-created
+    // Response passed across WebKit's Service Worker boundary.
+    await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v44',import.meta.url);
+    await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
   } catch (error) {
@@ -697,4 +687,6 @@ $('state-file').addEventListener('change',async e=>{
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('./service-worker.js').catch(console.warn);
+// Do not register a Service Worker. Large WASM streaming must bypass it.
+// Legacy registrations from v41-v43 are retired before the user selects files
+// (see the early bootstrap in index.html).

@@ -8,7 +8,20 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>DBZ SSD · iPhone Web POC</title>
   <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="stylesheet" href="style.css?build=v43"/>
+  <script>
+    // Old versions intercepted 18 MiB WASM streams. Remove their origin-
+    // scoped worker *before* file selection and reload once if it was
+    // controlling this tab. ROM, IPS and HD ZIP are never inspected here.
+    if ('serviceWorker' in navigator) {
+      const wasControlled=Boolean(navigator.serviceWorker.controller);
+      navigator.serviceWorker.getRegistration().then(async registration=>{
+        if (!registration) return;
+        const removed=await registration.unregister();
+        if (removed && wasControlled) location.reload();
+      }).catch(error=>console.warn('舊版快取控制清理失敗',error));
+    }
+  </script>
+  <link rel="stylesheet" href="style.css?build=v44"/>
 </head>
 <body>
   <main>
@@ -89,7 +102,7 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 hd-startup-unblock-v43；WASM 啟動時核對</p>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 hd-safari-network-v44；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -151,7 +164,7 @@
       繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
       </p>
   </main>
-  <script type="module" src="app.mjs?build=v43"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v43"></script>
+  <script type="module" src="app.mjs?build=v44"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v44"></script>
 </body>
 </html>
