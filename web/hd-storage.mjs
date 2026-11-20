@@ -79,6 +79,9 @@ export async function saveVerifiedHdPack(file,verified,{onProgress=()=>{},signal
   if(verified?.sha256!==OFFICIAL_PACK.sha256||file.size!==OFFICIAL_PACK.bytes)
     throw Error('必須先完成官方 HD 美術包 SHA-256 驗證');
   if(!opfsAvailable())throw Error('Safari 沒有提供 OPFS 功能，請保留檔案在「檔案」App。');
+  // Installed PWA may be able to keep its origin storage longer. Safari can
+  // still reject persistence or 484 MiB writes; neither is a success signal.
+  try { await navigator.storage.persist?.(); } catch {}
   const estimate=await navigator.storage.estimate?.();
   if(estimate?.quota && estimate?.usage!==undefined &&
      estimate.quota-estimate.usage < file.size+8*1024*1024)

@@ -474,16 +474,22 @@ void (async()=>{
   try {
     const cached=await readSavedHdPack();
     if(cached) {
-      const zip=await inspectZip(cached.file);
+      status('正在重新驗證已儲存的 HD ZIP（本機 SHA-256）…');
+      // The metadata is only a previous verification receipt. Rehash
+      // retained bytes on every new session before making art available.
+      // This never transmits the ZIP and catches corrupted/evicted parts.
+      const checked=await verifyOfficialPack(cached.file,{
+        onProgress:(n,total)=>progress('正在驗證已保存美術包',n,total)
+      });
       activeFile=cached.file;
-      verified={...OFFICIAL_PACK,count:zip.count,imageCount:zip.imageCount,manifest:zip.manifest,index:zip.index,entries:zip.entries};
+      verified=checked;
       sampleEntry=previewEntry(verified);
       persisted=true;
       prepareLocalReader(cached.file,verified);
       busyMode(false);
-      status('已自動恢復上次儲存在 iPhone 的官方 '+OFFICIAL_PACK.version+' HD 素材包（'+(cached.file.size/1048576).toFixed(1)+' MiB，'+zip.count.toLocaleString('en-US')+' 個檔案）。\n可直接預覽 HD 圖片，無須重新選擇 ZIP。上次匯入時已驗證 SHA-256；本次僅核對大小和 ZIP 目錄。\n已支援匹配背景；人物、選單 HD 美術尚未完整整合。');
+      status('HD 美術包已從 iPhone 本機儲存區恢復，並重新通過 SHA-256 驗證。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片。可直接開始 HD 遊戲，無須重選 ZIP。');
     } else {
       status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；只驗證並不會自動保存。');
     }
-  }catch(e){status('讀取舊版 HD 快取失敗：'+e.message);}
+  }catch(e){status('本機 HD 快取無法完整驗證：'+e.message+'。請重新選擇原始 ZIP；檔案不會上傳。');}
 })();
