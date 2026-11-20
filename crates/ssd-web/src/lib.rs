@@ -16,6 +16,8 @@ mod live_maps;
 mod live_cards;
 mod live_mode7;
 mod live_portraits;
+mod hd_profile;
+use hd_profile::Profile;
 use live_portraits::LivePortraits;
 use live_bg::LiveBackgrounds;
 use live_fighters::LiveFighters;
@@ -105,6 +107,7 @@ pub struct WebGame {
     live_portraits: LivePortraits,
     hd_portrait_pixels: u32,
     hd_portrait_enabled: bool,
+    hd_profile: Profile,
 }
 
 #[wasm_bindgen]
@@ -141,7 +144,8 @@ impl WebGame {
             live_cards:LiveCards::default(),hd_card_enabled:true,hd_card_pixels:0,
             live_mode7:LiveMode7::default(),hd_mode7_enabled:true,hd_mode7_pixels:0,
             live_portraits: LivePortraits::default(),
-            hd_portrait_pixels: 0, hd_portrait_enabled: true })
+            hd_portrait_pixels: 0, hd_portrait_enabled: true,
+            hd_profile: Profile::default() })
     }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
@@ -174,8 +178,12 @@ impl WebGame {
                     self.machine.frame_count() as u32);
             }
         }
+        // Sample one frame in eight: timings are local-only, never sent.
+        let profile_on=self.hd_enabled && self.machine.frame_count()%8==0;
+        let mut profile_clock=if profile_on{hd_profile::now()}else{0.0};
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
             .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
+        self.hd_profile.mark(hd_profile::EMU,profile_on,&mut profile_clock);
         self.native_late_page = false;
         self.native_visible_fallback = false;
         self.native_visible_score = 0;
@@ -206,7 +214,11 @@ impl WebGame {
         self.hd_portrait_pixels = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
-                match self.hd_renderer.render_hd(log, HdOptions { scale: 2, look: Look::Crisp }) {
+                let rendered=self.hd_renderer.render_hd(log, HdOptions {
+                    scale: 2, look: Look::Crisp
+                });
+                self.hd_profile.mark(hd_profile::PPU,profile_on,&mut profile_clock);
+                match rendered {
                     Ok(picture) => {
                         self.hd_width = picture.width;
                         self.hd_height = picture.height;
@@ -217,6 +229,7 @@ impl WebGame {
                             log, self.hd_renderer.layer_ids(), &mut self.hd_pixels,
                             self.hd_width as usize, self.hd_height as usize,
                         );
+                        self.hd_profile.mark(hd_profile::BG,profile_on,&mut profile_clock);
                         // Field map art is bound by the ROM map layout and
                         // independently checked against live PPU BG2 tilemap.
                         if self.hd_map_enabled && self.live_maps.has_entries() {
@@ -225,6 +238,7 @@ impl WebGame {
                                 log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
                                 self.hd_width as usize,self.hd_height as usize);
                         }
+                        self.hd_profile.mark(hd_profile::MAP,profile_on,&mut profile_clock);
                         // Mode7 art is keyed to an exact VRAM plane and
                         // original palette, and sampled with the SNES HDMA
                         // matrix per scanline and subpixel. No fixed scale.
@@ -242,6 +256,7 @@ impl WebGame {
                                 log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
                                 self.hd_width as usize,self.hd_height as usize);
                         }
+                        self.hd_profile.mark(hd_profile::MODE7,profile_on,&mut profile_clock);
                         // Reuse the desktop renderer's two-pass strategy:
                         // hide only validated fighter OAM sprites, reconstruct
                         // the genuine PPU pixels beneath them and reapply HD
@@ -299,6 +314,7 @@ impl WebGame {
                                 }
                             }
                         }
+                        self.hd_profile.mark(hd_profile::FIGHTER,profile_on,&mut profile_clock);
                         // Class1 faces: compare real winning 4bpp PPU source
                         // tile hashes against the player's ROM streams. Only
                         // verified local HD artwork may replace those pixels.
@@ -315,6 +331,7 @@ impl WebGame {
                                     self.hd_width as usize,self.hd_height as usize);
                             }
                         }
+                        self.hd_profile.mark(hd_profile::PORTRAIT,profile_on,&mut profile_clock);
                         // Card/UI 2bpp art uses a unique ROM tile hash and
                         // the PPU's winning BG tile, not a guessed card box.
                         if self.hd_card_enabled && self.live_cards.has_entries() {
@@ -325,6 +342,7 @@ impl WebGame {
                                 log,self.hd_renderer.portrait_pixels(),&mut self.hd_pixels,
                                 self.hd_width as usize,self.hd_height as usize);
                         }
+                        self.hd_profile.mark(hd_profile::CARDS,profile_on,&mut profile_clock);
                         // Compare the page identified from WRAM with the actual
                         // PPU glyphs. When it does NOT match, a recent earlier
                         // page may still be visible behind the advancing engine.
@@ -443,6 +461,8 @@ impl WebGame {
                 self.hd_warning = "等待完整 PPU 畫面紀錄".to_owned();
             }
         }
+        self.hd_profile.mark(hd_profile::TEXT,profile_on,&mut profile_clock);
+        self.hd_profile.finish(profile_on);
         Ok(())
     }
 
@@ -709,6 +729,12 @@ impl WebGame {
     /// Bitmask of visible HD art still awaiting local ZIP image decoding.
     /// This prevents six expensive JS/WASM JSON roundtrips on *every* frame
     /// while preserving same-frame requests when a new match appears.
+    /// Average and maximum sampled phase times since the last read. A
+    /// read resets counters, so each iPhone screenshot reflects the current
+    /// scene rather than an old battle stall.
+    pub fn hd_profile_report(&mut self)->String {
+        self.hd_profile.take_json()
+    }
     pub fn hd_pending_mask(&self)->u32 {
         if !self.hd_enabled {return 0;}
         u32::from(self.hd_fighter_enabled && self.live_fighters.has_pending_art()) |

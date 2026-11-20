@@ -11,6 +11,7 @@ import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
+import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
@@ -193,6 +194,7 @@ $('start').addEventListener('click', async () => {
     averageTickMs=0;
     transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
+    $('hd-phase-perf').textContent='HD 分段耗時：正在採樣…';
     raf = requestAnimationFrame(requestFrame);
   } catch (error) {
     $('start').disabled = false;
@@ -438,8 +440,16 @@ function requestFrame(now) {
     if (n) drawFrame();
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
-    if(perf)$('frame-perf').textContent=FrameMetrics.describe(perf)+
-      '；轉場異常影格已保護 '+transitionArtifactGate.heldFramesTotal;
+    if(perf){
+      $('frame-perf').textContent=FrameMetrics.describe(perf)+
+        '；轉場異常影格已保護 '+transitionArtifactGate.heldFramesTotal;
+      // One aggregated JSON report per two seconds, not per frame.
+      // Isolate ROM emulation, PPU, layered compositing, and translation.
+      if(typeof game.hd_profile_report==='function'){
+        const raw=game.hd_profile_report();
+        $('hd-phase-perf').textContent=describeHdPhases(raw,liveMaps);
+      }
+    }
     if (now - lastDiagPoll >= 900) {
       lastDiagPoll = now;
       sampleTranslationDiagnostics();
