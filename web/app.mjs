@@ -11,7 +11,7 @@ import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
-import {attachHdRuntimeSnapshot} from './hd-coverage-runtime.mjs';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const $ = id => document.getElementById(id);
@@ -22,6 +22,7 @@ let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const frameMetrics = new FrameMetrics();
+const hdSceneTrace = new HdSceneTrace();
 const transitionArtifactGate = new TransitionArtifactGate({maxFrames:5});
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
@@ -76,6 +77,8 @@ function sampleTranslationDiagnostics() {
 
 document.addEventListener('hd-coverage-runtime-snapshot',event=>{
   attachHdRuntimeSnapshot(event.detail,game);
+  if(event.detail && typeof event.detail==='object')
+    event.detail.recentSceneTrace=hdSceneTrace.report();
 });
 
 document.addEventListener('hd-catalog-ready', event => {
@@ -197,6 +200,7 @@ $('start').addEventListener('click', async () => {
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();
+    hdSceneTrace.reset();
     averageTickMs=0;
     transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
@@ -443,7 +447,10 @@ function requestFrame(now) {
     // On 120 Hz iPhone displays ~half of RAF calls have no emulated
     // frame. Repainting the same 512x478 ImageData wasted bandwidth.
     const drawStart=performance.now();
-    if (n) drawFrame();
+    if (n) {
+      drawFrame();
+      hdSceneTrace.capture(game);
+    }
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
     if(perf){
@@ -570,7 +577,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{hdSceneTrace.reset();translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -602,7 +609,7 @@ $('save').addEventListener('click',()=>{
 });
 $('state-file').addEventListener('change',async e=>{
   if(!game||!e.target.files?.[0])return;
-  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
+  try{ game.load_state(new Uint8Array(await e.target.files[0].arrayBuffer()));hdSceneTrace.reset();storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();sound.reset();translationKey='';updateTranslation();window.alert('讀取存檔成功'); }
   catch(err){window.alert(String(err));}
   e.target.value='';
 });
