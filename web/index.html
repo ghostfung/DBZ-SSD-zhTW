@@ -89,31 +89,6 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="frame-perf" class="hd-import-note" aria-live="off">卡頓監測：正在收集影格耗時…</p>
-      <p id="hd-phase-perf" class="hd-import-note" aria-live="off">HD 分段耗時：正在採樣…</p>
-      <div class="preview-bar">
-        <label class="check-option"><input id="inframe" type="checkbox" checked/> Classic 模式顯示繁中字幕（HD 2x 直接顯示中文）</label>
-        <button id="hd-toggle" type="button">啟用 HD 2x</button>
-        <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
-        <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
-        <label class="check-option"><input id="fighter-hd-toggle" type="checkbox" checked/> 人物 HD（實驗）— 可在同一場戰鬥切換比較</label>
-        <p id="hd-fighter-info" class="hd-import-note" aria-live="polite">人物 HD 尚未載入。</p>
-        <label class="check-option"><input id="portrait-hd-toggle" type="checkbox" checked/> 人物頭像 HD（class1 實驗）</label>
-        <p id="hd-portrait-info" class="hd-import-note" aria-live="polite">頭像 HD 尚未載入。</p>
-        <label class="check-option"><input id="special-hd-toggle" type="checkbox" checked/> 地圖人物／戰鬥特效 HD（實驗）</label>
-        <p id="hd-special-info" class="hd-import-note" aria-live="polite">物件／特效 HD 尚未載入。</p>
-        <label class="check-option"><input id="map-hd-toggle" type="checkbox" checked/> 探索地圖 HD（ROM／BG2 校驗）</label>
-        <p id="hd-map-info" class="hd-import-note" aria-live="polite">地圖 HD 尚未載入。</p>
-        <label class="check-option"><input id="card-hd-toggle" type="checkbox" checked/> 卡牌／UI HD（實驗）</label>
-        <p id="hd-card-info" class="hd-import-note" aria-live="polite">卡牌 HD 尚未載入。</p>
-        <label class="check-option"><input id="mode7-hd-toggle" type="checkbox" checked/> Mode 7 飛行 HD（實驗）</label>
-        <p id="hd-mode7-info" class="hd-import-note" aria-live="polite">Mode 7 HD 尚未載入。</p>
-      </div>
-      <div id="translation-card" class="translation-card" hidden>
-        <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>
-        <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
-      </div>
-      <p id="translation-count" class="translation-count" aria-live="polite"></p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -134,6 +109,34 @@
         <button id="stop">停止</button>
       </div>
       <p id="sound-status" class="audio-status" aria-live="polite">啟動時嘗試開啟聲音；如無聲請按「啟用聲音」。</p>
+      <div id="translation-card" class="translation-card" hidden>
+        <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>
+        <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
+      </div>
+      <p id="translation-count" class="translation-count" aria-live="polite"></p>
+      <details id="game-diagnostics" class="game-diagnostics">
+        <summary>HD 設定與效能分析（點擊展開）</summary>
+      <p id="frame-perf" class="hd-import-note" aria-live="off">卡頓監測：正在收集影格耗時…</p>
+      <p id="hd-phase-perf" class="hd-import-note" aria-live="off">HD 分段耗時：正在採樣…</p>
+      <div class="preview-bar">
+        <label class="check-option"><input id="inframe" type="checkbox" checked/> Classic 模式顯示繁中字幕（HD 2x 直接顯示中文）</label>
+        <button id="hd-toggle" type="button">啟用 HD 2x</button>
+        <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
+        <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
+        <label class="check-option"><input id="fighter-hd-toggle" type="checkbox" checked/> 人物 HD（實驗）— 可在同一場戰鬥切換比較</label>
+        <p id="hd-fighter-info" class="hd-import-note" aria-live="polite">人物 HD 尚未載入。</p>
+        <label class="check-option"><input id="portrait-hd-toggle" type="checkbox" checked/> 人物頭像 HD（class1 實驗）</label>
+        <p id="hd-portrait-info" class="hd-import-note" aria-live="polite">頭像 HD 尚未載入。</p>
+        <label class="check-option"><input id="special-hd-toggle" type="checkbox" checked/> 地圖人物／戰鬥特效 HD（實驗）</label>
+        <p id="hd-special-info" class="hd-import-note" aria-live="polite">物件／特效 HD 尚未載入。</p>
+        <label class="check-option"><input id="map-hd-toggle" type="checkbox" checked/> 探索地圖 HD（ROM／BG2 校驗）</label>
+        <p id="hd-map-info" class="hd-import-note" aria-live="polite">地圖 HD 尚未載入。</p>
+        <label class="check-option"><input id="card-hd-toggle" type="checkbox" checked/> 卡牌／UI HD（實驗）</label>
+        <p id="hd-card-info" class="hd-import-note" aria-live="polite">卡牌 HD 尚未載入。</p>
+        <label class="check-option"><input id="mode7-hd-toggle" type="checkbox" checked/> Mode 7 飛行 HD（實驗）</label>
+        <p id="hd-mode7-info" class="hd-import-note" aria-live="polite">Mode 7 HD 尚未載入。</p>
+      </div>
+      </details>
     </section>
     <p class="footer">ROM、IPS、存檔只在本機處理，不上傳伺服器。
 

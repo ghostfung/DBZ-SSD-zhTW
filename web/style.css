@@ -9,7 +9,7 @@ button,.upload {background:#2b3651;border:1px solid #4a5a7e;color:white;border-r
 button:disabled{opacity:.45} #start{background:#3762c2;font-size:1rem}
 .screen {background:black;border:2px solid #41506f;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;aspect-ratio:4 / 3}
 canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}.stats{display:flex;justify-content:space-between;color:#aeb9c8;font-size:.75rem;margin:6px}
-.controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:17px auto;max-width:520px}.dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:3px}.dpad button{padding:0}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:9px auto 8px;max-width:520px}.dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:3px}.dpad button{padding:0}
 .up{grid-column:2;grid-row:1}.left{grid-column:1;grid-row:2}.right{grid-column:3;grid-row:2}.down{grid-column:2;grid-row:3}
 .actions{display:grid;grid-template-columns:repeat(2,57px);grid-template-rows:repeat(2,57px);gap:8px}.actions button {border-radius:50%}
 .controls button:active,.controls button.pressed,.utility button:active{background:#d97b25}
@@ -64,3 +64,35 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 .hd-catalog select{width:100%;min-height:130px;background:#101a2a;color:#e7efff;border:1px solid #536987;border-radius:8px;padding:6px;font-size:.72rem}
 #hd-bg-preview{background:#36577c}
 #hd-bg-details{overflow-wrap:anywhere;line-height:1.55}
+
+/* Keep the entire on-screen controller directly below the game canvas.
+   Debug controls remain available in a collapsed disclosure below inputs.
+   Layout-only: all game button IDs, pointer capture, and JS callbacks stay. */
+.game-diagnostics {
+  margin-top:14px;
+  padding:10px 12px;
+  border:1px solid #435775;
+  border-radius:12px;
+  background:#131e2b;
+}
+.game-diagnostics summary {
+  font-size:.84rem;
+  font-weight:650;
+  color:#e2ecff;
+  cursor:pointer;
+  padding:4px 2px;
+  min-height:36px;
+  touch-action:manipulation;
+}
+.game-diagnostics[open] summary{margin-bottom:10px}
+.game-diagnostics > .hd-import-note {
+  margin:8px 0;
+  overflow-wrap:anywhere;
+}
+.game-diagnostics .preview-bar{margin:12px 0 0}
+@media (orientation:landscape) and (max-height:550px){
+  #game > .audio-status,
+  #game > .translation-card,
+  #game > .translation-count,
+  #game > .game-diagnostics {grid-column:1/-1}
+}
