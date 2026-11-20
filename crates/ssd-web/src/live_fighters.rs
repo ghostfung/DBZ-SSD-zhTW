@@ -555,6 +555,39 @@ mod tests {
         assert_eq!(&out[other..other+3], &[50,185,70]);
     }
     #[test]
+    fn official_variant_draws_hair_outside_pose_box_but_not_over_ui_or_other_sprite(){
+        let raw:serde_json::Value=serde_json::from_str(&entry()).unwrap();
+        let mut raw=raw;
+        raw[0]["variant"]=serde_json::json!({"art":"variants/ssj.png","margin":4});
+        let mut live=LiveFighters::default();
+        live.load_catalog(&raw.to_string()).unwrap();
+        live.active.push(Matching{index:0,pose:pose()});
+        let base=vec![0_u8;4*4*4];
+        live.add_picture(0,4,4,&base).unwrap();
+        let variant=[200_u8,80,30,255].repeat(8*8);
+        assert!(live.add_variant(0,7,8,&variant).is_err(),"dimensions are exact");
+        live.add_variant(0,8,8,&variant).unwrap();
+        assert!(live.variants.contains_key(&0));
+        let mut owners=vec![255;256*4];
+        owners[256+1]=5; // original core belongs to this pose
+        owners[256+3]=7; // unrelated OAM in extended hair's region
+        let mut layers=vec![0;256*4];
+        layers[256]=4; // foreground UI plane blocks variant outside silhouette
+        let beneath=vec![13;512*8*4];
+        let mut output=vec![22;512*8*4];
+        let changed=live.composite(&owners,&layers,&beneath,&mut output,512,8);
+        assert!(changed>0);
+        let get=|x:usize,y:usize|{
+            let at=(y*2*512+x*2)*4;
+            [output[at],output[at+1],output[at+2]]
+        };
+        assert_eq!(get(0,0),[200,80,30],"transparent-field overhang appears");
+        assert_eq!(get(1,1),[200,80,30],"core sprite replaced");
+        assert_eq!(get(3,1),[22,22,22],"other sprite remains above the variant");
+        assert_eq!(get(0,1),[22,22,22],"foreground UI remains visible");
+    }
+
+    #[test]
     fn luma_rejects_ambiguous_source_key_and_prefers_palette_exact_colour(){
         let mut live=LiveFighters::default();
         let raw=serde_json::json!([
