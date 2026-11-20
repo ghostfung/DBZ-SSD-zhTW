@@ -26,19 +26,25 @@ export function attachHdRuntimeSnapshot(report,game){
   const categories={};
   for(const [name,matcher,pixelGetter] of SOURCES){
     const hasMatch=typeof game[matcher]==='function';
-    let matched=null,ready=null;
+    let matched=null,ready=null,lumaMatches=null,lumaReady=null;
     if(hasMatch){
       try{
         const parsed=JSON.parse(game[matcher]());
         if(Array.isArray(parsed)){
           matched=parsed.length;
           ready=parsed.filter(x=>x?.ready===true).length;
+          // Only count luma if this WASM bridge actually reports the flag.
+          // Old JS or old WASM must not silently fabricate a zero.
+          if(parsed.some(x=>typeof x?.luma==='boolean')){
+            lumaMatches=parsed.filter(x=>x.luma===true).length;
+            lumaReady=parsed.filter(x=>x.luma===true&&x.ready===true).length;
+          }
         }
       }catch{/* no fabricated zero when diagnostic is unreadable */}
     }
     const changed=game[pixelGetter]?.();
     categories[name]={
-      matches:matched,ready,
+      matches:matched,ready,lumaMatches,lumaReady,
       replacedPixels:typeof changed==='number'&&Number.isFinite(changed) ?
         changed:null,
       matchDataAvailable:matched!==null

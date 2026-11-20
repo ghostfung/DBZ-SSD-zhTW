@@ -94,3 +94,19 @@ test('audit must remain collapsed away from the mobile controller',()=>{
  assert.match(html,/<details id="game-diagnostics" class="game-diagnostics">/);
  assert.match(html,/id="hd-coverage-export"[^>]*disabled/);
 });
+
+test('luma is explicitly supported in current audit, without inventing game hits',async()=>{
+ const item={id:'battle-test',source_key:'1234',source_size:[2,2],
+   file:'grey.png',luma:true,palette_indexes_used:{}};
+ const report=await buildHdCoverageAudit(make({
+   'class2/index.json':{assets_list:[item]}
+ },['class2/grey.png']));
+ const result=report.categories.find(x=>x.key==='battle_pose');
+ assert.ok(!result.blockers.some(x=>x.reason.includes('尚未支援')));
+ assert.equal(result.blockers.find(x=>x.reason.includes('luma 符合')).count,1);
+ report.runtime={status:'sampled',categories:{
+   battle_pose:{lumaMatches:1,lumaReady:1},
+   field_object_and_effect:{lumaMatches:null,lumaReady:null}
+ }};
+ assert.match(formatHdCoverageAudit(report),/戰鬥人物 luma 實際匹配：1 組/);
+});

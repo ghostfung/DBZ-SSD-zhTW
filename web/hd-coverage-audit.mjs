@@ -97,9 +97,11 @@ export async function buildHdCoverageAudit(assets,{version='v0.3.9'}={}){
       if(key==='battle_pose'){
         const luma=entries.filter(x=>x?.luma===true).length;
         const usable=p.items.filter(x=>x.available).length;
-        extra.push({reason:'luma 灰階素材尚未支援直接配色',count:luma});
-        extra.push({reason:'可安全配對的索引候選',count:usable});
-        extra.push({reason:'缺少足夠調色盤',count:p.noPalette??0});
+        extra.push({reason:'luma 灰階素材總數',count:luma});
+        extra.push({reason:'luma 符合目前索引條件（未代表實機命中）',
+          count:p.items.filter(x=>x.available&&x.luma).length});
+        extra.push({reason:'可安全配對的索引候選（含 luma）',count:usable});
+        extra.push({reason:'彩色素材缺少足夠調色盤',count:p.noPalette??0});
       }else if(key==='field_object'){
         extra.push({reason:'缺少足夠調色盤',count:p.noPalette??0});
       }else if(key==='cards'){
@@ -146,8 +148,19 @@ export function formatHdCoverageAudit(report){
       '/'+c.referencedImages+'｜缺 '+c.missingImages;
   });
   const missing=report.categories.reduce((n,c)=>n+c.missingImages,0);
+  const counted=report.runtime?.categories;
+  const lumaLine=report.runtime?.status==='sampled' ?
+    ['battle_pose','field_object_and_effect'].map(key=>{
+      const item=counted?.[key];
+      const label=key==='battle_pose'?'戰鬥人物':'特效';
+      return label+' luma 實際匹配：'+
+        (Number.isInteger(item?.lumaMatches) ?
+          item.lumaMatches+' 組／就緒 '+item.lumaReady+' 組':
+          '這個影格沒有可分辨的 luma 資料');
+    }).join('；'):'';
   const runtime=report.runtime?.status==='sampled' ?
-    '已附目前一個有效 HD 影格快照（不代表全遊戲覆蓋率）。':
+    '已附目前一個有效 HD 影格快照（不代表全遊戲覆蓋率）。'+
+      (lumaLine?' '+lumaLine:'') :
     report.runtime?.status==='not_sampled' ?
       '遊戲 HD 快照未採樣：'+report.runtime.reason :
       '尚未取得遊戲影格快照。';
