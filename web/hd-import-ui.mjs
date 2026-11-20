@@ -16,6 +16,7 @@ let verified=null;
 let activeFile=null;
 let busy=false;
 let persisted=false;
+let selectionEpoch=0;
 let previewObjectUrl=null;
 let sampleEntry=null;
 let library=null;
@@ -347,6 +348,7 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
+  selectionEpoch++;
   verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;auditReport=null;$('hd-bg-catalog').hidden=true;clearPreview();
   $('hd-coverage-build').disabled=true;
   $('hd-coverage-export').disabled=true;
@@ -395,7 +397,26 @@ $('hd-verify').addEventListener('click',async()=>{
     verified=checked;activeFile=file;
     sampleEntry=previewEntry(checked);
     prepareLocalReader(file,checked);
-    status(explanation(checked)+extra+'\n已可直接從本次選擇的 ZIP 按需讀取 HD 圖片，不需要儲存整包；重新開啟分頁可能要再選檔。');
+    // Verification alone should now trigger one automatic OPFS save, with
+    // no second user tap. The validated File remains usable if quota fails.
+    status(explanation(checked)+extra+'\n已驗證，正在自動保存到 iPhone 本機…');
+    if(opfsAvailable()){
+      try{
+        await saveVerifiedHdPack(file,checked,{
+          onProgress:(done,total)=>progress('已驗證，正在自動保存 HD 美術包',done,total)
+        });
+        const restored=await readSavedHdPack();
+        if(!restored)throw Error('寫入完成但未能重新讀取');
+        persisted=true;
+        status(explanation(checked)+extra+'\n驗證及本機保存均成功。下次開啟 PWA 會重新核對 SHA-256，不用再選取 ZIP。');
+      }catch(error){
+        persisted=false;
+        status(explanation(checked)+extra+'\nHD 美術包已通過驗證，可直接遊玩；但自動保存失敗：'+
+          (error?.message||String(error))+'。本次仍可使用所選的 ZIP，下次需重新選取。');
+      }
+    }else{
+      status(explanation(checked)+extra+'\nHD 已驗證，可直接遊玩；目前瀏覽器不支援持久化儲存，下次需重新選擇 ZIP。');
+    }
     $('hd-progress').value=100;
   } catch(e){
     $('hd-progress').hidden=true;
@@ -466,12 +487,13 @@ $('hd-remove').addEventListener('click',async()=>{
   finally{busyMode(false);}
 });
 
-void (async()=>{
+globalThis.hdRestorePromise=(async()=>{
   if(!opfsAvailable()){
     status('目前瀏覽器沒有 OPFS，仍可從「檔案」App 選擇 ZIP，完成本機驗證。');
     return;
   }
   try {
+    const epoch=selectionEpoch;
     const cached=await readSavedHdPack();
     if(cached) {
       status('正在重新驗證已儲存的 HD ZIP（本機 SHA-256）…');
@@ -481,6 +503,8 @@ void (async()=>{
       const checked=await verifyOfficialPack(cached.file,{
         onProgress:(n,total)=>progress('正在驗證已保存美術包',n,total)
       });
+      // A newly selected ZIP must not be overwritten by the stale restore.
+      if(epoch!==selectionEpoch)return;
       activeFile=cached.file;
       verified=checked;
       sampleEntry=previewEntry(verified);
