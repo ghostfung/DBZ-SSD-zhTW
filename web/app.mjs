@@ -23,6 +23,13 @@ let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false;
+let hdPreference=null;
+try {
+  const pref=localStorage.getItem('dbz-hd-mode');
+  if(pref==='hd'||pref==='classic'){
+    hdPreference=pref;hdEnabled=pref==='hd';
+  }
+}catch {}
 let savedRom=null,savedIps=null;
 let language='zh-tw';
 try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
@@ -118,6 +125,11 @@ document.addEventListener('hd-coverage-runtime-snapshot',event=>{
 
 document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
+  // First import defaults to HD; respect any previous explicit Classic pick.
+  if(event.detail.assets&&!game&&hdPreference===null){
+    hdEnabled=true;
+    $('hd-toggle').textContent='HD 2x';
+  }
   hdFrameGate.reset();
 });
 document.addEventListener('hd-fighter-catalog-ready', event => {
@@ -314,6 +326,7 @@ $('start').addEventListener('click', async () => {
     $('setup').hidden = true;
     $('game').hidden = false;
     document.body.classList.add('playing');
+    $('hd-toggle').textContent=hdEnabled?'HD 2x':'原版';
     button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
@@ -346,6 +359,7 @@ function drawFrame() {
   if (w===0 || h===0) return;
   if (canvas.width!==w || canvas.height!==h) {
     canvas.width=w; canvas.height=h;
+    canvas.parentElement.style.setProperty('--game-ratio',w+' / '+h);
     lastPresentedFrame=null;
     storyFrameGate.reset();
     hdFrameGate.reset();
@@ -700,6 +714,8 @@ $('locale-toggle').addEventListener('click',async()=>{
 updateLanguageButton();
 $('hd-toggle').addEventListener('click', () => {
   hdEnabled = !hdEnabled;
+  hdPreference=hdEnabled?'hd':'classic';
+  try{localStorage.setItem('dbz-hd-mode',hdPreference);}catch{}
   $('hd-toggle').textContent = hdEnabled ? 'HD 2x' : '原版';
   $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
   if (game) game.set_hd_mode(hdEnabled);
