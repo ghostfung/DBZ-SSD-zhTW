@@ -62,3 +62,17 @@ test('muted output is discarded; malformed stereo rejected', async () => {
   await audio.enable();
   assert.throws(() => audio.enqueue(new Float32Array(3)), /雙聲道/);
 });
+
+test('file picker interruption restores suspended AudioContext without unmuting by force',async()=>{
+  const audio=new SnesAudio(FakeAudioContext);
+  assert.equal(await audio.resumeAfterInterruption(),false);
+  await audio.enable();
+  assert.equal(audio.enabled,true);
+  await audio.context.suspend();
+  assert.equal(audio.state,'suspended');
+  assert.equal(await audio.resumeAfterInterruption(),true);
+  assert.equal(audio.state,'running');
+  await audio.mute();
+  assert.equal(await audio.resumeAfterInterruption(),false);
+  assert.equal(audio.enabled,false);
+});
