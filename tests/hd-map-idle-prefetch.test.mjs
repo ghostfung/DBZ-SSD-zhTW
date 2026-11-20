@@ -48,9 +48,11 @@ test('cannot prefetch if current tile is missing or idle budget is tiny',async()
  t.g.current[0].ready=true;
  t.live.pulse(true);
  assert.ok(t.scheduled());
+ const foregroundCalls=t.calls.length;
  t.fire({timeRemaining:()=>1});
  await new Promise(resolve=>setTimeout(resolve,0));
- assert.equal(t.calls.length,0);
+ // The previous foreground decode is allowed; no additional idle decode.
+ assert.equal(t.calls.length,foregroundCalls);
 });
 test('stale scene cannot keep a tile decoded after transition',async()=>{
  const t=create();
