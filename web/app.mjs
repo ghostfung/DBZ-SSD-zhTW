@@ -447,10 +447,8 @@ function requestFrame(now) {
     // On 120 Hz iPhone displays ~half of RAF calls have no emulated
     // frame. Repainting the same 512x478 ImageData wasted bandwidth.
     const drawStart=performance.now();
-    if (n) {
-      drawFrame();
-      hdSceneTrace.capture(game);
-    }
+    if (n) drawFrame();
+    if (n) hdSceneTrace.capture(game);
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
     if(perf){
