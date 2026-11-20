@@ -107,7 +107,7 @@ export class HdSceneTrace {
           ?Object.fromEntries(Object.entries(probe).filter(([key,value])=>
             ['poses','keyHits','paletteRejected','candidate','weak',
              'sourceWriteRejected','reason','matched','ready','lumaMatched',
-             'fallbackPoses','fallbackKeyHits'].includes(key)
+             'fallbackPoses','fallbackKeyHits','cgramWrites'].includes(key)
             && (typeof value==='number'||typeof value==='string'))
             // Exact source-key fingerprints only: never ROM data or textures.
             .concat(Array.isArray(probe.unindexedKeys)?[[
