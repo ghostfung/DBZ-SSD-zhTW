@@ -28,6 +28,14 @@ struct Entry {
     #[serde(default)]
     luma: bool,
     palette: Vec<Option<[u8; 3]>>,
+    #[serde(default)]
+    variant: Option<Variant>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Variant {
+    art: String,
+    margin: u16,
 }
 
 #[derive(Debug)]
@@ -49,6 +57,7 @@ pub(crate) struct LiveFighters {
     lookup: HashMap<u64, Vec<usize>>,
     active: Vec<Matching>,
     pictures: HashMap<usize, Picture>,
+    variants: HashMap<usize, Picture>,
     probes: usize,
     key_hits: usize,
     palette_rejections: usize,
@@ -118,6 +127,16 @@ impl LiveFighters {
             {
                 return Err(format!("HD 人物第 {} 筆索引不安全或資料不完整", i+1));
             }
+            if let Some(variant)=&entry.variant {
+                let ok_name=variant.art.starts_with("variants/")
+                    && (variant.art.ends_with(".png") || variant.art.ends_with(".webp"))
+                    && variant.art.len()<=240 && !variant.art.contains("..")
+                    && !variant.art.contains('\\\\');
+                if !entry.available || entry.luma || !ok_name
+                    || variant.margin>96 || variant.margin%4!=0 {
+                    return Err(format!("人物 {} 的擴展圖不安全",entry.id));
+                }
+            }
             let key=u64::from_str_radix(&entry.key,16)
                 .map_err(|_|format!("HD 人物鍵值格式錯誤：{}",entry.id))?;
             if entry.available {
@@ -128,6 +147,7 @@ impl LiveFighters {
         self.lookup=lookup;
         self.active.clear();
         self.pictures.clear();
+        self.variants.clear();
         self.probes=0;
         self.key_hits=0;
         self.palette_rejections=0;
@@ -228,7 +248,8 @@ impl LiveFighters {
     /// Cheap readiness check: avoid generating and parsing matches JSON on
     /// every emulated frame after all visible poses are loaded.
     pub(crate) fn has_pending_art(&self) -> bool {
-        self.active.iter().any(|m| !self.pictures.contains_key(&m.index))
+        self.active.iter().any(|m| !self.pictures.contains_key(&m.index)
+            || self.entries[m.index].variant.is_some() && !self.variants.contains_key(&m.index))
     }
 
     pub(crate) fn ready_oam_bits(&self) -> u128 {
@@ -245,6 +266,10 @@ impl LiveFighters {
                 "x":matched.pose.x,"y":matched.pose.y,
                 "width":matched.pose.width,"height":matched.pose.height,
                 "luma":entry.luma,
+                "variant":entry.variant.as_ref().map(|v|serde_json::json!({
+                    "art":v.art,"margin":v.margin
+                })),
+                "variantReady":self.variants.contains_key(&matched.index),
                 "key":entry.key,
             })
         }).collect();
@@ -280,6 +305,31 @@ impl LiveFighters {
         Ok(())
     }
 
+    /// Local 4x pose-variant art, downsampled to 2x by Safari. Bounded
+    /// enlarged art is composited only over the exact underlying class2 pose.
+    pub(crate) fn add_variant(&mut self,index:usize,width:usize,height:usize,rgba:&[u8])
+        ->Result<(),String>
+    {
+        if !self.active.iter().any(|m|m.index==index){
+            return Err("人物姿勢已切換，忽略過期擴展圖".into());
+        }
+        let entry=self.entries.get(index).ok_or("人物姿勢索引不存在")?;
+        let variant=entry.variant.as_ref().ok_or("該人物沒有擴展圖")?;
+        let expected_width=usize::from(entry.width)*2+usize::from(variant.margin);
+        let expected_height=usize::from(entry.height)*2+usize::from(variant.margin);
+        let bytes=width.checked_mul(height).and_then(|n|n.checked_mul(4))
+            .ok_or("擴展圖尺寸溢位")?;
+        if width!=expected_width || height!=expected_height
+            || bytes>MAX_PICTURE_BYTES || rgba.len()!=bytes {
+            return Err(format!("人物 {} 的擴展圖尺寸不符",entry.id));
+        }
+        self.variants.insert(index,Picture{width,rgba:rgba.to_vec(),luma_ref:255});
+        if self.variants.len()>6 {
+            self.variants.retain(|i,_|self.active.iter().any(|m|m.index==*i));
+        }
+        Ok(())
+    }
+
     /// First restore the real PPU/HD background below the replaced OAM
     /// pixels (second PPU render). Then draw the official HD artwork at 2x.
     /// This handles transparent art and small overhangs inside the original
@@ -298,11 +348,18 @@ impl LiveFighters {
         let mut changed_pixels=0_u32;
         let mut claimed=vec![false;cells];
         for matched in &self.active {
-            let Some(picture)=self.pictures.get(&matched.index) else {continue};
-            let luma=self.entries[matched.index].luma;
+            let Some(base)=self.pictures.get(&matched.index) else {continue};
+            let variant=self.variants.get(&matched.index)
+                .zip(self.entries[matched.index].variant.as_ref());
+            let (picture,margin)=match variant {
+                Some((image,entry))=>(image,i32::from(entry.margin/4)),
+                None=>(base,0)
+            };
+            let luma=self.entries[matched.index].luma && margin==0;
             let pose=&matched.pose;
-            let (left,top)=(pose.x,pose.y);
-            let (right,bottom)=(left+i32::from(pose.width),top+i32::from(pose.height));
+            let (left,top)=(pose.x-margin,pose.y-margin);
+            let (right,bottom)=(left+i32::from(pose.width)+2*margin,
+                top+i32::from(pose.height)+2*margin);
             let x0=left.max(0) as usize;
             let x1=right.clamp(0,WIDTH as i32) as usize;
             let y0=top.max(0) as usize;
@@ -338,7 +395,11 @@ impl LiveFighters {
                     } else {false};
                     // A greyscale silhouette needs the *original source*
                     // colour. Never invent one for a background-only overhang.
-                    if !owned && (!near || luma) {continue;}
+                    // The official variant can extend beyond the original
+                    // silhouette. Never cover another OBJ, UI layer or HUD.
+                    let variant_overhang=margin>0 && owner==255 &&
+                        layer_ids[p]<=2 && y<176;
+                    if !owned && !variant_overhang && (!near || luma) {continue;}
                     let image_x=(x as i32-left) as usize*2;
                     let image_y=(y as i32-top) as usize*2;
                     // A pixel with absolutely no HD coverage may still need
