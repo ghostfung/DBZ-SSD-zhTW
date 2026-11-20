@@ -242,6 +242,8 @@ impl LiveFighters {
             serde_json::json!({
                 "index":matched.index, "id":entry.id, "art":entry.art,
                 "ready":self.pictures.contains_key(&matched.index),
+                "x":matched.pose.x,"y":matched.pose.y,
+                "width":matched.pose.width,"height":matched.pose.height,
                 "luma":entry.luma,
                 "key":entry.key,
             })

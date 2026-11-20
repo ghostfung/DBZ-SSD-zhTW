@@ -71,10 +71,13 @@ export class HdSceneTrace {
     if(!Number.isInteger(stepFrames)||stepFrames<1||
        !Number.isInteger(maxSamples)||maxSamples<1||maxSamples>240)
       throw new RangeError('HD scene trace limits');
-    this.stepFrames=stepFrames;this.maxSamples=maxSamples;this.reset();
+    this.stepFrames=stepFrames;this.maxSamples=maxSamples;
+    // Keep first ~12 seconds plus latest ~12; earlier rolling buffer lost the opening.
+    this.initialSamples=maxSamples>=200?Math.floor(maxSamples/2):0;
+    this.reset();
   }
   reset(){this.lastFrame=null;this.samples=[];}
-  capture(game){
+  capture(game,presentation=null){
     if(!game || game.hd_active?.()!==true)return false;
     const frame=game.frame_count?.();
     if(!Number.isFinite(frame)||frame<=0)return false;
@@ -101,7 +104,10 @@ export class HdSceneTrace {
           id:String(m.id??'').slice(0,100),
           key:typeof m.key==='string'?m.key.slice(0,16):null,
           ready:m.ready===true,
-          luma:m.luma===true
+          luma:m.luma===true,
+          x:Number.isInteger(m.x)?m.x:null,y:Number.isInteger(m.y)?m.y:null,
+          width:Number.isInteger(m.width)?m.width:null,
+          height:Number.isInteger(m.height)?m.height:null
         }))??null,
         probe:probe&&typeof probe==='object'&&!Array.isArray(probe)
           ?Object.fromEntries(Object.entries(probe).filter(([key,value])=>
@@ -118,17 +124,23 @@ export class HdSceneTrace {
       };
     };
     this.samples.push({frame,
+      presentation:presentation?{
+        displayedFrame:Number.isInteger(presentation.displayedFrame)?presentation.displayedFrame:null,
+        held:presentation.held===true,
+        reasons:Array.isArray(presentation.reasons)?presentation.reasons.slice(0,8):[]
+      }:null,
       fighter:part('fighter_matches','fighter_probe','hd_fighter_pixels'),
       portrait:part('portrait_matches','portrait_probe','hd_portrait_pixels'),
       special:part('special_matches','special_probe','hd_special_pixels')
     });
-    if(this.samples.length>this.maxSamples)this.samples.shift();
+    if(this.samples.length>this.maxSamples)this.samples.splice(this.initialSamples,1);
     return true;
   }
   report(){
     return {
       scope:'recent_sampled_frames',
-      explanation:'最近遊玩影格的約 10Hz 配對快照；不代表遊戲覆蓋率，無 ROM／存檔／圖片資料',
+      explanation:'保留 HD 啟動後最初約 12 秒與最近約 12 秒的 10Hz 資料，並記錄 Canvas 呈現的實際影格；不代表遊戲覆蓋率',
+      initialSamples:this.initialSamples,
       samples:this.samples.slice()
     };
   }

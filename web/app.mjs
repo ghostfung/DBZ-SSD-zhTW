@@ -11,9 +11,10 @@ import {LiveHdMaps} from './hd-map-live.mjs';
 import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v40';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
+const BUILD_ID='hd-opening-trace-v40';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -23,6 +24,7 @@ let currentDialogue = null, embedded = false, hdEnabled = false;
 const STEP = 1000/60.0988;
 const frameMetrics = new FrameMetrics();
 const hdSceneTrace = new HdSceneTrace();
+let lastPresentedFrame=null,lastPresentation=null;
 const transitionArtifactGate = new TransitionArtifactGate({maxFrames:5});
 const sound = new SnesAudio();
 const liveHd = new LiveHdArt(message => { $('hd-live-info').textContent = message; });
@@ -77,8 +79,11 @@ function sampleTranslationDiagnostics() {
 
 document.addEventListener('hd-coverage-runtime-snapshot',event=>{
   attachHdRuntimeSnapshot(event.detail,game);
-  if(event.detail && typeof event.detail==='object')
+  if(event.detail && typeof event.detail==='object'){
+    const core=game?.browser_build_tag?.()??null;
+    event.detail.build={client:BUILD_ID,core,matched:core===BUILD_ID};
     event.detail.recentSceneTrace=hdSceneTrace.report();
+  }
 });
 
 document.addEventListener('hd-catalog-ready', event => {
@@ -156,6 +161,13 @@ $('start').addEventListener('click', async () => {
     const ips = ipsInput.files?.[0] ? new Uint8Array(await ipsInput.files[0].arrayBuffer()) : new Uint8Array(0);
     const { WebGame } = await ensureEngine();
     game = new WebGame(rom, ips);
+    const coreBuild=game.browser_build_tag?.()??null;
+    if(coreBuild!==BUILD_ID){
+      game.free?.();game=null;
+      throw Error('網頁與 WASM 核心版本不一致：頁面 '+BUILD_ID+'；核心 '+
+        (coreBuild??'舊版未標記')+'。請重新開啟最新測試網址。');
+    }
+    $('build-status').textContent='頁面／WASM 一致：'+BUILD_ID;
     // Translation remains on-device: the TSV loads from this site, never from the user's ROM.
     const translationResponse = await fetch('./zh-tw.tsv');
     if (!translationResponse.ok) throw Error('繁體中文翻譯包未部署（HTTP '+translationResponse.status+'），請檢查 GitHub Actions。');
@@ -200,7 +212,7 @@ $('start').addEventListener('click', async () => {
     $('game').hidden = false;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();
-    hdSceneTrace.reset();
+    hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
     averageTickMs=0;
     transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
@@ -222,6 +234,7 @@ function drawFrame() {
   if (w===0 || h===0) return;
   if (canvas.width!==w || canvas.height!==h) {
     canvas.width=w; canvas.height=h;
+    lastPresentedFrame=null;
     storyFrameGate.reset();
     hdFrameGate.reset();
     portraitFrameGate.reset();
@@ -339,7 +352,11 @@ function drawFrame() {
     pixels:game.hd_mode7_pixels?.()??0,
     key:mode7Matches.map(m=>m.index+':'+m.x+':'+m.y).sort().join('|')
   });
-  if (!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold) {
+  const holdReasons=[['story',storyHold],['background',hdHold],
+    ['fighter',fighterHold],['portrait',portraitHold],['special',specialHold],
+    ['map',mapHold],['cards',cardHold],['mode7',mode7Hold]]
+    .filter(([,held])=>held).map(([name])=>name);
+  if (holdReasons.length===0) {
     const rgba=game.frame_rgba();
     if (rgba.length!==w*h*4) throw Error('核心輸出的 RGBA 畫面大小錯誤');
     // A loaded HD background can still be composited over an incomplete
@@ -348,6 +365,7 @@ function drawFrame() {
     // let real all-black fades pass through without interruption.
     const artifactHold=transitionArtifactGate.shouldDefer(
       game.frame_count(),rgba,w,h,enhanced && hdEnabled);
+    if(artifactHold)holdReasons.push('transition-artifact');
     if(!artifactHold){
       if (!frameBytes || frameBytes.length!==rgba.length) {
         frameBytes=new Uint8ClampedArray(rgba.length);
@@ -355,6 +373,7 @@ function drawFrame() {
       }
       frameBytes.set(rgba);
       ctx.putImageData(frameImage,0,0);
+      lastPresentedFrame=game.frame_count();
       transitionArtifactGate.didPresent(rgba,w,h);
       storyFrameGate.didPresent();
       hdFrameGate.didPresent(pixels);
@@ -366,6 +385,8 @@ function drawFrame() {
       mode7FrameGate.didPresent();
     }
   }
+  lastPresentation={displayedFrame:lastPresentedFrame,
+    held:holdReasons.length>0,reasons:holdReasons};
   const native = game.native_translation_active();
   if (native) {
     // The Rust renderer already paints Chinese in the final RGBA pixels.
@@ -448,7 +469,7 @@ function requestFrame(now) {
     // frame. Repainting the same 512x478 ImageData wasted bandwidth.
     const drawStart=performance.now();
     if (n) drawFrame();
-    if (n) hdSceneTrace.capture(game);
+    if (n) hdSceneTrace.capture(game,lastPresentation);
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
     if(perf){
@@ -575,7 +596,7 @@ $('sound').addEventListener('click', async () => {
     }
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
-const stop=()=>{hdSceneTrace.reset();translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
+const stop=()=>{hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;$('start').disabled=false;};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;

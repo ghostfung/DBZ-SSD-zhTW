@@ -149,6 +149,9 @@ impl WebGame {
             hd_profile: Profile::default() })
     }
 
+    /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
+    pub fn browser_build_tag(&self) -> String { "hd-opening-trace-v40".into() }
+
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
         if !(8_000..=192_000).contains(&hz) {

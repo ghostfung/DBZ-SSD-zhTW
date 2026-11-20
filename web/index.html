@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>DBZ SSD · iPhone Web POC</title>
   <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="style.css?build=v40"/>
 </head>
 <body>
   <main>
@@ -89,6 +89,7 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 hd-opening-trace-v40；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -150,7 +151,7 @@
       繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
       </p>
   </main>
-  <script type="module" src="app.mjs"></script>
-  <script type="module" src="hd-import-ui.mjs"></script>
+  <script type="module" src="app.mjs?build=v40"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v40"></script>
 </body>
 </html>
