@@ -501,7 +501,12 @@ globalThis.hdRestorePromise=(async()=>{
       // retained bytes on every new session before making art available.
       // This never transmits the ZIP and catches corrupted/evicted parts.
       const checked=await verifyOfficialPack(cached.file,{
-        onProgress:(n,total)=>progress('正在驗證已保存美術包',n,total)
+        onProgress:(n,total)=>{
+          progress('正在驗證已保存美術包',n,total);
+          document.dispatchEvent(new CustomEvent('hd-restore-progress',{
+            detail:{done:n,total}
+          }));
+        }
       });
       // A newly selected ZIP must not be overwritten by the stale restore.
       if(epoch!==selectionEpoch)return;

@@ -17,7 +17,10 @@ test('Super Famicom diamond uses true X/Y/A/B input bits with original colors',(
   assert.match(css,/\.sfc-y\{grid-column:1;grid-row:2/);
   assert.match(css,/\.sfc-a\{grid-column:3;grid-row:2/);
   assert.match(css,/\.sfc-b\{grid-column:2;grid-row:3/);
-  assert.match(css,/\.playing #game \.dpad\{transform:translateX\(-26px\)/);
+  assert.match(css,/grid-template-columns:repeat\(3,min\(5\.15vw,46px\)\)/);
+  assert.match(css,/transform:translate\(2px,16px\)/);
+  assert.match(css,/grid-template-columns:repeat\(3,min\(5\.7vw,49px\)\)/);
+  assert.match(css,/align-self:center;justify-self:center;transform:translateY\(16px\)/);
   assert.match(css,/width:clamp\(152px,19\.5vw,172px\)/);
 });
 
@@ -34,10 +37,14 @@ test('file-state restore resumes Safari sound and offers manual recovery on deni
   assert.doesNotMatch(app,/window\.alert\('讀取存檔成功'\)/);
 });
 
-test('returning launcher does not expose HD ZIP import progress but first import remains visible',()=>{
+test('returning launcher shows measured HD restore percent and launch stages',()=>{
   const html=source('web/index.html'),css=source('web/style.css'),app=source('web/app.mjs');
   assert.match(app,/const compactLaunch=\$\('setup'\)\.classList\.contains\('launch-ready'\)/);
-  assert.match(app,/button\.textContent=compactLaunch\?'正在啟動遊戲…':message/);
+  assert.match(app,/document\.addEventListener\('hd-restore-progress'/);
+  assert.match(app,/activeHdRestoreReporter=\(\{done,total,percent\}\)=>/);
+  assert.match(app,/button\.textContent=`HD 驗證 · \$\{percent\}%`/);
+  assert.match(app,/啟動步驟 \$\{stageIndex\}\/\$\{stageCount\}/);
+  assert.match(source('web/hd-import-ui.mjs'),/detail:\{done:n,total\}/);
   assert.match(css,/#setup\.launch-ready #setup-files\{display:none!important\}/);
   assert.match(html,/id="hd-verify"/);
   assert.match(html,/id="hd-progress"/);

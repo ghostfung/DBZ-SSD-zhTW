@@ -201,6 +201,18 @@ function unlockAudio() {
 }
 
 const setStatus = msg => { $('status').textContent = msg; };
+// HD is validated from the player's local OPFS bytes on every page load.
+// The byte progress event is separate from coarse, non-time-based launch stages.
+let latestHdRestoreProgress=null;
+let activeHdRestoreReporter=null;
+document.addEventListener('hd-restore-progress',event=>{
+  const done=event.detail?.done,total=event.detail?.total;
+  if(!Number.isFinite(done)||!Number.isFinite(total)||total<=0)return;
+  latestHdRestoreProgress={
+    done,total,percent:Math.max(0,Math.min(100,Math.floor(done/total*100)))
+  };
+  activeHdRestoreReporter?.(latestHdRestoreProgress);
+});
 function refreshLaunchCover({edit=false}={}){
   // Returning players see one title image and Start; a small management
   // control still permits replacing locally stored ROM/IPS/HD files.
@@ -311,12 +323,17 @@ $('start').addEventListener('click', async () => {
   $('setup').classList.add('launching');
   $('setup').classList.remove('launch-failed');
   let currentStage='讀取遊戲檔案';
+  // A stage percentage counts completed setup stages, not elapsed time.
+  // HD hashing below has its own genuinely byte-measured percentage.
+  const stageCount=7;
+  let stageIndex=0;
   const phase=async message=>{
     currentStage=message;
-    button.textContent=compactLaunch?'正在啟動遊戲…':message;
-    setStatus(compactLaunch?'正在啟動遊戲…':'啟動進度：'+message);
-    // Let Safari paint the status before a potentially expensive WASM or
-    // ROM operation, otherwise users only see a disabled button.
+    stageIndex=Math.min(stageCount,stageIndex+1);
+    const percent=Math.floor((stageIndex-1)/stageCount*100);
+    button.textContent=`啟動中 · ${percent}%`;
+    setStatus(`啟動步驟 ${stageIndex}/${stageCount}（已完成 ${percent}% 步驟）：${message}`);
+    // Paint the updated percent before Safari performs expensive WASM work.
     await new Promise(resolve=>setTimeout(resolve,0));
   };
   try {
@@ -329,10 +346,18 @@ $('start').addEventListener('click', async () => {
     // Cached HD ZIP may still be hashing when the player presses Start.
     // Wait for completed verification before attaching any HD catalogs.
     if(globalThis.hdRestorePromise){
-      // ZIP is already saved; hash in the background, not as a second
-      // user-facing import wizard on the compact return-visit screen.
-      await phase('正在準備本機遊戲素材…');
-      await globalThis.hdRestorePromise;
+      await phase('正在準備本機 HD 美術包…');
+      activeHdRestoreReporter=({done,total,percent})=>{
+        button.textContent=`HD 驗證 · ${percent}%`;
+        setStatus(`正在驗證已保存的 HD 美術包：${percent}%（${(done/1048576).toFixed(0)} / ${(total/1048576).toFixed(0)} MiB）`);
+      };
+      try{
+        // A hash may already be underway when Start is tapped.
+        if(latestHdRestoreProgress)activeHdRestoreReporter(latestHdRestoreProgress);
+        await globalThis.hdRestorePromise;
+      }finally{
+        activeHdRestoreReporter=null;
+      }
     }
     const { WebGame } = await ensureEngine(phase);
     await phase('正在建立遊戲核心…');
