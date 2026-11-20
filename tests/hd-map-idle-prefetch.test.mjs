@@ -43,6 +43,8 @@ test('cannot prefetch if current tile is missing or idle budget is tiny',async()
  t.g.current[0].ready=false;
  t.live.pulse(true);
  assert.equal(t.scheduled(),null);
+ // The pending foreground read must finish before idle prefetch is eligible.
+ await new Promise(resolve=>setTimeout(resolve,0));
  t.g.current[0].ready=true;
  t.live.pulse(true);
  assert.ok(t.scheduled());
