@@ -9,6 +9,7 @@ import {readSpecialCatalog} from './hd-special-index.mjs';
 import {readMapCatalog} from './hd-map-index.mjs';
 import {readCardCatalog} from './hd-card-index.mjs';
 import {readMode7Catalog} from './hd-mode7-index.mjs';
+import {buildHdCoverageAudit,formatHdCoverageAudit} from './hd-coverage-audit.mjs';
 
 const $=id=>document.getElementById(id);
 let verified=null;
@@ -25,6 +26,7 @@ let specialCatalog=null;
 let mapCatalog=null;
 let cardCatalog=null;
 let mode7Catalog=null;
+let auditReport=null;
 
 function clearPreview(){
   if(previewObjectUrl)URL.revokeObjectURL(previewObjectUrl);
@@ -48,6 +50,8 @@ function busyMode(value){
   $('hd-asset-list').disabled=value||!library;
   $('hd-preview-selected').disabled=value||!library||!$('hd-asset-list').value;
   $('hd-bg-preview').disabled=value||!selectedBackground()?.available;
+  $('hd-coverage-build').disabled=value||!library;
+  $('hd-coverage-export').disabled=value||!auditReport;
 }
 function progress(phase,done,total){
   const value=total?Math.round(done/total*100):0;
@@ -184,7 +188,7 @@ async function loadCardIndex(source){
       '。依 ROM 2bpp 鍵值匹配，base／roles 分層處理。';
   }catch(e){
     if(library!==source)return;
-    cardCatalog=null;mode7Catalog=null;
+    cardCatalog=null;
     label.textContent='卡牌索引未就緒：'+(e?.message||e);
     document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
       detail:{catalog:null,assets:null}
@@ -227,7 +231,7 @@ async function loadSpecialIndex(source){
       '只在 SNES OAM 精確匹配後載入圖片。');
   }catch(error){
     if(library!==source)return;
-    specialCatalog=null;mapCatalog=null;
+    specialCatalog=null;
     label.textContent='物件／特效索引未就緒：'+(error?.message||String(error));
     document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
       detail:{catalog:null,assets:null}
@@ -242,19 +246,10 @@ async function loadPortraitIndex(source){
     const catalog=await readPortraitCatalog(source);
     if(library!==source)return;
     portraitCatalog=catalog;
-    document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
-  document.dispatchEvent(new CustomEvent('hd-card-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
-  document.dispatchEvent(new CustomEvent('hd-map-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
-  document.dispatchEvent(new CustomEvent('hd-special-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
-  document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
+    // Only publish this module's result. Clearing unrelated HD catalogues
+    // here used to randomly disable maps/cards/effects/Mode7 depending on
+    // which asynchronous ZIP index finished last.
+    document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
       detail:{catalog,assets:source}
     }));
     label.textContent='官方肖像素材 '+catalog.count+' 筆，缺少圖片 '+
@@ -270,9 +265,12 @@ async function loadPortraitIndex(source){
 }
 
 function prepareLocalReader(file,info){
+  auditReport=null;
+  $('hd-coverage-summary').textContent='素材已匯入，可生成來源索引盤點；此數據不代表遊戲實際 HD 覆蓋率。';
   library?.clearCache();
   library=new LocalHdAssets(file,info);
-  bgCatalog=null;
+  bgCatalog=null;fighterCatalog=null;portraitCatalog=null;
+  specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;
   $('hd-asset-search').value='';
   $('hd-asset-browser').hidden=false;
   refreshAssetList();
@@ -286,6 +284,36 @@ function prepareLocalReader(file,info){
   sessionStatus('本次分頁已就緒：'+library.images.length.toLocaleString('en-US')+
     ' 張 HD 圖片可按需讀取，無須複製整份 ZIP。關閉或重新載入頁面後可能需要再次選擇檔案。');
 }
+
+$('hd-coverage-build').addEventListener('click',async()=>{
+  if(!library||busy)return;
+  const source=library;
+  busyMode(true);
+  $('hd-coverage-summary').textContent='正在核對本機 ZIP 索引與引用圖片（不解壓圖片）…';
+  try{
+    const report=await buildHdCoverageAudit(source);
+    if(library!==source)return;
+    // The game module may attach one *current frame* snapshot. This is
+    // deliberately separate from static ZIP counts and is not a percentage.
+    document.dispatchEvent(new CustomEvent('hd-coverage-runtime-snapshot',
+      {detail:report}));
+    auditReport=report;
+    $('hd-coverage-summary').textContent=formatHdCoverageAudit(report);
+  }catch(error){
+    if(library===source)
+      $('hd-coverage-summary').textContent='盤點失敗：'+(error?.message||error);
+  }finally{busyMode(false);}
+});
+$('hd-coverage-export').addEventListener('click',()=>{
+  if(!auditReport||busy)return;
+  const blob=new Blob([JSON.stringify(auditReport,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='dbz-hd-coverage-v0.3.9.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+
 async function previewLocalImage(name){
   if(!library||!name||busy)return;
   busyMode(true);
@@ -317,13 +345,15 @@ ${result.bytes.toLocaleString('en-US')} bytes，ZIP 內有 ${result.count.toLoca
 }
 
 $('hd-zip').addEventListener('change',()=>{
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;$('hd-bg-catalog').hidden=true;clearPreview();
-  document.dispatchEvent(new CustomEvent('hd-portrait-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
-  document.dispatchEvent(new CustomEvent('hd-fighter-catalog-ready',{
-    detail:{catalog:null,assets:null}
-  }));
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;auditReport=null;$('hd-bg-catalog').hidden=true;clearPreview();
+  $('hd-coverage-build').disabled=true;
+  $('hd-coverage-export').disabled=true;
+  $('hd-coverage-summary').textContent='尚未驗證本機 HD 素材包。';
+  for(const kind of ['mode7','card','map','special','portrait','fighter']){
+    document.dispatchEvent(new CustomEvent('hd-'+kind+'-catalog-ready',{
+      detail:{catalog:null,assets:null}
+    }));
+  }
 
   $('hd-asset-browser').hidden=true;
   document.dispatchEvent(new CustomEvent('hd-catalog-ready', {
@@ -341,7 +371,7 @@ $('hd-verify').addEventListener('click',async()=>{
   const file=$('hd-zip').files?.[0];
   if(!file||busy)return;
   busyMode(true);
-  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;clearPreview();
+  verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;auditReport=null;clearPreview();
   $('hd-asset-browser').hidden=true;
   try {
     status('正在檢查 ZIP 結構...');
@@ -403,7 +433,10 @@ $('hd-remove').addEventListener('click',async()=>{
     await clearSavedHdPack();
     persisted=false; verified=null; activeFile=null; sampleEntry=null;
     clearPreview();
-    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;
+    library?.clearCache();library=null;bgCatalog=null;fighterCatalog=null;portraitCatalog=null;specialCatalog=null;mapCatalog=null;cardCatalog=null;mode7Catalog=null;auditReport=null;
+    $('hd-coverage-build').disabled=true;
+    $('hd-coverage-export').disabled=true;
+    $('hd-coverage-summary').textContent='本機 HD 素材已清除。';
   document.dispatchEvent(new CustomEvent('hd-mode7-catalog-ready',{
     detail:{catalog:null,assets:null}
   }));

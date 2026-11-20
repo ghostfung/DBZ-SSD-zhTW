@@ -135,6 +135,13 @@
         <p id="hd-card-info" class="hd-import-note" aria-live="polite">卡牌 HD 尚未載入。</p>
         <label class="check-option"><input id="mode7-hd-toggle" type="checkbox" checked/> Mode 7 飛行 HD（實驗）</label>
         <p id="hd-mode7-info" class="hd-import-note" aria-live="polite">Mode 7 HD 尚未載入。</p>
+        <div class="hd-catalog">
+          <strong>HD 覆蓋率盤點（不影響遊戲操作）</strong>
+          <p class="hd-import-note">只讀取官方 ZIP 的小型索引及檔案目錄，不解壓圖片、不讀取 ROM 或存檔；畫面匹配另附目前單幀快照。</p>
+          <button id="hd-coverage-build" type="button" disabled>分析本機 HD 素材覆蓋</button>
+          <button id="hd-coverage-export" type="button" disabled>下載盤點 JSON</button>
+          <pre id="hd-coverage-summary" class="hd-import-note" style="white-space:pre-wrap;overflow-wrap:anywhere">尚未驗證本機 HD 素材包。</pre>
+        </div>
       </div>
       </details>
     </section>

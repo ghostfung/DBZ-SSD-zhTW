@@ -72,6 +72,39 @@ function sampleTranslationDiagnostics() {
   }
 }
 
+
+document.addEventListener('hd-coverage-runtime-snapshot',event=>{
+  const report=event.detail;
+  if(!report||!game)return;
+  const count=(method)=>{
+    try {
+      const v=game[method]?.();
+      return typeof v==='string'&&Array.isArray(JSON.parse(v)) ?
+        JSON.parse(v) : [];
+    }catch{return [];}
+  };
+  const describe=(matches,pixels)=>({
+    matches:matches.length,ready:matches.filter(x=>x.ready===true).length,
+    replacedPixels:typeof pixels==='number'&&Number.isFinite(pixels)?pixels:0
+  });
+  const methods=[
+    ['background','background_matches','hd_art_pixels'],
+    ['battle_pose','fighter_matches','hd_fighter_pixels'],
+    ['portrait','portrait_matches','hd_portrait_pixels'],
+    ['field_object_and_effect','special_matches','hd_special_pixels'],
+    ['maps','map_matches','hd_map_pixels'],
+    ['cards','card_matches','hd_card_pixels'],
+    ['mode7','mode7_matches','hd_mode7_pixels']
+  ];
+  report.runtime={
+    explanation:'單一遊戲影格的匹配快照，不是整個遊戲覆蓋率',
+    frame:game.frame_count?.()??null,
+    hdActive:game.hd_active?.()??false,
+    categories:Object.fromEntries(methods.map(([key,matches,pixels])=>
+      [key,describe(count(matches),game[pixels]?.())]))
+  };
+});
+
 document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
   hdFrameGate.reset();
