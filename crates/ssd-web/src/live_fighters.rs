@@ -52,6 +52,9 @@ pub(crate) struct LiveFighters {
     probes: usize,
     key_hits: usize,
     palette_rejections: usize,
+    fallback_probes: usize,
+    fallback_key_hits: usize,
+    unindexed_keys: Vec<String>,
 }
 
 fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
@@ -128,6 +131,9 @@ impl LiveFighters {
         self.probes=0;
         self.key_hits=0;
         self.palette_rejections=0;
+        self.fallback_probes=0;
+        self.fallback_key_hits=0;
+        self.unindexed_keys.clear();
         Ok(self.entries.len())
     }
 
@@ -136,20 +142,62 @@ impl LiveFighters {
         self.probes=0;
         self.key_hits=0;
         self.palette_rejections=0;
+        self.fallback_probes=0;
+        self.fallback_key_hits=0;
+        self.unindexed_keys.clear();
         if self.lookup.is_empty() { return; }
-        // The original engine handles both standard OAM palettes 1-2 and
-        // formations that render enemies with palettes 3-7. Exact source
-        // hashes must still match an official class2 asset before use.
+
+        // Try the original battle OAM grouping first, unchanged. This is
+        // cheaper than field refinement, and takes precedence when present.
         for pose in ssd_hd::live_fighter_poses(log) {
             self.probes+=1;
-            let Some(indices)=self.lookup.get(&pose.key) else { continue };
+            let Some(indices)=self.lookup.get(&pose.key) else {
+                if self.unindexed_keys.len()<3 {
+                    let description=format!("{:016x}/{}x{}",pose.key,pose.width,pose.height);
+                    if !self.unindexed_keys.contains(&description) {
+                        self.unindexed_keys.push(description);
+                    }
+                }
+                continue;
+            };
             self.key_hits+=1;
-            let selected=choose_pose(&self.entries,indices,&pose);
-            if let Some(index)=selected {
+            if let Some(index)=choose_pose(&self.entries,indices,&pose) {
                 self.active.push(Matching {index,pose});
-                if self.active.len()>=MAX_POSES { break; }
+                if self.active.len()>=MAX_POSES {break;}
             } else {
                 self.palette_rejections+=1;
+            }
+        }
+
+        // An opening/cutscene can split one character into several OAM
+        // palette runs. Only when no ordinary fighter was accepted, ask the
+        // upstream field-group/refinement logic for alternative *exact*
+        // battle keys; never reuse the last HD frame or guess from position.
+        if self.active.is_empty() {
+            let candidates = {
+                let entries=&self.entries;
+                let lookup=&self.lookup;
+                let mut has_battle_art=|key,width,height| {
+                    lookup.get(&key).is_some_and(|indices| indices.iter().any(|&i|
+                        entries[i].id.starts_with("battle-")
+                            && entries[i].width==width && entries[i].height==height))
+                };
+                ssd_hd::live_field_fighter_poses(log,&mut has_battle_art)
+            };
+            let mut owned=0_u128;
+            for pose in candidates {
+                self.fallback_probes+=1;
+                let Some(indices)=self.lookup.get(&pose.key) else {continue};
+                self.fallback_key_hits+=1;
+                let Some(index)=choose_pose(&self.entries,indices,&pose) else {
+                    self.palette_rejections+=1;
+                    continue;
+                };
+                if !self.entries[index].id.starts_with("battle-")
+                    || (owned & pose.oam_bits)!=0 {continue;}
+                owned|=pose.oam_bits;
+                self.active.push(Matching {index,pose});
+                if self.active.len()>=MAX_POSES {break;}
             }
         }
     }
@@ -159,6 +207,16 @@ impl LiveFighters {
             "poses":self.probes, "keyHits":self.key_hits,
             "paletteRejected":self.palette_rejections,
             "matched":self.active.len(),
+            "fallbackPoses":self.fallback_probes,
+            "fallbackKeyHits":self.fallback_key_hits,
+            "unindexedKeys":&self.unindexed_keys,
+            "reason": if self.active.is_empty() {
+                if self.key_hits+self.fallback_key_hits==0 {
+                    "來源鍵值未命中官方 class2 素材"
+                } else {
+                    "來源鍵值命中，但尺寸／調色盤／歧義驗證未通過"
+                }
+            } else { "已驗證人物姿勢" },
             "lumaMatched":self.active.iter().filter(|m|self.entries[m.index].luma).count(),
             "ready":self.active.iter()
                 .filter(|p| self.pictures.contains_key(&p.index)).count(),
