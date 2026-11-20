@@ -63,11 +63,11 @@ export function attachHdRuntimeSnapshot(report,game){
  * states, screenshots, or the user's ZIP contents.
  *
  * A single-frame export can show a successful HD pose even though the next
- * animation pose fails. Sampling at 10 Hz for ~18 seconds distinguishes these
+ * animation pose fails. Sampling at 10 Hz for ~24 seconds distinguishes these
  * without a continuous 60 Hz WASM/JSON/DOM workload on iPhone Safari.
  */
 export class HdSceneTrace {
-  constructor({stepFrames=6,maxSamples=180}={}){
+  constructor({stepFrames=6,maxSamples=240}={}){
     if(!Number.isInteger(stepFrames)||stepFrames<1||
        !Number.isInteger(maxSamples)||maxSamples<1||maxSamples>240)
       throw new RangeError('HD scene trace limits');
