@@ -79,6 +79,6 @@ test('strict data-path gating retains old Chinese overlay and fallback rules',()
   for(const folder of ['hd-special','hd-map','hd-card','hd-mode7']){
     assert.match(importUI,new RegExp('read'+(folder==='hd-special'?'Special':folder==='hd-map'?'Map':folder==='hd-card'?'Card':'Mode7')+'Catalog'));
   }
-  assert.match(ui,/!storyHold && !hdHold && !fighterHold && !portraitHold && !specialHold && !mapHold && !cardHold && !mode7Hold/);
+  assert.match(ui,/if \(holdReasons\.length===0\)/);
   assert.doesNotMatch(ui,/fetch\(.+class[123]\/|fetch\(.+mode7\//);
 });
