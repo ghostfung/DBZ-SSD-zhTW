@@ -36,7 +36,7 @@ test('only transient matches may request holds; story/background protections rem
   assert.match(app,/mode7Matches\.length>0/);
   assert.match(app,/event\.detail\.framePerformance=/);
   assert.doesNotMatch(source('web/service-worker.js'),/addEventListener\('fetch'/);
-  assert.match(source('crates/ssd-web/src/lib.rs'),/hd-safari-network-v44/);
+  assert.match(source('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v45/);
 });
 
 test('official luma effects remain eligible while unverified fighter and class3 art is rejected',()=>{
