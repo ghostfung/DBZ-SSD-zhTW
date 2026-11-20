@@ -6,8 +6,11 @@
   <meta name="theme-color" content="#10121a"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>DBZ SSD · iPhone Web POC</title>
+  <title>七龍珠Z 超賽亞傳說 · HD 繁體中文版</title>
   <link rel="manifest" href="manifest.webmanifest"/>
+  <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
   <script>
     // Old versions intercepted 18 MiB WASM streams. Remove their origin-
     // scoped worker *before* file selection and reload once if it was
@@ -21,21 +24,28 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v44"/>
+  <link rel="stylesheet" href="style.css?build=v45"/>
 </head>
 <body>
   <main>
-    <h1>超賽亞傳說 <small>iPhone 網頁原型</small></h1>
-    <p class="notice">第九階段：原生繁中與 HD 背景已驗收，戰鬥人物 HD 部分生效，新增人物頭像 class1 HD 實驗性匹配。戰鬥人物 HD，使用官方 class2 source_key 與 SNES OAM 像素逐項比對；招式特效、人物外擴輪廓與 16:9 尚未完成。</p>
+    <h1>七龍珠Z 超賽亞傳說 <small>HD 繁體中文版</small></h1>
+    <p class="notice">將此網頁透過 Safari「分享 → 加入主畫面」，即可像 App 一樣使用。遊戲檔案只在本機儲存與運行。</p>
     <section id="setup">
+      <details id="game-files-details" open>
+        <summary>遊戲 ROM／IPS（首次匯入後保存在本機）</summary>
+        <div class="setup-file-fields">
       <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
       <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
+          <button type="button" id="clear-game-files">清除已保存的 ROM／IPS</button>
+        </div>
+      </details>
+      <p id="local-files-status" class="hd-import-note">首次使用請選 ROM，日文 Rev 1 ROM 另需選 IPS。</p>
       <div class="hd-import-panel">
-        <strong>HD 美術包（本機檔案）</strong>
+        <strong>HD 美術包（可選用）</strong>
         <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
           <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
         </label>
-        <p class="hd-import-note">約 462 MiB。驗證後直接使用你選取的 ZIP，不用複製 462 MiB 到瀏覽器儲存區。素材全程只在本機讀取，不會上傳。</p>
+        <p class="hd-import-note">約 462 MiB。驗證後本次遊玩可直接使用；若想下次免重選，可嘗試儲存整包至 PWA 本機空間，但 iPhone 可能因儲存額度拒絕。Safari 無法永久記住「檔案」App 的 ZIP 路徑。</p>
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
           <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
@@ -84,8 +94,8 @@
           <p id="hd-fighter-count" class="hd-import-note">匯入後將讀取 class2/index.json。僅精確匹配的戰鬥人物會替換原始精靈像素；招式特效、人物輪廓擴大及場景物件仍待整合。</p>
         </div>
         <details class="hd-storage-experimental">
-          <summary>實驗性本機永久快取（Safari 已發生寫入失敗）</summary>
-          <p class="hd-import-note">只有想嘗試免重新選取 ZIP 時才使用。先前在 iPhone 約 200 MiB 時失敗，不能保證這個功能成功；即使不儲存，仍可從原始 ZIP 按需讀取素材。</p>
+          <summary>保存 HD 素材供下次開啟（受 iPhone 容量限制）</summary>
+          <p class="hd-import-note">將驗證過的 ZIP 分成 2 MiB 小段保存在 Safari 專屬空間。寫入完成後才會確認保存成功；如果 iOS 拒絕，仍可正常從原始 ZIP 遊玩，但下次要重新選取。請保留原檔備份。</p>
           <div class="hd-import-buttons">
             <button id="hd-cache" type="button" disabled>嘗試儲存整份 ZIP</button>
             <button id="hd-remove" type="button">清除 HD 本機快取</button>
@@ -101,8 +111,8 @@
     </section>
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
-      <div class="stats"><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 hd-safari-network-v44；WASM 啟動時核對</p>
+      <div class="stats" hidden><span id="frames">0 幀</span><span id="fps"></span></div>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v45；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -115,11 +125,16 @@
           <button data-bit="8">A</button><button data-bit="0">B</button>
         </div>
       </div>
-      <div class="utility">
-        <button data-bit="2">Select</button><button data-bit="3">Start</button>
+      <div class="playbar">
+        <button data-bit="2" class="playbar-key">Select</button>
+        <button data-bit="3" class="playbar-key">Start</button>
+        <button id="hd-toggle" type="button">原版</button>
+        <button id="locale-toggle" type="button">台灣繁中</button>
+      </div>
+      <div class="utility" hidden>
         <button id="save">匯出即時存檔</button>
         <label class="upload">匯入存檔<input id="state-file" type="file" accept=".sav,.bin"/></label>
-        <button id="sound" type="button">啟用聲音</button><button id="translation-debug" type="button" title="匯出畫面文字鍵值，不包含遊戲 ROM 或存檔">匯出繁中診斷</button>
+        <button id="sound" type="button">啟用聲音</button><button id="translation-debug" type="button" title="匯出文字診斷">匯出文字診斷</button>
         <button id="stop">停止</button>
       </div>
       <p id="sound-status" class="audio-status" aria-live="polite">啟動時嘗試開啟聲音；如無聲請按「啟用聲音」。</p>
@@ -128,13 +143,13 @@
         <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
       </div>
       <p id="translation-count" class="translation-count" aria-live="polite"></p>
-      <details id="game-diagnostics" class="game-diagnostics">
+      <details id="game-diagnostics" class="game-diagnostics" hidden>
         <summary>HD 設定與效能分析（點擊展開）</summary>
       <p id="frame-perf" class="hd-import-note" aria-live="off">卡頓監測：正在收集影格耗時…</p>
       <p id="hd-phase-perf" class="hd-import-note" aria-live="off">HD 分段耗時：正在採樣…</p>
       <div class="preview-bar">
         <label class="check-option"><input id="inframe" type="checkbox" checked/> Classic 模式顯示繁中字幕（HD 2x 直接顯示中文）</label>
-        <button id="hd-toggle" type="button">啟用 HD 2x</button>
+        <!-- Release player uses the HD switch in .playbar above. -->
         <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
         <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
         <label class="check-option"><input id="fighter-hd-toggle" type="checkbox" checked/> 人物 HD（實驗）— 可在同一場戰鬥切換比較</label>
@@ -164,7 +179,7 @@
       繁體中文譯文 © 2026 <a href="https://github.com/lming888/DBZ-SSD-zhTW" rel="noopener noreferrer" target="_blank">Ming / DBZ-SSD-zhTW</a> · CC BY-NC-SA 4.0。
       </p>
   </main>
-  <script type="module" src="app.mjs?build=v44"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v44"></script>
+  <script type="module" src="app.mjs?build=v45"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v45"></script>
 </body>
 </html>

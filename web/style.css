@@ -96,3 +96,59 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
   #game > .translation-count,
   #game > .game-diagnostics {grid-column:1/-1}
 }
+
+
+/* Production PWA. Source game aspect ratio, NOT an invented 16:9 field. */
+.setup-file-fields{display:grid;gap:11px;margin-top:12px}
+#game-files-details{background:#111c2a;border:1px solid #455b77;border-radius:10px;padding:10px}
+#game-files-details summary{font-weight:650;cursor:pointer;touch-action:manipulation}
+#clear-game-files{font-size:.76rem;background:#394051}
+#local-files-status{line-height:1.5;padding:6px 0}
+#setup>.hd-import-panel>.hd-catalog,
+#setup #hd-asset-browser,
+#setup #hd-bg-catalog,
+#setup #hd-preview-panel,
+#setup #hd-preview-btn{display:none!important}
+#setup{max-width:620px;margin:0 auto}
+#setup .hd-import-panel{margin:0}
+.playing h1,.playing .notice,.playing .footer{display:none!important}
+.playing{overflow:hidden;padding:0;background:#090c14}
+.playing main{max-width:none;width:100%;height:100dvh;padding:0}
+.playing #game{display:grid;grid-template-areas:"screen" "buttons" "bar";grid-template-rows:minmax(0,auto) auto auto;
+  align-content:start;gap:6px;width:100%;height:100dvh;padding:0}
+.playing #game > :not(.screen):not(.controls):not(.playbar){display:none!important}
+.playing #game .screen{grid-area:screen;aspect-ratio:var(--game-ratio,512 / 478);height:auto;
+  width:100%;max-height:calc(100dvh - 235px);border-radius:0;border:0;margin:0 auto;background:#000}
+.playing #game .screen canvas{width:100%;height:100%;object-fit:contain}
+.playing #game .controls{grid-area:buttons;display:flex;justify-content:space-between;
+  margin:5px auto;gap:10px;width:100%;max-width:470px;padding:0 14px}
+.playing #game .dpad{grid-template-columns:repeat(3,min(14vw,52px));
+  grid-template-rows:repeat(3,min(14vw,52px));gap:3px}
+.playing #game .actions{grid-template-columns:repeat(2,min(15vw,60px));
+  grid-template-rows:repeat(2,min(15vw,60px));gap:8px}
+.playing #game .playbar{grid-area:bar;display:flex;gap:7px;justify-content:center;
+  align-items:center;padding:0 12px max(5px,env(safe-area-inset-bottom))}
+.playing #game .playbar button{touch-action:manipulation;min-height:40px;
+  font-size:clamp(.7rem,2.9vw,.86rem);padding:8px 10px;white-space:nowrap}
+.playing #game #hd-toggle{background:#325275}
+.playing #game #locale-toggle{background:#4c4672}
+@media (orientation:landscape) and (max-height:650px){
+  .playing main{max-width:none;display:block;padding:0}
+  .playing #game{display:grid;grid-template-areas:"dpad screen actions" "bar bar bar";
+    grid-template-columns:minmax(100px,1fr) minmax(0,3.2fr) minmax(100px,1fr);
+    grid-template-rows:minmax(0,1fr) 50px;gap:4px;
+    width:100%;height:100dvh;padding:env(safe-area-inset-top) 10px env(safe-area-inset-bottom)}
+  .playing #game .controls{display:contents}
+  .playing #game .screen{grid-area:screen;width:min(100%,calc((100dvh - 70px)*1.07));
+    height:auto;max-height:calc(100dvh - 60px);place-self:center;
+    aspect-ratio:var(--game-ratio,512 / 478);border:0}
+  .playing #game .dpad{grid-area:dpad;display:grid;place-self:center;
+    grid-template-columns:repeat(3,min(5.4vw,48px));
+    grid-template-rows:repeat(3,min(5.4vw,48px));gap:3px}
+  .playing #game .actions{grid-area:actions;display:grid;place-self:center;
+    grid-template-columns:repeat(2,min(6.2vw,58px));
+    grid-template-rows:repeat(2,min(6.2vw,58px));gap:7px}
+  .playing #game .playbar{grid-area:bar;display:flex;justify-content:center;
+    align-items:center;gap:8px;padding:2px max(10px,env(safe-area-inset-left)) 2px max(10px,env(safe-area-inset-right))}
+  .playing #game .playbar button{min-height:35px}
+}
