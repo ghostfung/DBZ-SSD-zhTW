@@ -19,7 +19,7 @@ const face={id:'goku',source:'rom 16:8000 half 0',
 const pose={id:'battle-test',source_key:'1122334455667788',
   source_size:[32,32],file:'battle.png',palette_indexes_used:{
     1:'#ff0000',2:'#00ff00'}};
-test('audit detects unsupported pose variants and card tips without image extraction',async()=>{
+test('audit recognises exact always pose variants and records unsupported card tips without image extraction',async()=>{
  const data={
   'bg/index.json':{layers:[]},
   'class1/index.json':{assets:[face]},
@@ -31,7 +31,7 @@ test('audit detects unsupported pose variants and card tips without image extrac
      metatiles:'06:F400',tiles:'field/t{x}_{y}.png'}]},
   'mode7/index.json':{version:1,scale:4,tile:256,planes:[]},
   'variants/index.json':{variants:[
-    {art:'battle-test',when:'super_saiyan_goku',margin:1,file:'ssj.png'}]}
+    {art:'battle-test',when:'always',margin:76,file:'ssj.png'}]}
  };
  const assets=make(data,[
   'class1/goku.png','class2/battle.png','class2/luma.png',
@@ -40,7 +40,8 @@ test('audit detects unsupported pose variants and card tips without image extrac
  ]);
  const result=await buildHdCoverageAudit(assets);
  const v=result.categories.find(x=>x.key==='variants');
- assert.equal(v.status,'not_implemented');
+ assert.equal(v.status,'indexed');
+ assert.equal(v.parsedEntries,1);
  assert.equal(v.rawEntries,1);
  assert.equal(v.existingImages,1);
  const c=result.categories.find(x=>x.key==='cards');
