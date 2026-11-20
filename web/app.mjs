@@ -13,10 +13,10 @@ import {LiveHdCards} from './hd-card-live.mjs';
 import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
-import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v45';
+import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v46';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v45';
+const BUILD_ID='dbz-hd-tw-pwa-v46';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -173,6 +173,19 @@ function unlockAudio() {
 }
 
 const setStatus = msg => { $('status').textContent = msg; };
+function refreshLaunchCover({edit=false}={}){
+  // Returning players see one title image and Start; a small management
+  // control still permits replacing locally stored ROM/IPS/HD files.
+  const ready=Boolean(savedRom&&!$('rom').files?.length&&!edit);
+  $('setup').classList.toggle('launch-ready',ready);
+  $('setup-edit').hidden=!ready;
+}
+$('setup-edit').addEventListener('click',()=>{
+  $('setup').classList.remove('launch-ready');
+  $('setup-edit').hidden=true;
+  $('game-files-details').open=true;
+  $('setup-files').scrollIntoView?.({block:'start',behavior:'smooth'});
+});
 const romInput = $('rom'), ipsInput = $('ips');
 
 function displayStoredFiles(){
@@ -197,6 +210,7 @@ romInput.addEventListener('change', async () => {
       await saveGameFile('rom',file);
       savedRom=await readGameFile('rom');
       displayStoredFiles();
+      refreshLaunchCover({edit:true});
     }catch(error){
       setStatus(check.label+'。ROM 可於本次開啟使用，但保存失敗：'+error.message);
     }
@@ -219,6 +233,7 @@ $('clear-game-files').addEventListener('click',async()=>{
   savedRom=null;savedIps=null;romInput.value='';ipsInput.value='';
   $('start').disabled=true;$('game-files-details').open=true;
   displayStoredFiles();
+  refreshLaunchCover({edit:true});
 });
 void (async()=>{
   try {
@@ -231,6 +246,7 @@ void (async()=>{
         $('start').disabled=false;
         $('game-files-details').open=false;
         setStatus('已從 PWA 本機載入遊戲 ROM，可直接開始遊戲。');
+        refreshLaunchCover();
       }
     }
   }catch(error){setStatus('本機遊戲檔案無法恢復：'+error.message+'；請重新選擇 ROM。');}
@@ -244,12 +260,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v45');
+    const mod = await import('./pkg/ssd_web.js?build=v46');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v45',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v46',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -262,7 +278,9 @@ async function ensureEngine(phase=async()=>{}) {
 $('start').addEventListener('click', async () => {
   // Safari audio unlock must begin synchronously inside the user's tap.
   unlockAudio();
-  const button=$('start'),originalLabel='啟動本機遊戲';
+  const button=$('start'),originalLabel='啟動遊戲';
+  $('setup').classList.add('launching');
+  $('setup').classList.remove('launch-failed');
   let currentStage='讀取遊戲檔案';
   const phase=async message=>{
     currentStage=message;
@@ -279,6 +297,12 @@ $('start').addEventListener('click', async () => {
     const rom = new Uint8Array(await (romInput.files?.[0]??savedRom.blob).arrayBuffer());
     const ipsFile=ipsInput.files?.[0]??savedIps?.blob;
     const ips = ipsFile ? new Uint8Array(await ipsFile.arrayBuffer()) : new Uint8Array(0);
+    // Cached HD ZIP may still be hashing when the player presses Start.
+    // Wait for completed verification before attaching any HD catalogs.
+    if(globalThis.hdRestorePromise){
+      await phase('正在確認本機 HD 美術包…');
+      await globalThis.hdRestorePromise;
+    }
     const { WebGame } = await ensureEngine(phase);
     await phase('正在建立遊戲核心…');
     game = new WebGame(rom, ips);
@@ -323,6 +347,7 @@ $('start').addEventListener('click', async () => {
     livePortraits.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
+    $('setup').classList.remove('launching');
     $('setup').hidden = true;
     $('game').hidden = false;
     document.body.classList.add('playing');
@@ -339,6 +364,8 @@ $('start').addEventListener('click', async () => {
   } catch (error) {
     button.disabled=false;
     button.textContent=originalLabel;
+    $('setup').classList.remove('launching');
+    $('setup').classList.add('launch-failed');
     setStatus('遊戲啟動失敗（'+currentStage+'）：'+(error?.message||String(error)));
     // A failed translation, index or version check must not leave a
     // partially initialized WebGame alive across the next start attempt.
@@ -756,7 +783,7 @@ $('sound').addEventListener('click', async () => {
   } catch (error) { soundUi(`播放失敗：${error.message}`); }
 });
 const stop=()=>{hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
-lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;};
+lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
