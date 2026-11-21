@@ -14,6 +14,10 @@ export class WebGame {
     browser_build_tag(): string;
     card_matches(): string;
     card_probe(): string;
+    /**
+     * Query the first-phase gameplay cheats. Never exposes ROM, RAM or save data.
+     */
+    cheat_state(): string;
     classic_zh_mode(): boolean;
     /**
      * Returns the original translator's keyed dialogue as JSON for testing.
@@ -106,6 +110,11 @@ export class WebGame {
      */
     set_card_index(json: string): number;
     /**
+     * Apply only the upstream's whitelisted gameplay settings. Changes are
+     * limited to the running session and are not embedded in exported states.
+     */
+    set_cheat_option(key: string, value: string): string;
+    /**
      * Render real PPU pixels at 1x, with Traditional Chinese drawn by the
      * existing glyph-matched translator. No HD artwork is required.
      */
@@ -185,6 +194,7 @@ export interface InitOutput {
     readonly webgame_browser_build_tag: (a: number) => [number, number];
     readonly webgame_card_matches: (a: number) => [number, number];
     readonly webgame_card_probe: (a: number) => [number, number];
+    readonly webgame_cheat_state: (a: number) => [number, number];
     readonly webgame_classic_zh_mode: (a: number) => number;
     readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
@@ -224,6 +234,7 @@ export interface InitOutput {
     readonly webgame_set_card_art: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly webgame_set_card_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_card_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_cheat_option: (a: number, b: number, c: number, d: number, e: number) => [number, number, number, number];
     readonly webgame_set_classic_zh_mode: (a: number, b: number) => void;
     readonly webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
