@@ -439,7 +439,7 @@ impl WebGame {
                                 .map(|(_, page)| page));
                         self.native_story_ascii_cells = text_page
                             .map_or(0, |page| self.hd_renderer.story_ascii_cells(page));
-                        self.hd_renderer.set_translation_screen(selected);
+                        self.hd_renderer.set_translation_screen(selected.clone());
                         // The original native renderer owns every Chinese glyph.
                         // It runs AFTER HD art. This boolean means the pass ran,
                         // not necessarily that translated pixels changed.
@@ -467,6 +467,47 @@ impl WebGame {
                 self.hd_pixels.clear();
                 self.hd_art_pixels = 0;
                 self.hd_warning = "等待完整 PPU 畫面紀錄".to_owned();
+            }
+        }
+        if self.classic_zh_enabled && !self.hd_enabled {
+            // Native 1x image with the existing glyph-matched translator.
+            // Do not composite HD art, redraw sprites, or upscale the PPU.
+            if let Some(log) = self.machine.frame_log() {
+                if self.hd_renderer.capture_classic_text(log) {
+                    // If the message engine advanced before the visible text
+                    // changed, use the most recently confirmed page.
+                    let mut best = selected.as_ref()
+                        .and_then(|page| self.hd_renderer.visible_translation_score(page))
+                        .unwrap_or(0);
+                    if best == 0 {
+                        for (seen, page) in self.recent_pages.iter().rev() {
+                            if (self.machine.frame_count() as u32).saturating_sub(*seen) > 18 {
+                                break;
+                            }
+                            if let Some(score) = self.hd_renderer.visible_translation_score(page)
+                                && score > best
+                            {
+                                best = score;
+                                selected = Some(page.clone());
+                                self.native_visible_fallback = true;
+                            }
+                        }
+                    }
+                    self.native_visible_score = best;
+                    self.native_page_key = selected.as_ref().map(|page| page.key.clone());
+                    self.hd_renderer.set_translation_screen(selected);
+                    let (width, height) = {
+                        let frame = self.machine.frame();
+                        self.classic_zh_pixels.extend_from_slice(
+                            bytemuck::cast_slice(frame.pixels),
+                        );
+                        (frame.size.width as usize, frame.size.height as usize)
+                    };
+                    self.native_painted = self.hd_renderer.paint_classic_translation(
+                        log, &mut self.classic_zh_pixels, width, height,
+                    );
+                    if !self.native_painted { self.classic_zh_pixels.clear(); }
+                }
             }
         }
         self.hd_profile.mark(hd_profile::TEXT,profile_on,&mut profile_clock);
