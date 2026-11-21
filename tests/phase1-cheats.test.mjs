@@ -51,7 +51,8 @@ test('WASM cheats are session-only and state restore resets stale WRAM cheat blo
   assert.match(wasm,/cheat_bridge::clear_after_state_load\(&mut self\.machine\)/);
   assert.match(bridge,/engine::block_events\(&Cheats::neutral\(\)\)/);
   assert.match(bridge,/"session_only": true/);
-  assert.doesNotMatch(wasm,/pub fn save_state\(&self\) -> Vec<u8>\s*\{\s*.*cheat_bridge/s);
+  const rawSaveBody=wasm.split('pub fn save_state(&self) -> Vec<u8>')[1].split('pub fn load_state')[0];
+  assert.doesNotMatch(rawSaveBody,/cheat_bridge/);
 });
 
 test('mobile menu pauses gameplay, preserves sound recovery and resumes after closing',()=>{
