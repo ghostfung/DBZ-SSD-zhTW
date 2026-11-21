@@ -719,6 +719,102 @@ mod tests {
         assert_eq!(get(0,1),[22,22,22],"foreground UI remains visible");
     }
 
+
+    #[test]
+    fn multi_fighter_refinement_does_not_let_saibaman_block_goku() {
+        let mut pal=vec![serde_json::Value::Null;16];
+        pal[1]=serde_json::json!([255,0,0]);
+        pal[2]=serde_json::json!([0,255,0]);
+        let catalog=serde_json::json!([
+            {"id":"battle-saibaman-000","key":"abcd","width":2,"height":2,
+             "art":"class2/saibaman.png","available":true,"palette":pal},
+            {"id":"battle-goku-wrong-palette","key":"ef01","width":2,"height":2,
+             "art":"class2/goku-wrong.png","available":true,"palette":pal},
+            {"id":"battle-goku-verified","key":"ef02","width":2,"height":2,
+             "art":"class2/goku.png","available":true,"palette":pal}
+        ]);
+        let mut live=LiveFighters::default();
+        live.load_catalog(&catalog.to_string()).unwrap();
+        let mut owned=0_u128;
+        let saibaman=pose();
+        assert!(live.accept_primary(saibaman,&mut owned));
+        let mut rejected_goku=pose();
+        rejected_goku.key=0xef01;
+        rejected_goku.oam_bits=1<<7;
+        rejected_goku.colours[1]=[0,0,255];
+        assert!(!live.accept_primary(rejected_goku,&mut owned));
+        assert_eq!(live.palette_rejections,1);
+        assert!(live.should_try_refinement(1<<7));
+        let mut verified_goku=pose();
+        verified_goku.key=0xef02;
+        verified_goku.oam_bits=1<<7;
+        assert!(live.accept_refined(verified_goku,&mut owned,1<<7,true));
+        assert_eq!(live.active.len(),2);
+        assert_eq!(live.entries[live.active[0].index].id,"battle-saibaman-000");
+        assert_eq!(live.entries[live.active[1].index].id,"battle-goku-verified");
+        assert_eq!(owned,(1<<5)|(1<<7));
+        assert_eq!(live.fallback_accepted,1);
+        let output:serde_json::Value=serde_json::from_str(&live.probe_json()).unwrap();
+        assert_eq!(output["rejectedPoses"][0]["reason"],"palette_mismatch");
+        assert_eq!(output["rejectedPoses"][0]["key"],"000000000000ef01");
+        assert_eq!(output["rejectedPoses"][0]["candidateIds"][0],
+            "battle-goku-wrong-palette");
+    }
+
+    #[test]
+    fn fallback_never_steals_sprite_from_verified_primary_or_unrelated_oam() {
+        let mut live=LiveFighters::default();
+        live.load_catalog(&entry()).unwrap();
+        let mut owned=0_u128;
+        assert!(live.accept_primary(pose(),&mut owned));
+        assert!(!live.should_try_refinement(0),"all matched; avoid extra work");
+        let mut conflict=pose();
+        conflict.oam_bits=1<<5;
+        assert!(!live.accept_refined(conflict,&mut owned,1<<6,true));
+        let mut unrelated=pose();
+        unrelated.oam_bits=1<<8;
+        assert!(!live.accept_refined(unrelated,&mut owned,1<<6,true));
+        assert_eq!(live.active.len(),1);
+        assert_eq!(live.fallback_accepted,0);
+        assert_eq!(live.rejected[0].reason,"oam_overlap");
+        assert_eq!(live.probes,1);
+    }
+
+    #[test]
+    fn reasons_identify_size_palette_and_ambiguity_without_guessing_character() {
+        let mut live=LiveFighters::default();
+        live.load_catalog(&entry()).unwrap();
+        let mut smaller=pose();
+        smaller.width=1;
+        assert_eq!(pose_rejection_reason(&live.entries,&[0],&smaller),"size_mismatch");
+        let mut wrong=pose();
+        wrong.colours[1]=[0,0,255];
+        assert_eq!(pose_rejection_reason(&live.entries,&[0],&wrong),"palette_mismatch");
+        let exact=pose();
+        assert_eq!(pose_rejection_reason(&live.entries,&[0,0],&exact),"ambiguous_palette");
+        live.entries[0].luma=true;
+        assert_eq!(pose_rejection_reason(&live.entries,&[0,0],&exact),"ambiguous_luma");
+        assert_eq!(choose_pose(&live.entries,&[0,0],&exact),None);
+    }
+
+    #[test]
+    fn rejected_trace_is_bounded_even_when_many_poses_fail() {
+        let mut live=LiveFighters::default();
+        live.load_catalog(&entry()).unwrap();
+        let mut owned=0_u128;
+        for k in 0..100 {
+            let mut unknown=pose();
+            unknown.key=0xf000+k;
+            unknown.oam_bits=1<<6;
+            assert!(!live.accept_primary(unknown,&mut owned));
+        }
+        assert_eq!(live.rejected.len(),MAX_REJECTED);
+        assert_eq!(live.unindexed_keys.len(),3);
+        let report:serde_json::Value=serde_json::from_str(&live.probe_json()).unwrap();
+        assert_eq!(report["rejectedPoses"].as_array().unwrap().len(),MAX_REJECTED);
+        assert_eq!(report["fallbackAccepted"],0);
+    }
+
     #[test]
     fn luma_rejects_ambiguous_source_key_and_prefers_palette_exact_colour(){
         let mut live=LiveFighters::default();
