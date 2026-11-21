@@ -551,12 +551,12 @@ impl Renderer {
         self.native_text_frame.is_some()
     }
 
-    /// Paint the existing stateful Chinese translator over a native 1x PPU image.
-    /// Translation is deliberately independent of the HD art compositing path.
+    /// Paint sharp 2x Chinese glyphs on a nearest-neighbour copy of the
+    /// native 1x PPU frame. This NEVER enables HD art/PPU filters.
     pub fn paint_classic_translation(
         &mut self, log: &FrameLog, rgba: &mut [u8], width: usize, height: usize,
     ) -> bool {
-        self.paint_native_translation_scaled(log, rgba, width, height, 1)
+        self.paint_native_translation_scaled(log, rgba, width, height, 2)
     }
 
     /// Draw Traditional Chinese after the HD art passes on the 2x image.
