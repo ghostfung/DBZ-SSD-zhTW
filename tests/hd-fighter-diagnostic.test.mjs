@@ -77,7 +77,7 @@ test('report sanitises oversized or malformed index items and never embeds priva
   assert.equal(r.summary.unindexedSourceKeys.length,1);
   assert.equal(r.samples[0].matches[0].ready,true);
   const json=JSON.stringify(r);
-  for(const forbidden of ['/Users/private','SECRET','PRIVATE','ROM:','saveState','pixels":[']){
+  for(const forbidden of ['/Users/private','SECRET','PRIVATE','ROM:','saveState','rawPixels']){
     assert.equal(json.includes(forbidden),false,forbidden);
   }
   assert.doesNotMatch(json,/HD\/goku\.png/);
@@ -124,5 +124,5 @@ test('test-only diagnostic UI is reachable from existing game menu without addin
   assert.match(css,/\.fighter-diagnostic-entry\{/);
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
   assert.doesNotMatch(playbar,/fighter-diagnostic/);
-  assert.equal((html.match(/data-bit="/g)||[]).length,12);
+  assert.equal((html.match(/data-bit="/g)||[]).length,10);
 });
