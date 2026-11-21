@@ -65,6 +65,6 @@ test('mobile menu pauses gameplay, preserves sound recovery and resumes after cl
   assert.match(app,/const importedCheats=restoreActiveCheats\(\)/);
   assert.match(css,/\.cheats-modal\{/);
   assert.match(css,/overscroll-behavior:contain/);
-  assert.match(html,/app\.mjs\?build=v50&ui=v56/);
-  assert.match(wasm,/dbz-hd-tw-pwa-v50/);
+  assert.match(html,/app\.mjs\?build=v51&ui=v57/);
+  assert.match(wasm,/dbz-hd-tw-pwa-v51/);
 });
