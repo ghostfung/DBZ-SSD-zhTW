@@ -70,7 +70,7 @@ test('reset all changes the saved preferences, preventing old cheats next time',
   assert.deepEqual(readCheatChoices(s),CHEAT_DEFAULTS);
 });
 
-test('importing a save resets only active cheats, not the saved local preferences',()=>{
+test('importing a save can restore preferences immediately, without embedding them in the save',()=>{
   const s=store(),first=game();
   first.state.exp=3;
   saveCheatChoices(s,first.state);
@@ -78,6 +78,9 @@ test('importing a save resets only active cheats, not the saved local preference
   first.set_cheat_option('reset','all');
   assert.equal(first.state.exp,0);
   assert.equal(readCheatChoices(s).exp,3);
+  const afterImport=restoreCheatChoices(first,s);
+  assert.equal(afterImport.applied,1);
+  assert.equal(first.state.exp,3);
   const next=game(),result=restoreCheatChoices(next,s);
   assert.equal(result.applied,1);
   assert.equal(next.state.exp,3);
@@ -134,7 +137,9 @@ test('PWA wires auto-restore on launch and save on successful change/reset only'
     >app.indexOf('game = new WebGame(rom, ips)'));
   assert.ok(app.indexOf('const cheatRestore=restoreCheatChoices(game,cheatPreferenceStorage())')
     <app.indexOf('raf = requestAnimationFrame(requestFrame)'));
-  assert.match(app,/game\.load_state\(new Uint8Array\(await file\.arrayBuffer\(\)\)\);\s*refreshCheatPanel/);
+  assert.match(app,/game\.load_state\(new Uint8Array\(await file\.arrayBuffer\(\)\)\);\s*\/\/[^\n]*\n[^\n]*\n\s*const importedCheats=restoreActiveCheats\(\)/);
+  assert.match(app,/if\(pendingCheatRestore && n && game\.frame_count\(\)%60===0\)/);
+  assert.match(app,/pendingCheatRestore=Boolean\(result\.error\?\.includes\('戰鬥進行中'\)\)/);
   assert.match(html,/設定會自動儲存在本機/);
   assert.match(html,/app\.mjs\?build=v50&ui=v53/);
   assert.match(app,/reconnectFromGesture\(\)/);
