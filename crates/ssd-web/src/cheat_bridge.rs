@@ -121,6 +121,10 @@ pub fn configure(machine: &mut Machine, before: Cheats, after: Cheats) -> Result
         apply_events(machine, events)?;
     } else {
         apply_events(machine, engine::block_events(&after))?;
+        // First activation must also update Z corners already visible in
+        // the hand; the future-deal hook affects only newly dealt cards.
+        let hand = engine::hand_events(&after, machine.wram());
+        apply_events(machine, hand)?;
     }
     Ok(())
 }
