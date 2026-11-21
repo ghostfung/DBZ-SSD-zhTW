@@ -21,6 +21,7 @@ const BUILD_ID='dbz-hd-tw-pwa-v50';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let cheatPanelOpen = false;
+let pendingCheatRestore = false;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
@@ -212,6 +213,14 @@ function cheatPreferenceStorage(){
 function persistActiveCheats(){
   return saveCheatChoices(cheatPreferenceStorage(),JSON.parse(game.cheat_state()));
 }
+function restoreActiveCheats(){
+  const result=restoreCheatChoices(game,cheatPreferenceStorage());
+  // On a loaded save in battle, the Rust core intentionally rejects changing
+  // cheats. Preserve the preferences and retry only after play returns to a
+  // safe state; do not bypass its scripted-battle protection.
+  pendingCheatRestore=Boolean(result.error?.includes('戰鬥進行中'));
+  return result;
+}
 // Cheats are owned by the active WASM machine; never inferred from UI state.
 function refreshCheatPanel(message='') {
   if(!game) return;
@@ -254,6 +263,7 @@ for(const control of document.querySelectorAll('[data-cheat]')){
     try{
       const value=control.type==='checkbox'?String(control.checked):control.value;
       game.set_cheat_option(control.dataset.cheat,value);
+      pendingCheatRestore=false;
       const saved=persistActiveCheats();
       refreshCheatPanel(saved?'已套用並儲存在此手機':'已套用，但無法儲存在此瀏覽器');
     }catch(error){
@@ -265,6 +275,7 @@ $('cheat-reset').addEventListener('click',()=>{
   if(!game)return;
   try{
     game.set_cheat_option('reset','all');
+    pendingCheatRestore=false;
     const saved=persistActiveCheats();
     refreshCheatPanel(saved?'作弊與本機偏好已全部重設':'作弊已關閉，但無法更新本機偏好');
   }catch(error){
@@ -486,10 +497,12 @@ $('start').addEventListener('click', async () => {
     livePortraits.attach(game);
     // Restore after the new WASM game has been constructed, but before its
     // first emulated frame. Do not embed preferences in .sav game states.
-    const cheatRestore=restoreCheatChoices(game,cheatPreferenceStorage());
+    const cheatRestore=restoreActiveCheats();
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
-    refreshCheatPanel(cheatRestore.error
+    refreshCheatPanel(pendingCheatRestore
+      ? '已保留上次的作弊設定；遊戲進入安全階段後自動恢復'
+      : cheatRestore.error
       ? '上次作弊設定未能恢復，已使用原版規則：'+cheatRestore.error
       : cheatRestore.found
         ? (cheatRestore.applied>0
@@ -743,6 +756,17 @@ function requestFrame(now) {
       averageTickMs=averageTickMs===0 ? perFrame :
         averageTickMs*.75+perFrame*.25;
     }
+    // For save states imported mid-battle, retry at most once per 60
+    // emulated frames; no additional work during normal gameplay.
+    if(pendingCheatRestore && n && game.frame_count()%60===0){
+      const restored=restoreActiveCheats();
+      if(!pendingCheatRestore){
+        refreshCheatPanel(restored.error
+          ? '恢復作弊設定失敗：'+restored.error
+          : restored.applied>0?'已在安全階段恢復本機作弊設定':'已載入本機設定');
+        if(!restored.error && restored.applied>0)gameToast('已自動恢復作弊設定');
+      }
+    }
     if (n) {
       sound.enqueue(game.drain_audio());
       // Synchronise the message with the PPU from the same emulation frame.
@@ -957,7 +981,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
@@ -1007,7 +1031,16 @@ $('state-file').addEventListener('change',async e=>{
   if(!game||!file)return;
   try {
     game.load_state(new Uint8Array(await file.arrayBuffer()));
-    refreshCheatPanel('讀取進度成功；當次作弊已關閉（本機偏好仍保留，重新啟動會套用）');
+    // load_state clears any stale cheat WRAM, then we restore the user's
+    // validated local preferences. Battle saves retry safely once back on map.
+    const importedCheats=restoreActiveCheats();
+    refreshCheatPanel(pendingCheatRestore
+      ? '進度已讀取；戰鬥中暫不修改，回到安全階段後自動恢復作弊'
+      : importedCheats.error
+        ? '讀取進度成功，但作弊恢復失敗：'+importedCheats.error
+        : importedCheats.applied>0
+          ? '讀取進度成功，已恢復本機作弊設定'
+          : '讀取進度成功；作弊維持關閉');
     hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
     storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
     fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
