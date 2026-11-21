@@ -16,24 +16,30 @@ import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v47';
+const BUILD_ID='dbz-hd-tw-pwa-v48';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
-let currentDialogue = null, embedded = false, hdEnabled = false;
+let currentDialogue = null, embedded = false, hdEnabled = false, classicZhEnabled = false;
 let hdPreference=null;
 try {
   const pref=localStorage.getItem('dbz-hd-mode');
-  if(pref==='hd'||pref==='classic'){
-    hdPreference=pref;hdEnabled=pref==='hd';
+  if(pref==='hd'||pref==='classic'||pref==='classic-zh'){
+    hdPreference=pref;hdEnabled=pref==='hd';classicZhEnabled=pref==='classic-zh';
   }
 }catch {}
 let savedRom=null,savedIps=null;
 let language='zh-tw';
 try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
 const translationCache=new Map();
+function updateRenderModeButton(){
+  const button=$('hd-toggle');
+  button.textContent=hdEnabled?'HD 2x':classicZhEnabled?'中文 1x':'原版';
+  button.setAttribute('aria-label',
+    '畫面模式：'+(hdEnabled?'HD 2x':classicZhEnabled?'Classic 繁體中文 1x':'Classic 英文原版')+'，點擊切換');
+}
 function updateLanguageButton(){
   $('locale-toggle').textContent=language==='zh-hk'?'香港繁中':'台灣繁中';
   $('locale-toggle').setAttribute('aria-label','文字版本：'+$('locale-toggle').textContent+'，點按切換');
@@ -127,8 +133,8 @@ document.addEventListener('hd-catalog-ready', event => {
   liveHd.setCatalog(event.detail.catalog, event.detail.assets);
   // First import defaults to HD; respect any previous explicit Classic pick.
   if(event.detail.assets&&!game&&hdPreference===null){
-    hdEnabled=true;
-    $('hd-toggle').textContent='HD 2x';
+    hdEnabled=true;classicZhEnabled=false;
+    updateRenderModeButton();
   }
   hdFrameGate.reset();
 });
@@ -300,12 +306,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v47');
+    const mod = await import('./pkg/ssd_web.js?build=v48');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v47',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v48',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -387,6 +393,7 @@ $('start').addEventListener('click', async () => {
     mode7FrameGate.reset();
     transitionArtifactGate.reset();
     game.set_hd_mode(hdEnabled);
+    game.set_classic_zh_mode(classicZhEnabled);
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
     game.set_special_hd_enabled?.($('special-hd-toggle').checked);
     game.set_map_hd_enabled?.($('map-hd-toggle').checked);
@@ -407,7 +414,7 @@ $('start').addEventListener('click', async () => {
     $('setup').hidden = true;
     $('game').hidden = false;
     document.body.classList.add('playing');
-    $('hd-toggle').textContent=hdEnabled?'HD 2x':'原版';
+    updateRenderModeButton();
     button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
@@ -715,7 +722,7 @@ function requestFrame(now) {
       $('fps').textContent=`約 ${(countFrames*1000/(now-countWindow)).toFixed(1)} 模擬幀/秒`;
       $('hd-info').textContent=hdEnabled
         ? (game.hd_active() ? `HD 2x：${game.width()}×${game.height()}` : `HD 已回退 Classic：${game.hd_warning()}`)
-        : 'Classic 原版畫面';
+        : classicZhEnabled ? 'Classic 繁體中文 1x（低耗能）' : 'Classic 英文原版';
       countWindow=now;countFrames=0;
     }
     lastTick=now;
@@ -795,13 +802,23 @@ $('locale-toggle').addEventListener('click',async()=>{
   }finally{button.disabled=false;}
 });
 updateLanguageButton();
+updateRenderModeButton();
+// Tap cycles HD 2x -> Classic Chinese 1x -> original English Classic.
+// This is a rendering setting only: ROM, SRAM, save states and audio stay put.
 $('hd-toggle').addEventListener('click', () => {
-  hdEnabled = !hdEnabled;
-  hdPreference=hdEnabled?'hd':'classic';
+  const current=hdEnabled?'hd':classicZhEnabled?'classic-zh':'classic';
+  const modes=['hd','classic-zh','classic'];
+  hdPreference=modes[(modes.indexOf(current)+1)%modes.length];
+  hdEnabled=hdPreference==='hd';
+  classicZhEnabled=hdPreference==='classic-zh';
   try{localStorage.setItem('dbz-hd-mode',hdPreference);}catch{}
-  $('hd-toggle').textContent = hdEnabled ? 'HD 2x' : '原版';
-  $('hd-info').textContent = hdEnabled ? '正在初始化 HD 渲染…' : 'Classic 原版畫面';
-  if (game) game.set_hd_mode(hdEnabled);
+  updateRenderModeButton();
+  $('hd-info').textContent=hdEnabled?'正在初始化 HD 渲染…':
+    classicZhEnabled?'Classic 繁體中文 1x（低耗能）':'Classic 英文原版';
+  if(game) {
+    game.set_hd_mode(hdEnabled);
+    game.set_classic_zh_mode(classicZhEnabled);
+  }
   storyFrameGate.reset();
   hdFrameGate.reset();
   portraitFrameGate.reset();
