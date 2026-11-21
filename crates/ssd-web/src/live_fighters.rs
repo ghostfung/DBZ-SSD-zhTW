@@ -14,6 +14,8 @@ use std::collections::HashMap;
 const MAX_ENTRIES: usize = 20_000;
 const MAX_PICTURE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_POSES: usize = 8;
+const MAX_REJECTED: usize = 8;
+const MAX_REJECT_CANDIDATES: usize = 3;
 const WIDTH: usize = 256;
 
 #[derive(Debug, Deserialize)]
@@ -51,6 +53,27 @@ struct Matching {
     pose: LiveFighterPose,
 }
 
+/// Compact per-frame evidence only. No pixels, palette data, ROM, or paths.
+#[derive(Debug)]
+struct RejectedPose {
+    key: u64,
+    width: u16,
+    height: u16,
+    origin: &'static str,
+    reason: &'static str,
+    candidates: Vec<usize>,
+}
+
+impl RejectedPose {
+    fn new(pose: &LiveFighterPose, origin: &'static str, reason: &'static str,
+           indices: &[usize]) -> Self {
+        Self {
+            key: pose.key, width: pose.width, height: pose.height, origin, reason,
+            candidates: indices.iter().copied().take(MAX_REJECT_CANDIDATES).collect(),
+        }
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct LiveFighters {
     entries: Vec<Entry>,
@@ -63,7 +86,10 @@ pub(crate) struct LiveFighters {
     palette_rejections: usize,
     fallback_probes: usize,
     fallback_key_hits: usize,
+    fallback_attempted: bool,
+    fallback_accepted: usize,
     unindexed_keys: Vec<String>,
+    rejected: Vec<RejectedPose>,
 }
 
 fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
@@ -106,7 +132,115 @@ fn choose_pose(entries:&[Entry],indices:&[usize],pose:&LiveFighterPose)->Option<
     }
 }
 
+
+/// Explain exactly why an existing source key was not accepted. Never
+/// weaken the original unique-palette / unique-luma matching rule.
+fn pose_rejection_reason(entries: &[Entry], indices: &[usize],
+                         pose: &LiveFighterPose) -> &'static str {
+    let mut sized = 0_usize;
+    let mut exact = 0_usize;
+    let mut greys = 0_usize;
+    for &i in indices {
+        let entry = &entries[i];
+        if entry.width != pose.width || entry.height != pose.height { continue; }
+        sized += 1;
+        if entry.luma { greys += 1; }
+        else if palette_matches(entry, pose) { exact += 1; }
+    }
+    if sized == 0 { "size_mismatch" }
+    else if exact > 1 { "ambiguous_palette" }
+    else if exact == 0 && greys > 1 { "ambiguous_luma" }
+    else { "palette_mismatch" }
+}
+
 impl LiveFighters {
+    fn record_rejection(&mut self, rejected: RejectedPose) {
+        if self.rejected.len() < MAX_REJECTED {
+            self.rejected.push(rejected);
+        }
+    }
+
+    /// Primary fighter poses have priority over all fallback candidates.
+    /// Enforce exclusive OAM ownership rather than ever combining two
+    /// competing figures in a shared SNES sprite group.
+    fn accept_primary(&mut self, pose: LiveFighterPose, owned: &mut u128) -> bool {
+        self.probes += 1;
+        let Some(indices) = self.lookup.get(&pose.key) else {
+            if self.unindexed_keys.len() < 3 {
+                let description = format!("{:016x}/{}x{}",
+                    pose.key, pose.width, pose.height);
+                if !self.unindexed_keys.contains(&description) {
+                    self.unindexed_keys.push(description);
+                }
+            }
+            self.record_rejection(RejectedPose::new(
+                &pose, "primary", "source_key_unmatched", &[]));
+            return false;
+        };
+        self.key_hits += 1;
+        let Some(index) = choose_pose(&self.entries, indices, &pose) else {
+            self.palette_rejections += 1;
+            let reason = pose_rejection_reason(&self.entries, indices, &pose);
+            let rejected = RejectedPose::new(&pose, "primary", reason, indices);
+            self.record_rejection(rejected);
+            return false;
+        };
+        if pose.oam_bits & *owned != 0 {
+            self.record_rejection(RejectedPose::new(
+                &pose, "primary", "oam_overlap", &[]));
+            return false;
+        }
+        *owned |= pose.oam_bits;
+        self.active.push(Matching { index, pose });
+        true
+    }
+
+    fn should_try_refinement(&self, missing_oam: u128) -> bool {
+        self.active.len() < MAX_POSES &&
+            (self.active.is_empty() || missing_oam != 0)
+    }
+
+    /// Match extra exact-key field/refined poses only for *unclaimed* OAM
+    /// groups. In a multi-person battle, a matched Saibaman must not stop
+    /// attempts to identify the still-unmatched Goku.
+    fn accept_refined(&mut self, pose: LiveFighterPose, owned: &mut u128,
+                      missing_oam: u128, had_primary: bool) -> bool {
+        self.fallback_probes += 1;
+        if pose.oam_bits & *owned != 0 {
+            self.record_rejection(RejectedPose::new(
+                &pose, "refined", "oam_overlap", &[]));
+            return false;
+        }
+        if had_primary && pose.oam_bits & missing_oam == 0 {
+            // An unrelated NPC must never become a battle fighter.
+            return false;
+        }
+        let Some(indices) = self.lookup.get(&pose.key) else {
+            self.record_rejection(RejectedPose::new(
+                &pose, "refined", "source_key_unmatched", &[]));
+            return false;
+        };
+        self.fallback_key_hits += 1;
+        let Some(index) = choose_pose(&self.entries, indices, &pose) else {
+            self.palette_rejections += 1;
+            let reason = pose_rejection_reason(&self.entries, indices, &pose);
+            let rejected = RejectedPose::new(&pose, "refined", reason, indices);
+            self.record_rejection(rejected);
+            return false;
+        };
+        if !(self.entries[index].id.starts_with("battle-")
+            || self.entries[index].id.starts_with("field-fg-"))
+        {
+            self.record_rejection(RejectedPose::new(
+                &pose, "refined", "unsupported_category", &[index]));
+            return false;
+        }
+        *owned |= pose.oam_bits;
+        self.active.push(Matching { index, pose });
+        self.fallback_accepted += 1;
+        true
+    }
+
     pub(crate) fn load_catalog(&mut self, json: &str) -> Result<usize, String> {
         let incoming: Vec<Entry> = serde_json::from_str(json)
             .map_err(|e| format!("HD 人物索引無法解析：{e}"))?;
@@ -153,7 +287,10 @@ impl LiveFighters {
         self.palette_rejections=0;
         self.fallback_probes=0;
         self.fallback_key_hits=0;
+        self.fallback_attempted=false;
+        self.fallback_accepted=0;
         self.unindexed_keys.clear();
+        self.rejected.clear();
         Ok(self.entries.len())
     }
 
@@ -164,37 +301,31 @@ impl LiveFighters {
         self.palette_rejections=0;
         self.fallback_probes=0;
         self.fallback_key_hits=0;
+        self.fallback_attempted=false;
+        self.fallback_accepted=0;
         self.unindexed_keys.clear();
+        self.rejected.clear();
         if self.lookup.is_empty() { return; }
 
-        // Try the original battle OAM grouping first, unchanged. This is
-        // cheaper than field refinement, and takes precedence when present.
+        // Respect primary battle grouping and its exact source key, size,
+        // colour and OAM mask before trying any refined candidate.
+        let mut owned=0_u128;
+        let mut missing_oam=0_u128;
         for pose in ssd_hd::live_fighter_poses(log) {
-            self.probes+=1;
-            let Some(indices)=self.lookup.get(&pose.key) else {
-                if self.unindexed_keys.len()<3 {
-                    let description=format!("{:016x}/{}x{}",pose.key,pose.width,pose.height);
-                    if !self.unindexed_keys.contains(&description) {
-                        self.unindexed_keys.push(description);
-                    }
-                }
-                continue;
-            };
-            self.key_hits+=1;
-            if let Some(index)=choose_pose(&self.entries,indices,&pose) {
-                self.active.push(Matching {index,pose});
-                if self.active.len()>=MAX_POSES {break;}
-            } else {
-                self.palette_rejections+=1;
+            let missed_bits=pose.oam_bits;
+            if !self.accept_primary(pose, &mut owned) {
+                missing_oam |= missed_bits;
             }
+            if self.active.len() >= MAX_POSES { return; }
         }
 
-        // An opening/cutscene can split one character into several OAM
-        // palette runs. Only when no ordinary fighter was accepted, ask the
-        // upstream field-group/refinement logic for alternative *exact*
-        // battle keys; never reuse the last HD frame or guess from position.
-        if self.active.is_empty() {
-            let candidates = {
+        // Previously this ran only when *no* fighter matched, leaving Goku
+        // as SNES art whenever Saibaman already matched. Try the upstream
+        // field/refine logic for unmatched OAM, but never steal the source
+        // OAM bits belonging to an already verified fighter.
+        if self.should_try_refinement(missing_oam) {
+            self.fallback_attempted=true;
+            let candidates={
                 let entries=&self.entries;
                 let lookup=&self.lookup;
                 let mut has_battle_art=|key,width,height| {
@@ -205,21 +336,10 @@ impl LiveFighters {
                 };
                 ssd_hd::live_field_fighter_poses(log,&mut has_battle_art)
             };
-            let mut owned=0_u128;
+            let had_primary=owned!=0;
             for pose in candidates {
-                self.fallback_probes+=1;
-                let Some(indices)=self.lookup.get(&pose.key) else {continue};
-                self.fallback_key_hits+=1;
-                let Some(index)=choose_pose(&self.entries,indices,&pose) else {
-                    self.palette_rejections+=1;
-                    continue;
-                };
-                if !(self.entries[index].id.starts_with("battle-")
-                    || self.entries[index].id.starts_with("field-fg-"))
-                    || (owned & pose.oam_bits)!=0 {continue;}
-                owned|=pose.oam_bits;
-                self.active.push(Matching {index,pose});
-                if self.active.len()>=MAX_POSES {break;}
+                self.accept_refined(pose, &mut owned, missing_oam, had_primary);
+                if self.active.len()>=MAX_POSES { break; }
             }
         }
     }
@@ -231,7 +351,19 @@ impl LiveFighters {
             "matched":self.active.len(),
             "fallbackPoses":self.fallback_probes,
             "fallbackKeyHits":self.fallback_key_hits,
+            "fallbackAttempted":self.fallback_attempted,
+            "fallbackAccepted":self.fallback_accepted,
             "unindexedKeys":&self.unindexed_keys,
+            "rejectedPoses":self.rejected.iter().map(|rejected| {
+                serde_json::json!({
+                    "key":format!("{:016x}",rejected.key),
+                    "w":rejected.width,"h":rejected.height,
+                    "origin":rejected.origin,"reason":rejected.reason,
+                    "candidateIds":rejected.candidates.iter()
+                        .filter_map(|&i|self.entries.get(i).map(|e|e.id.as_str()))
+                        .collect::<Vec<_>>()
+                })
+            }).collect::<Vec<_>>(),
             "reason": if self.active.is_empty() {
                 if self.key_hits+self.fallback_key_hits==0 {
                     "來源鍵值未命中官方 class2 素材"
