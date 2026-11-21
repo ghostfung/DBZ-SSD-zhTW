@@ -16,7 +16,7 @@ import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v48';
+const BUILD_ID='dbz-hd-tw-pwa-v49';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -163,14 +163,18 @@ document.addEventListener('hd-portrait-catalog-ready', event => {
   portraitFrameGate.reset();
 });
 
+// A WebKit context can be marked 'running' while completely inaudible after
+// an app switch. Keep manual recovery accessible until the player chooses it.
+let offerManualSoundRecovery=false;
 function soundUi(message) {
   const ready=sound.enabled && sound.state==='running';
-  // Normal play remains uncluttered. Reveal a one-tap recovery button only
-  // if iOS suspends audio during a File picker or OS interruption.
-  $('sound').hidden=!game||ready;
-  $('sound').textContent='恢復聲音';
+  $('sound').hidden=!game||(ready&&!offerManualSoundRecovery);
+  $('sound').textContent=offerManualSoundRecovery?'重新連接聲音':'恢復聲音';
   $('sound-status').textContent=message||
-    (ready?`聲音已啟用 · ${sound.sampleRate} Hz`:'聲音已暫停，點「恢復聲音」');
+    (offerManualSoundRecovery
+      ? '切換 App 後若無聲，請按「重新連接聲音」'
+      : ready?`聲音已啟用 · ${sound.sampleRate} Hz`
+        : '聲音已暫停，點「恢復聲音」');
 }
 async function restoreAudioAfterInterruption() {
   if(!game)return false;
@@ -181,7 +185,9 @@ async function restoreAudioAfterInterruption() {
   try {
     const ready=await sound.resumeAfterInterruption();
     if(ready)game.set_audio_rate(sound.sampleRate);
-    soundUi(ready?'聲音已恢復':undefined);
+    soundUi(ready && offerManualSoundRecovery
+      ? '已嘗試恢復；如仍無聲，點「重新連接聲音」'
+      : ready?'聲音已恢復':undefined);
     return ready;
   }catch(error){
     soundUi('iPhone 尚未允許聲音恢復：'+(error?.message||error));
@@ -306,12 +312,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v48');
+    const mod = await import('./pkg/ssd_web.js?build=v49');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v48',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v49',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -627,6 +633,8 @@ function drawFrame() {
     embedded = false;
     $('translation-card').hidden = !currentDialogue;
   }
+  // The 1x original pixels are duplicated exactly in Rust; the 2x Chinese
+  // glyph antialiasing already lives in that buffer. Keep pixel-art sampling.
   canvas.style.imageRendering=game.hd_active()?'auto':'pixelated';
 }
 function requestFrame(now) {
@@ -846,14 +854,21 @@ for(const btn of document.querySelectorAll('button[data-bit]')) {
   btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release);
 }
 $('sound').addEventListener('click', async () => {
+  // Begin AudioContext recreation BEFORE awaiting anything: Safari requires
+  // a real tap for the new output graph, even if the old context says running.
+  const button=$('sound');
+  button.disabled=true;
   try {
-    // Explicit tap is required if iOS denied automatic AudioContext.resume().
-    await unlockAudio();
-    if(game)game.set_audio_rate(sound.sampleRate);
-    soundUi();
-  } catch (error) { soundUi(`播放失敗：${error.message}`); }
+    const rate=await sound.reconnectFromGesture();
+    if(game)game.set_audio_rate(rate);
+    soundUi(`音訊輸出已重新連接 · ${rate} Hz；如仍無聲，可再按一次`);
+  } catch(error) {
+    soundUi(`重新連接失敗：${error?.message||error}`);
+  } finally {
+    button.disabled=false;
+  }
 });
-const stop=()=>{hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
@@ -872,14 +887,25 @@ $('translation-debug').addEventListener('click',()=>{
   setTimeout(()=>URL.revokeObjectURL(url),3000);
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden&&running){running=false;cancelAnimationFrame(raf);held=0;sound.reset();}
-  else if(!document.hidden&&game&&!running){
-    running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
+  if(document.hidden&&game){
+    if(running){running=false;cancelAnimationFrame(raf);}
+    held=0;sound.reset();
+    offerManualSoundRecovery=Boolean(sound.enabled);
+  }else if(!document.hidden&&game){
+    if(!running){
+      running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
+    }
+    offerManualSoundRecovery=Boolean(sound.enabled);
+    soundUi();
     void restoreAudioAfterInterruption();
   }
 });
 window.addEventListener('pageshow',()=>{
-  if(game)void restoreAudioAfterInterruption();
+  if(game && !document.hidden){
+    offerManualSoundRecovery=Boolean(sound.enabled);
+    soundUi();
+    void restoreAudioAfterInterruption();
+  }
 });
 $('save').addEventListener('click',()=>{
   if(!game)return;
