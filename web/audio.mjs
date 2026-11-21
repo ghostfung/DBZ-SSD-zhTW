@@ -30,13 +30,46 @@ export class SnesAudio {
   }
 
   async resumeAfterInterruption() {
-    // A File picker suspends AudioContext on iOS. The stored state may also
-    // reset PCM queues; keep the user's intentional mute preference.
-    if(!this.enabled||!this.context||this.context.state==='closed')return false;
-    if(this.context.state!=='running')await this.context.resume();
-    if(this.context.state!=='running')return false;
+    // iOS can interrupt an AudioContext on app switch or file selection.
+    // Resume is best-effort; 'running' alone does NOT guarantee audible output.
+    if (!this.enabled || !this.context || this.context.state === 'closed') return false;
+    const context = this.context;
+    if (context.state !== 'running') await context.resume();
+    if (context !== this.context || context.state !== 'running') return false;
     this.reset();
     return true;
+  }
+
+  async reconnectFromGesture() {
+    // Called synchronously from an actual user tap. iOS Safari sometimes
+    // reports 'running' on a silent AudioContext after backgrounding; simply
+    // calling resume() again will not recover that output route.
+    if (!this.Context) throw new Error('這個瀏覽器不支援 Web Audio API');
+    const old = this.context;
+    this.enabled = false;
+    this.reset();
+    if (old && old.state !== 'closed' && typeof old.close === 'function') {
+      try {
+        const closing = old.close(); // Initiate before creating a replacement.
+        closing?.catch?.(() => {});
+      } catch { /* Replacement remains available if closing fails. */ }
+    }
+    const fresh = new this.Context();
+    this.context = fresh;
+    // Start a tiny silent buffer inside the click handler to activate WebKit's
+    // audio rendering graph. PCM is still supplied only by the emulator.
+    const warmup = fresh.createBuffer(2, 128, fresh.sampleRate);
+    const source = fresh.createBufferSource();
+    source.buffer = warmup;
+    source.connect(fresh.destination);
+    source.start();
+    await fresh.resume();
+    if (fresh !== this.context || fresh.state !== 'running') {
+      throw new Error('Safari 未恢復音訊輸出，請再點一次重新連接聲音');
+    }
+    this.enabled = true;
+    this.reset();
+    return this.sampleRate;
   }
 
   async mute() {
