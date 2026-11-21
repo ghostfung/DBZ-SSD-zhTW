@@ -19,7 +19,12 @@ test('Classic Chinese mode preserves original 1x PPU and never enters HD art',()
   assert.doesNotMatch(classic,/render_hd\(|\.composite\(|set_background_art\(|set_fighter_art\(/);
   assert.match(renderer,/pub fn capture_classic_text\(&mut self, log: &FrameLog\) -> bool/);
   assert.match(renderer,/pub fn paint_classic_translation\(/);
-  assert.match(renderer,/paint_native_translation_scaled\(log, rgba, width, height, 1\)/);
+  // The source remains native 1x PPU: only RGBA pixels and Chinese glyphs
+  // are enlarged, avoiding the costly 2x HD PPU renderer.
+  assert.match(bridge,/fn nearest_rgba_2x\(source: &\[u8\]/);
+  assert.match(bridge,/nearest_rgba_2x\(/);
+  assert.match(bridge,/\(width \* 2, height \* 2\)/);
+  assert.doesNotMatch(classic,/render_hd\(/);
   assert.match(renderer,/paint_native_translation_scaled\(log, rgba, width, height, 2\)/);
   assert.match(renderer,/self\.render_log\(log, None, false\)/);
 });
@@ -32,8 +37,8 @@ test('three-way display selection is persisted and updates both WASM switches',(
   assert.match(app,/game\.set_classic_zh_mode\(classicZhEnabled\)/);
   assert.match(app,/classicZhEnabled\?'中文 1x':'原版'/);
   assert.match(src('web/index.html'),/Classic 繁中 1x/);
-  assert.match(app,/const BUILD_ID='dbz-hd-tw-pwa-v48'/);
-  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v48/);
+  assert.match(app,/const BUILD_ID='dbz-hd-tw-pwa-v49'/);
+  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v49/);
 });
 
 test('original audio and save-state handlers remain intact',()=>{
