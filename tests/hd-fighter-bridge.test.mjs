@@ -14,7 +14,7 @@ test('HD poses reuse the official OAM sprite-group source-key algorithm',()=>{
  assert.match(native,/pose\.fighter && !pose\.field && !pose\.bg/);
  assert.match(compositor,/ssd_hd::live_fighter_poses\(log\)/);
  assert.match(compositor,/palette_matches\(&entries\[i\],pose\)/);
- assert.match(compositor,/choose_pose\(&self\.entries,indices,&pose\)/);
+ assert.match(compositor,/choose_pose\(&self\.entries,\s*indices,\s*&pose\)/);
 });
 test('HD fighter pixels only override winning OAM sprites and are before native Chinese',()=>{
  assert.match(native,/pub fn oam_ids\(&self\) -> &\[u8\]/);
