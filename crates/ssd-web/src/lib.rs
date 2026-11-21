@@ -83,6 +83,8 @@ pub struct WebGame {
     menu_names: HashMap<String, String>,
     previous_page: Option<usize>,
     hd_enabled: bool,
+    classic_zh_enabled: bool,
+    classic_zh_pixels: Vec<u8>,
     hd_renderer: HdRenderer,
     hd_pixels: Vec<u8>,
     hd_width: u32,
@@ -134,7 +136,8 @@ impl WebGame {
             native_expected_english: String::new(),
             native_story_text_pending: false, native_story_ascii_cells: 0,
             text_font, menu_names: HashMap::new(), previous_page: None,
-            hd_enabled: false, hd_renderer, hd_pixels: Vec::new(),
+            hd_enabled: false, classic_zh_enabled: false,
+            classic_zh_pixels: Vec::new(), hd_renderer, hd_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
             live_fighters: LiveFighters::default(), hd_fighter_pixels: 0,
@@ -150,7 +153,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v47".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v48".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -174,7 +177,7 @@ impl WebGame {
             ssd_hd::world::FieldState::from_wram(self.machine.wram())
         } else {None};
         let mut started = None;
-        if self.hd_enabled && self.native_overlay.is_some() {
+        if (self.hd_enabled || self.classic_zh_enabled) && self.native_overlay.is_some() {
             started = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
             if let Some(ref page) = started {
                 self.native_page_hint = Some(page.page);
@@ -193,7 +196,7 @@ impl WebGame {
         self.native_visible_score = 0;
         self.native_untranslated_visible = None;
         let mut selected = started;
-        if self.hd_enabled && self.native_overlay.is_some() && selected.is_none() {
+        if (self.hd_enabled || self.classic_zh_enabled) && self.native_overlay.is_some() && selected.is_none() {
             // A page that began during this emulated frame is a candidate,
             // never proof that it is already visible.
             let ended = on_screen(&self.rom, self.machine.wram(), self.native_page_hint);
@@ -208,6 +211,7 @@ impl WebGame {
         }
         self.native_page_key = selected.as_ref().map(|page| page.key.clone());
         self.native_painted = false;
+        self.classic_zh_pixels.clear();
         self.native_story_text_pending = false;
         self.native_story_ascii_cells = 0;
         self.hd_fighter_pixels = 0;
@@ -532,7 +536,8 @@ impl WebGame {
     /// True only when the original Rust translator painted the *current*
     /// Enhanced picture; the browser must not add heuristic text overlays.
     pub fn native_translation_active(&self) -> bool {
-        self.hd_enabled && self.native_painted && self.hd_active()
+        self.native_painted && (self.hd_active()
+            || (self.classic_zh_enabled && !self.classic_zh_pixels.is_empty()))
     }
 
     /// Whether a story dialogue frame contains untranslated PPU letters
@@ -784,14 +789,35 @@ impl WebGame {
         self.hd_portrait_enabled=enabled;
     }
 
+    /// Render real PPU pixels at 1x, with Traditional Chinese drawn by the
+    /// existing glyph-matched translator. No HD artwork is required.
+    pub fn set_classic_zh_mode(&mut self, enabled: bool) {
+        if self.classic_zh_enabled == enabled { return; }
+        self.classic_zh_enabled = enabled;
+        self.machine.set_line_log(self.hd_enabled || enabled);
+        self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
+        self.hd_renderer.set_layer_tracking(self.hd_enabled);
+        self.hd_renderer.set_portrait_tracking(
+            self.hd_enabled && (self.live_portraits.has_entries() || self.live_cards.has_entries()),
+        );
+        self.native_painted = false;
+        self.native_page_hint = None;
+        self.recent_pages.clear();
+        self.story_candidates.clear();
+        self.story_candidates_for = None;
+        self.classic_zh_pixels.clear();
+    }
+
+    pub fn classic_zh_mode(&self) -> bool { self.classic_zh_enabled }
+
     /// Use upstream Enhanced 2x renderer; backgrounds are supplied by the player.
     /// Unsupported frames fall back to Classic without affecting emulator state.
     pub fn set_hd_mode(&mut self, enabled: bool) {
         if self.hd_enabled == enabled { return; }
         self.hd_enabled = enabled;
-        self.machine.set_line_log(enabled);
+        self.machine.set_line_log(enabled || self.classic_zh_enabled);
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
-        self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries()||self.live_cards.has_entries());
+        self.hd_renderer.set_portrait_tracking(enabled && (self.live_portraits.has_entries()||self.live_cards.has_entries()));
         self.native_painted = false;
         self.native_page_hint = None;
         self.native_page_key = None;
@@ -813,6 +839,7 @@ impl WebGame {
         self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         self.hd_pixels.clear();
+        self.classic_zh_pixels.clear();
         self.hd_width = 0;
         self.hd_height = 0;
         self.hd_warning.clear();
@@ -837,6 +864,9 @@ impl WebGame {
     /// RGBA8 pixels, copied across the wasm-to-JS boundary.
     pub fn frame_rgba(&self) -> Vec<u8> {
         if self.hd_active() { return self.hd_pixels.clone(); }
+        if self.classic_zh_enabled && !self.classic_zh_pixels.is_empty() {
+            return self.classic_zh_pixels.clone();
+        }
         bytemuck::cast_slice(self.machine.frame().pixels).to_vec()
     }
 
