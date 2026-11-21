@@ -514,12 +514,24 @@ impl WebGame {
             }
         }
         if self.classic_zh_enabled && !self.hd_enabled {
-            // Native 1x image with the existing glyph-matched translator.
-            // Do not composite HD art, redraw sprites, or upscale the PPU.
+            // Keep every Classic Chinese frame at one consistent output size,
+            // even if the PPU text log is momentarily unavailable.
+            // The artwork is always the original SNES frame, just nearest-
+            // neighbour duplicated; no 2x HD PPU pass or art compositing.
+            let (width, height) = {
+                let frame = self.machine.frame();
+                let width = frame.size.width as usize;
+                let height = frame.size.height as usize;
+                nearest_rgba_2x(
+                    bytemuck::cast_slice(frame.pixels), width, height,
+                    &mut self.classic_zh_pixels,
+                );
+                (width * 2, height * 2)
+            };
             if let Some(log) = self.machine.frame_log() {
                 if self.hd_renderer.capture_classic_text(log) {
-                    // If the message engine advanced before the visible text
-                    // changed, use the most recently confirmed page.
+                    // If the engine named its next page before that page
+                    // visibly arrived, prefer recently confirmed real glyphs.
                     let mut best = selected.as_ref()
                         .and_then(|page| self.hd_renderer.visible_translation_score(page))
                         .unwrap_or(0);
@@ -540,22 +552,11 @@ impl WebGame {
                     self.native_visible_score = best;
                     self.native_page_key = selected.as_ref().map(|page| page.key.clone());
                     self.hd_renderer.set_translation_screen(selected);
-                    let (width, height) = {
-                        let frame = self.machine.frame();
-                        let width = frame.size.width as usize;
-                        let height = frame.size.height as usize;
-                        nearest_rgba_2x(
-                            bytemuck::cast_slice(frame.pixels), width, height,
-                            &mut self.classic_zh_pixels,
-                        );
-                        (width * 2, height * 2)
-                    };
-                    // Sharper Traditional Chinese at 2x, over unmodified
-                    // nearest-neighbour source pixels, without HD rendering.
+                    // Only the Chinese glyphs get 2x rasterisation. Source
+                    // art remains the original, without HD sprite/background.
                     self.native_painted = self.hd_renderer.paint_classic_translation(
                         log, &mut self.classic_zh_pixels, width, height,
                     );
-                    if !self.native_painted { self.classic_zh_pixels.clear(); }
                 }
             }
         }
