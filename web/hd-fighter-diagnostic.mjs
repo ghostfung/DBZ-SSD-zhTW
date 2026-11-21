@@ -1,12 +1,20 @@
 // Test-only HD fighter trace. Never records ROM/IPS, save-state, HD images,
 // screenshots, browser identifiers or file paths. All data remains on device
 // until the player explicitly downloads a bounded JSON report.
-export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v1';
+export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v2';
 const SAMPLE_MS = 200; // At most 5 FPS; expensive WASM/JSON probes only while recording.
 const MAX_MS = 60_000;
 const MAX_SAMPLES = 300;
 const MAX_MATCHES = 8;
 const MAX_KEYS = 3;
+const MAX_REJECTED = 8;
+const MAX_SUMMARY_REJECTIONS = 48;
+const REJECTION_REASONS = new Set([
+  'source_key_unmatched','size_mismatch','palette_mismatch',
+  'ambiguous_palette','ambiguous_luma','oam_overlap','unsupported_category'
+]);
+const POSE_KEY = /^[0-9a-f]{16}$/i;
+const SAFE_ID = /^[a-z0-9._-]{1,90}$/i;
 const KEY_RE = /^[0-9a-f]{16}\/\d{1,3}x\d{1,3}$/i;
 const COUNT_KEYS = [
   'poses','keyHits','paletteRejected','matched','ready','lumaMatched',
@@ -26,6 +34,26 @@ function safeMatches(input) {
     h:Number.isInteger(item?.height)?item.height:null
   }));
 }
+// Sanitize every field: the exporter must not accept arbitrary JSON from the
+// user's ROM, local art-pack indices or external data as a file path or text.
+function safeRejections(input) {
+  if(!Array.isArray(input))return [];
+  const cleaned=[];
+  for(const item of input.slice(0,MAX_REJECTED)){
+    if(!item||!POSE_KEY.test(item.key)||!REJECTION_REASONS.has(item.reason)
+      ||!['primary','refined'].includes(item.origin)
+      ||!Number.isInteger(item.w)||item.w<1||item.w>255
+      ||!Number.isInteger(item.h)||item.h<1||item.h>239)continue;
+    cleaned.push({
+      key:item.key.toLowerCase(),
+      w:item.w,h:item.h,reason:item.reason,origin:item.origin,
+      candidateIds:Array.isArray(item.candidateIds)?
+        item.candidateIds.filter(v=>typeof v==='string'&&SAFE_ID.test(v))
+          .slice(0,3):[]
+    });
+  }
+  return cleaned;
+}
 function safeProbe(input) {
   if(!input||typeof input!=='object'||Array.isArray(input))return null;
   const out={};
@@ -37,6 +65,10 @@ function safeProbe(input) {
     ?input.unindexedKeys.filter(v=>typeof v==='string'&&KEY_RE.test(v))
       .slice(0,MAX_KEYS).map(s=>s.toLowerCase())
     :[];
+  out.fallbackAttempted=input.fallbackAttempted===true;
+  out.fallbackAccepted=Number.isInteger(input.fallbackAccepted)&&input.fallbackAccepted>=0
+    ?Math.min(input.fallbackAccepted,MAX_MATCHES):0;
+  out.rejectedPoses=safeRejections(input.rejectedPoses);
   return out;
 }
 function readJson(game,name) {
@@ -129,8 +161,14 @@ export class HdFighterDiagnostic {
     const categories={};
     const missingKeys=new Map();
     const matchedIds=new Set();
+    const rejectionCounts=new Map();
+    const rejectedExamples=new Map();
     let totalReplaced=0;
     let samplesWithActiveHD=0;
+    let partialMatches=0;
+    let rejectedSamples=0;
+    let fallbackAttemptedSamples=0;
+    let fallbackAccepted=0;
     for(const sample of this.samples) {
       categories[sample.category]=(categories[sample.category]||0)+1;
       if(sample.hdActive)samplesWithActiveHD++;
@@ -141,12 +179,26 @@ export class HdFighterDiagnostic {
       for(const item of sample.matches??[]){
         if(item.id)matchedIds.add(item.id);
       }
+      const rejected=sample.probe?.rejectedPoses??[];
+      if(rejected.length) {
+        rejectedSamples++;
+        if(sample.matches?.length && sample.replacedPixels>0)partialMatches++;
+      }
+      if(sample.probe?.fallbackAttempted)fallbackAttemptedSamples++;
+      fallbackAccepted+=sample.probe?.fallbackAccepted||0;
+      for(const item of rejected){
+        rejectionCounts.set(item.reason,(rejectionCounts.get(item.reason)||0)+1);
+        const signature=[item.key,item.w+'x'+item.h,item.reason,item.origin].join(':');
+        const previous=rejectedExamples.get(signature);
+        if(previous)previous.count++;
+        else rejectedExamples.set(signature,{...item,count:1});
+      }
     }
     return {
       format:FIGHTER_TRACE_VERSION,
       build:String(build).slice(0,80),
       scope:'player_initiated_hd_fighter_pose_samples',
-      note:'僅記錄本次 60 秒內抽樣的來源鍵值、尺寸、載入與畫面替換統計；不能據此推斷全部角色素材覆蓋率。',
+      note:'只表示本次 60 秒抽樣中至少部分 HD 像素有替換，不保證所有人物均為 HD；拒絕原因與來源鍵值不等於已證實角色身分。',
       privacy:'No ROM, IPS, save-state, pixels, screenshots, HD ZIP, URLs, or device identifiers.',
       sampling:{intervalMs:this.sampleMs,maximumDurationMs:this.maxMs,
         maximumSamples:this.maxSamples},
@@ -156,6 +208,13 @@ export class HdFighterDiagnostic {
         sampleCount:this.samples.length,samplesWithActiveHD,
         totalReplacedPixelsAcrossSamples:totalReplaced,
         categoryCounts:categories,
+        samplesWithRejectedPoses:rejectedSamples,
+        partialMatches,
+        fallbackAttemptedSamples,
+        acceptedRefinedPosesAcrossSamples:fallbackAccepted,
+        rejectionReasons:Object.fromEntries(rejectionCounts),
+        rejectedPoseExamples:[...rejectedExamples.values()]
+          .sort((a,b)=>b.count-a.count).slice(0,MAX_SUMMARY_REJECTIONS),
         matchedAssetIds:[...matchedIds].slice(0,32),
         unindexedSourceKeys:[...missingKeys].sort((a,b)=>b[1]-a[1])
           .slice(0,48).map(([key,count])=>({key,count}))
