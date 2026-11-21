@@ -60,11 +60,11 @@ test('mobile menu pauses gameplay, preserves sound recovery and resumes after cl
   assert.match(app,/function openCheatPanel\(\)/);
   assert.match(app,/if\(running\)\{running=false;cancelAnimationFrame\(raf\);\}/);
   assert.match(app,/function closeCheatPanel\(\)/);
-  assert.match(app,/if\(!running&&!cheatPanelOpen\)/);
+  assert.match(app,/if\(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen\)/);
   assert.match(app,/await sound\.reconnectFromGesture\(\)/);
   assert.match(app,/const importedCheats=restoreActiveCheats\(\)/);
   assert.match(css,/\.cheats-modal\{/);
   assert.match(css,/overscroll-behavior:contain/);
-  assert.match(html,/app\.mjs\?build=v50&ui=v54/);
+  assert.match(html,/app\.mjs\?build=v50&ui=v56/);
   assert.match(wasm,/dbz-hd-tw-pwa-v50/);
 });
