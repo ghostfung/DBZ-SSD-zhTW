@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SnesAudio } from '../web/audio.mjs';
+import { readFileSync } from 'node:fs';
 
 class FakeAudioContext {
   constructor() {
@@ -12,6 +13,7 @@ class FakeAudioContext {
   }
   async resume() { this.state = 'running'; }
   async suspend() { this.state = 'suspended'; }
+  async close() { this.state = 'closed'; }
   createBuffer(channels, length, rate) {
     assert.equal(channels, 2);
     assert.equal(rate, this.sampleRate);
@@ -75,4 +77,42 @@ test('file picker interruption restores suspended AudioContext without unmuting 
   await audio.mute();
   assert.equal(await audio.resumeAfterInterruption(),false);
   assert.equal(audio.enabled,false);
+});
+
+test('iPhone gesture reconnect recreates a silent-but-running context and restarts PCM',async()=>{
+  const audio=new SnesAudio(FakeAudioContext);
+  await audio.enable();
+  const old=audio.context;
+  audio.enqueue(new Float32Array(4096));
+  assert.equal(audio.context.started.length,1);
+  // Safari can report "running" but output silence after switching apps.
+  assert.equal(audio.state,'running');
+  const rate=await audio.reconnectFromGesture();
+  assert.equal(rate,48000);
+  assert.notEqual(audio.context,old);
+  assert.equal(old.state,'closed');
+  assert.equal(audio.context.state,'running');
+  assert.equal(audio.enabled,true);
+  assert.equal(audio.pendingFrames,0);
+  assert.equal(audio.context.started.length,1,'new context was primed inside tap');
+  audio.enqueue(new Float32Array(4096));
+  assert.equal(audio.context.started.length,2,'subsequent emulator PCM reaches new context');
+});
+
+test('audio reconnect remains possible after an interrupted context',async()=>{
+  const audio=new SnesAudio(FakeAudioContext);
+  await audio.enable();
+  const old=audio.context;
+  old.state='interrupted';
+  assert.equal(await audio.reconnectFromGesture(),48000);
+  assert.equal(audio.state,'running');
+  assert.equal(old.state,'closed');
+});
+
+test('manual audio recovery stays available after visibilitychange even when context reports running',()=>{
+  const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
+  assert.match(app,/offerManualSoundRecovery=Boolean\(sound\.enabled\)/);
+  assert.match(app,/await sound\.reconnectFromGesture\(\)/);
+  assert.match(app,/offerManualSoundRecovery\?'重新連接聲音':'恢復聲音'/);
+  assert.match(app,/if\(game\)game\.set_audio_rate\(rate\)/);
 });
