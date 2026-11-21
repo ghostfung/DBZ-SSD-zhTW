@@ -11,6 +11,8 @@ crate-type = ["cdylib", "rlib"]
 ssd-rom = { path = "../ssd-rom" }
 ssd-oracle = { path = "../ssd-oracle" }
 ssd-catalogue = { workspace = true }
+ssd-game = { workspace = true }
+ssd-menus = { workspace = true }
 ssd-hd = { workspace = true }
 serde_json = { workspace = true }
 serde = { workspace = true }
