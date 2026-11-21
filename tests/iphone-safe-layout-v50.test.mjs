@@ -38,8 +38,8 @@ test('layout-only update leaves original SNES controls, language and audio modul
   for(const bit of [0,1,2,3,4,5,6,7,8,9]){
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
   }
-  assert.match(html,/style\.css\?build=v49&ui=v51/);
-  assert.match(html,/app\.mjs\?build=v49&ui=v50/);
+  assert.match(html,/style\.css\?build=v50&ui=v52/);
+  assert.match(html,/app\.mjs\?build=v50&ui=v52/);
   assert.match(src('web/app.mjs'),/reconnectFromGesture\(\)/);
-  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v49/);
+  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v50/);
 });
