@@ -131,11 +131,11 @@ test('PWA wires auto-restore on launch and save on successful change/reset only'
   const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   assert.match(app,/import \{saveCheatChoices,restoreCheatChoices\} from '\.\/cheat-preferences\.mjs\?ui=v53'/);
-  assert.match(app,/game\.set_cheat_option\(control\.dataset\.cheat,value\);\s*const saved=persistActiveCheats\(\)/);
-  assert.match(app,/game\.set_cheat_option\('reset','all'\);\s*const saved=persistActiveCheats\(\)/);
-  assert.ok(app.indexOf('const cheatRestore=restoreCheatChoices(game,cheatPreferenceStorage())')
+  assert.match(app,/game\.set_cheat_option\(control\.dataset\.cheat,value\);\s*pendingCheatRestore=false;\s*const saved=persistActiveCheats\(\)/);
+  assert.match(app,/game\.set_cheat_option\('reset','all'\);\s*pendingCheatRestore=false;\s*const saved=persistActiveCheats\(\)/);
+  assert.ok(app.indexOf('const cheatRestore=restoreActiveCheats()')
     >app.indexOf('game = new WebGame(rom, ips)'));
-  assert.ok(app.indexOf('const cheatRestore=restoreCheatChoices(game,cheatPreferenceStorage())')
+  assert.ok(app.indexOf('const cheatRestore=restoreActiveCheats()')
     <app.indexOf('raf = requestAnimationFrame(requestFrame)'));
   assert.match(app,/game\.load_state\(new Uint8Array\(await file\.arrayBuffer\(\)\)\);\s*\/\/[^\n]*\n[^\n]*\n\s*const importedCheats=restoreActiveCheats\(\)/);
   assert.match(app,/if\(pendingCheatRestore && n && game\.frame_count\(\)%60===0\)/);
