@@ -26,7 +26,7 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v49&ui=v51"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v52"/>
 </head>
 <body>
   <main>
@@ -122,7 +122,7 @@
     <section id="game" hidden>
       <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
       <div class="stats" hidden><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v48；WASM 啟動時核對</p>
+      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v50；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
           <button data-bit="4" class="up" aria-label="上">▲</button>
@@ -145,6 +145,7 @@
         <button id="save" type="button">匯出進度</button>
         <label class="upload playbar-upload">匯入進度<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
         <button id="sound" type="button" hidden>恢復聲音</button>
+        <button id="cheat-open" type="button" aria-haspopup="dialog" aria-controls="cheats-panel">遊戲修改</button>
         <output id="play-toast" role="status" aria-live="polite" hidden></output>
       </div>
       <div class="utility" hidden>
@@ -189,7 +190,44 @@
       </details>
     </section>
    </main>
-  <script type="module" src="app.mjs?build=v49&ui=v50"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v49&ui=v50"></script>
+  <section id="cheats-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="cheats-title" hidden>
+    <div class="cheats-sheet">
+      <header class="cheats-heading">
+        <div><h2 id="cheats-title">遊戲修改</h2><p>第一階段 · 遊戲進行中適用</p></div>
+        <button type="button" id="cheat-close" aria-label="關閉遊戲修改">完成</button>
+      </header>
+      <p class="cheats-note">變更只對目前遊戲有效；重新啟動或匯入進度會重設。戰鬥中不可啟用或調整，特定劇情戰鬥會自動暫停作弊。</p>
+      <div class="cheats-grid">
+        <label>攻擊傷害倍率
+          <select data-cheat="damage"><option value="0">0.5x</option><option value="1" selected>1x（原版）</option><option value="2">2x</option><option value="3">3x</option><option value="4">5x</option><option value="5">10x</option></select>
+        </label>
+        <label>防禦減傷倍率
+          <select data-cheat="defence"><option value="0">0.5x</option><option value="1" selected>1x（原版）</option><option value="2">2x</option><option value="3">3x</option><option value="4">5x</option><option value="5">10x</option></select>
+        </label>
+        <label>經驗值 EXP
+          <select data-cheat="exp"><option value="0" selected>1x（原版）</option><option value="1">2x</option><option value="2">3x</option><option value="3">5x</option><option value="4">10x</option></select>
+        </label>
+        <label>全隊 Z 卡牌
+          <select data-cheat="z_cards"><option value="off" selected>關閉</option><option value="attack">攻擊 Z</option><option value="defence">防禦 Z</option><option value="both">攻防皆 Z</option></select>
+        </label>
+        <label>獲得金錢倍率
+          <select data-cheat="gain"><option value="0" selected>1x（原版）</option><option value="1">2x</option><option value="2">3x</option><option value="3">5x</option><option value="4">10x</option></select>
+        </label>
+        <label>隨機遇敵頻率
+          <select data-cheat="encounters"><option value="0">0.25x</option><option value="1">0.5x</option><option value="2" selected>1x（原版）</option><option value="3">2x</option><option value="4">4x</option></select>
+        </label>
+        <label class="cheats-check"><input type="checkbox" data-cheat="max_zeni"/> 金錢維持最大值（999）</label>
+        <label class="cheats-check"><input type="checkbox" data-cheat="no_random"/> 關閉隨機遇敵（劇情戰鬥保留）</label>
+      </div>
+      <output id="cheat-feedback" role="status" aria-live="polite">所有遊戲修改預設關閉。</output>
+      <div class="cheats-actions">
+        <button type="button" id="cheat-reset">全部重設</button>
+        <button type="button" id="cheat-done">返回遊戲</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src="app.mjs?build=v50&ui=v52"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v52"></script>
 </body>
 </html>
