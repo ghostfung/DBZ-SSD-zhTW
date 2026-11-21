@@ -534,15 +534,45 @@ impl Renderer {
     #[must_use]
     pub fn native_changed_samples(&self) -> u32 { self.native_changed_samples }
 
-    /// Render the upstream author's translation over the supplied 2x frame.
-    /// Call this only after locally matched HD background replacement.
-    /// This preserves sprites, HUD and all original PPU text-window semantics.
+    /// Capture only the 1x PPU text source cells for Classic Chinese mode.
+    /// No 2x filters, HD layers, art decoding or sprite replacement is run.
+    /// The source frame is used solely to verify native SNES text positions.
+    pub fn capture_classic_text(&mut self, log: &FrameLog) -> bool {
+        if self.native_translation.is_none() || self.font.is_none() {
+            self.native_text_frame = None;
+            return false;
+        }
+        self.text.clear();
+        self.text_on = true;
+        self.capturing = false;
+        let frame = self.render_log(log, None, false);
+        self.text_on = false;
+        self.native_text_frame = frame.ok();
+        self.native_text_frame.is_some()
+    }
+
+    /// Paint the existing stateful Chinese translator over a native 1x PPU image.
+    /// Translation is deliberately independent of the HD art compositing path.
+    pub fn paint_classic_translation(
+        &mut self, log: &FrameLog, rgba: &mut [u8], width: usize, height: usize,
+    ) -> bool {
+        self.paint_native_translation_scaled(log, rgba, width, height, 1)
+    }
+
+    /// Draw Traditional Chinese after the HD art passes on the 2x image.
     pub fn paint_native_translation(
+        &mut self, log: &FrameLog, rgba: &mut [u8], width: usize, height: usize,
+    ) -> bool {
+        self.paint_native_translation_scaled(log, rgba, width, height, 2)
+    }
+
+    fn paint_native_translation_scaled(
         &mut self,
         log: &FrameLog,
         rgba: &mut [u8],
         width: usize,
         height: usize,
+        scale: usize,
     ) -> bool {
         let (Some(translator), Some(frame), Some(font)) = (
             self.native_translation.as_mut(),
@@ -551,37 +581,32 @@ impl Renderer {
         ) else {
             return false;
         };
-        if width != frame.width * 2 || height != frame.height * 2
+        if width != frame.width * scale || height != frame.height * scale
             || rgba.len() != width.saturating_mul(height).saturating_mul(4)
         {
             return false;
         }
-        // Bounded instrumentation: a few locations within each PPU text
-        // cell, never a full-screen diff on the iPhone's 60 Hz hot path.
+        // Sample a few source text-cell pixels, never diff the whole screen.
+        let offsets = [(2_usize, 2_usize), (4, 4), (6, 6)];
         let positions: Vec<usize> = self.text.cells().iter().take(180)
-            .flat_map(|cell| [(4_usize, 4_usize), (8, 8), (12, 12)]
-                .into_iter().filter_map(move |(dx,dy)| {
-                    let x = usize::try_from(cell.x.checked_mul(2)?).ok()?.checked_add(dx)?;
-                    let y = usize::try_from(cell.y.checked_mul(2)?).ok()?.checked_add(dy)?;
-                    (x < width && y < height).then_some(4*(y*width+x))
-                }))
+            .flat_map(|cell| offsets.into_iter().filter_map(move |(dx, dy)| {
+                let x = usize::try_from(cell.x.checked_mul(scale as i32)?).ok()?
+                    .checked_add(dx * scale)?;
+                let y = usize::try_from(cell.y.checked_mul(scale as i32)?).ok()?
+                    .checked_add(dy * scale)?;
+                (x < width && y < height).then_some(4 * (y * width + x))
+            }))
             .collect();
         let before: Vec<[u8; 3]> = positions.iter()
-            .map(|&at| [rgba[at],rgba[at+1],rgba[at+2]]).collect();
-        let mut target = translate::Target { rgba, width, scale: 2 };
+            .map(|&at| [rgba[at], rgba[at + 1], rgba[at + 2]]).collect();
+        let mut target = translate::Target { rgba, width, scale };
         let mut beneath = |_cells: &[(i32, i32)]| None;
         translator.draw(
-            &mut target,
-            self.text.cells(),
-            frame,
-            log,
-            0,
-            &|glyph| font.character(glyph),
-            &mut beneath,
-            None,
+            &mut target, self.text.cells(), frame, log, 0,
+            &|glyph| font.character(glyph), &mut beneath, None,
         );
         self.native_changed_samples = positions.iter().zip(before)
-            .map(|(&at, colour)| target.rgba[at..at+3] != colour[..])
+            .map(|(&at, colour)| target.rgba[at..at + 3] != colour[..])
             .filter(|changed| *changed)
             .count() as u32;
         true
