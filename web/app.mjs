@@ -1,5 +1,6 @@
 import {inspectRom} from './rom-check.mjs';
 import {SnesAudio} from './audio.mjs?build=v49';
+import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
@@ -203,6 +204,14 @@ function gameToast(message){
   toastTimeout=setTimeout(()=>{toast.hidden=true;},2800);
 }
 
+// First-phase cheat settings are separate browser-local preferences; existing
+// ROM, save-state and emulation data formats remain unchanged.
+function cheatPreferenceStorage(){
+  try{return localStorage;}catch{return null;}
+}
+function persistActiveCheats(){
+  return saveCheatChoices(cheatPreferenceStorage(),JSON.parse(game.cheat_state()));
+}
 // Cheats are owned by the active WASM machine; never inferred from UI state.
 function refreshCheatPanel(message='') {
   if(!game) return;
@@ -245,7 +254,8 @@ for(const control of document.querySelectorAll('[data-cheat]')){
     try{
       const value=control.type==='checkbox'?String(control.checked):control.value;
       game.set_cheat_option(control.dataset.cheat,value);
-      refreshCheatPanel();
+      const saved=persistActiveCheats();
+      refreshCheatPanel(saved?'已套用並儲存在此手機':'已套用，但無法儲存在此瀏覽器');
     }catch(error){
       refreshCheatPanel('操作未套用：'+(error?.message||String(error)));
     }
@@ -255,7 +265,8 @@ $('cheat-reset').addEventListener('click',()=>{
   if(!game)return;
   try{
     game.set_cheat_option('reset','all');
-    refreshCheatPanel('作弊已全部關閉');
+    const saved=persistActiveCheats();
+    refreshCheatPanel(saved?'作弊與本機偏好已全部重設':'作弊已關閉，但無法更新本機偏好');
   }catch(error){
     refreshCheatPanel('無法重設：'+(error?.message||String(error)));
   }
@@ -473,9 +484,18 @@ $('start').addEventListener('click', async () => {
     liveCards.attach(game);
     liveMode7.attach(game);
     livePortraits.attach(game);
+    // Restore after the new WASM game has been constructed, but before its
+    // first emulated frame. Do not embed preferences in .sav game states.
+    const cheatRestore=restoreCheatChoices(game,cheatPreferenceStorage());
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
-    refreshCheatPanel();
+    refreshCheatPanel(cheatRestore.error
+      ? '上次作弊設定未能恢復，已使用原版規則：'+cheatRestore.error
+      : cheatRestore.found
+        ? (cheatRestore.applied>0
+          ? '已恢復上次儲存的 '+cheatRestore.applied+' 項作弊設定'
+          : '已讀取本機設定：全部關閉')
+        : '目前使用原版設定；修改後會自動儲存在此手機');
     $('setup').classList.remove('launching');
     $('setup').hidden = true;
     $('game').hidden = false;
@@ -987,7 +1007,7 @@ $('state-file').addEventListener('change',async e=>{
   if(!game||!file)return;
   try {
     game.load_state(new Uint8Array(await file.arrayBuffer()));
-    refreshCheatPanel('讀取進度成功；作弊設定已自動關閉');
+    refreshCheatPanel('讀取進度成功；當次作弊已關閉（本機偏好仍保留，重新啟動會套用）');
     hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
     storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
     fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
