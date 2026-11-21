@@ -63,7 +63,21 @@ export class SnesAudio {
     source.buffer = warmup;
     source.connect(fresh.destination);
     source.start();
-    await fresh.resume();
+    // Some WebKit interruptions leave resume() permanently pending. Bound
+    // the manual attempt so the button is re-enabled for another tap.
+    let deadline;
+    try {
+      await Promise.race([
+        fresh.resume(),
+        new Promise((_, reject) => {
+          deadline = setTimeout(() => reject(new Error(
+            'iOS 音訊啟動逾時；可再次點擊重新連接聲音'
+          )), 3500);
+        }),
+      ]);
+    } finally {
+      clearTimeout(deadline);
+    }
     if (fresh !== this.context || fresh.state !== 'running') {
       throw new Error('Safari 未恢復音訊輸出，請再點一次重新連接聲音');
     }
