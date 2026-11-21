@@ -258,3 +258,39 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
   .playing #game .playbar .playbar-upload{font-size:clamp(9px,1.35vw,11px);
     padding:3px 1px;min-height:28px}
 }
+
+
+/* v50 — thumb-safe control placement on iPhone portrait and landscape.
+   Pure layout: do not change game canvas resolution, controller bits,
+   audio, or language. Reserve space before moving the entire controls
+   group so the sound-reconnect row still fits within the viewport. */
+@media (orientation:portrait){
+  .playing #game .screen{
+    max-height:min(calc(100dvh - 430px),calc(100vw * 478 / 512));
+  }
+  /* Moving this grid row also moves the following settings row. */
+  .playing #game .controls{
+    margin:clamp(12px,2.3dvh,24px) auto clamp(8px,1.4dvh,14px);
+  }
+  .playing #game .playbar{
+    margin:clamp(7px,1.4dvh,14px) auto 0;
+  }
+}
+@media (orientation:landscape) and (max-height:650px){
+  /* Align both thumb clusters to the same lower baseline; respect the
+     home-indicator inset rather than translating past the screen edge. */
+  .playing #game .dpad,
+  .playing #game .actions{
+    align-self:end;
+    justify-self:center;
+    margin-bottom:max(14px,env(safe-area-inset-bottom));
+  }
+  .playing #game .dpad{transform:translateX(2px)}
+  .playing #game .actions{transform:none}
+  /* Keep settings above the thumb area, clear of X even when the
+     seventh "reconnect audio" button adds a fourth row. */
+  .playing #game .playbar{
+    position:absolute;
+    top:max(14px,calc(env(safe-area-inset-top) + 8px));
+  }
+}
