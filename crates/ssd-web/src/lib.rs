@@ -59,6 +59,50 @@ impl AudioSink for AudioFrame {
     }
 }
 
+/// Enlarges only the *original* 1x SNES RGBA pixels. This is not the HD
+/// PPU renderer: each source pixel becomes one exact 2x2 block so the pixel
+/// art stays untouched, while Chinese glyphs can be rasterised at 2x.
+fn nearest_rgba_2x(source: &[u8], width: usize, height: usize, out: &mut Vec<u8>) {
+    let source_stride = width * 4;
+    if source.len() != source_stride * height {
+        out.clear();
+        return;
+    }
+    let out_stride = source_stride * 2;
+    out.resize(out_stride * height * 2, 0);
+    for (y, row) in source.chunks_exact(source_stride).enumerate() {
+        let offset = 2 * y * out_stride;
+        for (x, rgba) in row.chunks_exact(4).enumerate() {
+            let at = offset + 8 * x;
+            out[at..at + 4].copy_from_slice(rgba);
+            out[at + 4..at + 8].copy_from_slice(rgba);
+        }
+        out.copy_within(offset..offset + out_stride, offset + out_stride);
+    }
+}
+
+#[cfg(test)]
+mod classic_zh_pixel_tests {
+    use super::nearest_rgba_2x;
+
+    #[test]
+    fn upscaled_original_pixels_keep_exact_rgba_and_two_dimensional_edges() {
+        let source = [1, 2, 3, 255, 5, 6, 7, 250, 9, 10, 11, 240, 13, 14, 15, 230];
+        let mut output = Vec::new();
+        nearest_rgba_2x(&source, 2, 2, &mut output);
+        assert_eq!(output.len(), 4 * 4 * 4);
+        for y in 0..4 {
+            for x in 0..4 {
+                let from = (y / 2 * 2 + x / 2) * 4;
+                let at = (y * 4 + x) * 4;
+                assert_eq!(&output[at..at + 4], &source[from..from + 4]);
+            }
+        }
+        nearest_rgba_2x(&[], 2, 2, &mut output);
+        assert!(output.is_empty());
+    }
+}
+
 #[wasm_bindgen]
 pub struct WebGame {
     machine: Machine,
@@ -153,7 +197,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v48".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v49".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -498,11 +542,16 @@ impl WebGame {
                     self.hd_renderer.set_translation_screen(selected);
                     let (width, height) = {
                         let frame = self.machine.frame();
-                        self.classic_zh_pixels.extend_from_slice(
-                            bytemuck::cast_slice(frame.pixels),
+                        let width = frame.size.width as usize;
+                        let height = frame.size.height as usize;
+                        nearest_rgba_2x(
+                            bytemuck::cast_slice(frame.pixels), width, height,
+                            &mut self.classic_zh_pixels,
                         );
-                        (frame.size.width as usize, frame.size.height as usize)
+                        (width * 2, height * 2)
                     };
+                    // Sharper Traditional Chinese at 2x, over unmodified
+                    // nearest-neighbour source pixels, without HD rendering.
                     self.native_painted = self.hd_renderer.paint_classic_translation(
                         log, &mut self.classic_zh_pixels, width, height,
                     );
@@ -894,11 +943,17 @@ impl WebGame {
 
     pub fn width(&self) -> u32 {
         if self.hd_active() { return self.hd_width; }
+        if self.classic_zh_enabled && !self.classic_zh_pixels.is_empty() {
+            return self.machine.frame().size.width * 2;
+        }
         self.machine.frame().size.width
     }
 
     pub fn height(&self) -> u32 {
         if self.hd_active() { return self.hd_height; }
+        if self.classic_zh_enabled && !self.classic_zh_pixels.is_empty() {
+            return self.machine.frame().size.height * 2;
+        }
         self.machine.frame().size.height
     }
 
