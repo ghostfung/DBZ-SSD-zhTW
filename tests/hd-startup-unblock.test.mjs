@@ -16,7 +16,7 @@ test('startup shows a distinct stage and restores button on WASM failure',()=>{
 
 test('WASM uses proven wasm-pack URL loader, not WebKit intercepted Response',()=>{
  const app=source('web/app.mjs'),sw=source('web/service-worker.js');
- assert.match(app,/ssd_web\.js\?build=v50/);
+ assert.match(app,/ssd_web\.js\?build=v51/);
  assert.match(app,/ssd_web_bg\.wasm\?build=v51/);
  assert.match(app,/mod\.default\(\{module_or_path:wasmUrl\}\)/);
  assert.doesNotMatch(app,/module_or_path:wasmResponse/);
