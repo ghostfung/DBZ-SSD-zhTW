@@ -33,7 +33,7 @@ fn block_is_live(wram: &[u8]) -> bool {
 fn set_hooks(machine: &mut Machine, enabled: bool) {
     if enabled {
         if machine.hook_table().is_some_and(|table| {
-            ALLOWED_HOOKS.iter().all(|name| table.entries().any(|entry| &entry.name == name))
+            ALLOWED_HOOKS.iter().all(|name| table.entries().any(|entry| entry.name == *name))
         }) {
             return;
         }
@@ -117,7 +117,8 @@ pub fn configure(machine: &mut Machine, before: Cheats, after: Cheats) -> Result
     }
     set_hooks(machine, true);
     if block_is_live(machine.wram()) {
-        apply_events(machine, engine::settings_events(&after, machine.wram()))?;
+        let events = engine::settings_events(&after, machine.wram());
+        apply_events(machine, events)?;
     } else {
         apply_events(machine, engine::block_events(&after))?;
     }
@@ -128,7 +129,8 @@ pub fn configure(machine: &mut Machine, before: Cheats, after: Cheats) -> Result
 /// cadence via these frame events; simply installing hooks isn't enough.
 pub fn before_frame(machine: &mut Machine, current: Cheats) -> Result<(), String> {
     if !current.is_neutral() {
-        apply_events(machine, engine::frame_events(machine.wram()))?;
+        let events = engine::frame_events(machine.wram());
+        apply_events(machine, events)?;
     }
     Ok(())
 }
