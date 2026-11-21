@@ -65,6 +65,6 @@ test('mobile menu pauses gameplay, preserves sound recovery and resumes after cl
   assert.match(app,/refreshCheatPanel\('讀取進度成功；作弊設定已自動關閉'\)/);
   assert.match(css,/\.cheats-modal\{/);
   assert.match(css,/overscroll-behavior:contain/);
-  assert.match(html,/app\.mjs\?build=v50&ui=v52/);
+  assert.match(html,/app\.mjs\?build=v50&ui=v53/);
   assert.match(wasm,/dbz-hd-tw-pwa-v50/);
 });
