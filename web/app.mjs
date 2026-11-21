@@ -16,9 +16,10 @@ import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v49';
+const BUILD_ID='dbz-hd-tw-pwa-v50';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
+let cheatPanelOpen = false;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
@@ -202,6 +203,64 @@ function gameToast(message){
   toastTimeout=setTimeout(()=>{toast.hidden=true;},2800);
 }
 
+// Cheats are owned by the active WASM machine; never inferred from UI state.
+function refreshCheatPanel(message='') {
+  if(!game) return;
+  const state=JSON.parse(game.cheat_state());
+  for(const control of document.querySelectorAll('[data-cheat]')){
+    const value=state[control.dataset.cheat];
+    if(control.type==='checkbox')control.checked=Boolean(value);
+    else control.value=String(value);
+  }
+  $('cheat-feedback').textContent=message||
+    (state.active===0?'全部關閉 · 原版遊戲規則':
+      '已啟用 '+state.active+' 項 · 戰鬥中不能調整');
+}
+function openCheatPanel(){
+  if(!game||cheatPanelOpen)return;
+  cheatPanelOpen=true;
+  held=0;
+  if(running){running=false;cancelAnimationFrame(raf);}
+  sound.reset();
+  $('cheats-panel').hidden=false;
+  refreshCheatPanel();
+  $('cheat-close').focus({preventScroll:true});
+}
+function closeCheatPanel(){
+  if(!cheatPanelOpen)return;
+  cheatPanelOpen=false;
+  $('cheats-panel').hidden=true;
+  if(game&&!document.hidden&&!running){
+    running=true;lastTick=0;accumulator=0;
+    raf=requestAnimationFrame(requestFrame);
+  }
+  $('cheat-open').focus({preventScroll:true});
+}
+$('cheat-open').addEventListener('click',openCheatPanel);
+$('cheat-close').addEventListener('click',closeCheatPanel);
+$('cheat-done').addEventListener('click',closeCheatPanel);
+for(const control of document.querySelectorAll('[data-cheat]')){
+  control.addEventListener('change',()=>{
+    if(!game)return;
+    try{
+      const value=control.type==='checkbox'?String(control.checked):control.value;
+      game.set_cheat_option(control.dataset.cheat,value);
+      refreshCheatPanel();
+    }catch(error){
+      refreshCheatPanel('操作未套用：'+(error?.message||String(error)));
+    }
+  });
+}
+$('cheat-reset').addEventListener('click',()=>{
+  if(!game)return;
+  try{
+    game.set_cheat_option('reset','all');
+    refreshCheatPanel('作弊已全部關閉');
+  }catch(error){
+    refreshCheatPanel('無法重設：'+(error?.message||String(error)));
+  }
+});
+
 function unlockAudio() {
   // Calling resume() before the first await is required for Safari's user-gesture policy.
   const promise = sound.enable();
@@ -312,12 +371,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v49');
+    const mod = await import('./pkg/ssd_web.js?build=v50');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v49',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v50',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
@@ -416,6 +475,7 @@ $('start').addEventListener('click', async () => {
     livePortraits.attach(game);
     if (sound.enabled && sound.state === 'running') game.set_audio_rate(sound.sampleRate);
     soundUi();
+    refreshCheatPanel();
     $('setup').classList.remove('launching');
     $('setup').hidden = true;
     $('game').hidden = false;
@@ -845,8 +905,17 @@ $('hd-toggle').addEventListener('click', () => {
   liveMode7.pulse();
 });
 const keyToBit={KeyZ:0,KeyX:8,KeyA:1,KeyS:9,ArrowUp:4,ArrowDown:5,ArrowLeft:6,ArrowRight:7,Enter:3,ShiftRight:2};
-window.addEventListener('keydown',e=>{if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}});
-window.addEventListener('keyup',e=>{if(keyToBit[e.code]!==undefined){held&=~(1<<keyToBit[e.code]);e.preventDefault();}});
+window.addEventListener('keydown',e=>{
+  if(cheatPanelOpen){
+    if(e.code==='Escape'){e.preventDefault();closeCheatPanel();}
+    return;
+  }
+  if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}
+});
+window.addEventListener('keyup',e=>{
+  if(cheatPanelOpen)return;
+  if(keyToBit[e.code]!==undefined){held&=~(1<<keyToBit[e.code]);e.preventDefault();}
+});
 for(const btn of document.querySelectorAll('button[data-bit]')) {
   const bit=+btn.dataset.bit, active=new Set();
   btn.addEventListener('pointerdown',e=>{e.preventDefault();active.add(e.pointerId);held|=1<<bit;btn.classList.add('pressed');btn.setPointerCapture(e.pointerId);});
@@ -868,7 +937,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
@@ -892,7 +961,7 @@ document.addEventListener('visibilitychange',()=>{
     held=0;sound.reset();
     offerManualSoundRecovery=Boolean(sound.enabled);
   }else if(!document.hidden&&game){
-    if(!running){
+    if(!running&&!cheatPanelOpen){
       running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
     }
     offerManualSoundRecovery=Boolean(sound.enabled);
@@ -918,6 +987,7 @@ $('state-file').addEventListener('change',async e=>{
   if(!game||!file)return;
   try {
     game.load_state(new Uint8Array(await file.arrayBuffer()));
+    refreshCheatPanel('讀取進度成功；作弊設定已自動關閉');
     hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
     storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
     fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
