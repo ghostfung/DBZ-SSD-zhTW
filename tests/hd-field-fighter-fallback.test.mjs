@@ -13,13 +13,17 @@ test('cutscene fallback uses bounded upstream field reconstruction, not old-fram
   assert.match(native,/fields\.len\(\) > 12/,'bounded OAM grouping on iPhone');
   assert.match(native,/!log\.vram_writes\.is_empty\(\) \|\| !log\.oam_writes\.is_empty\(\)/);
   assert.match(native,/has_art\(pose\.key, pose\.w as u16, pose\.h as u16\)/);
-  assert.match(matcher,/if self\.active\.is_empty\(\) \{/);
+  assert.match(matcher,/self\.should_try_refinement\(missing_oam\)/);
   assert.match(matcher,/ssd_hd::live_field_fighter_poses\(log,&mut has_battle_art\)/);
   assert.match(matcher,/entries\[i\]\.id\.starts_with\("battle-"\)/);
   assert.match(matcher,/entries\[i\]\.id\.starts_with\("field-fg-"\)/);
-  assert.match(matcher,/choose_pose\(&self\.entries,indices,&pose\)/);
-  assert.match(matcher,/owned & pose\.oam_bits/);
+  assert.match(matcher,/choose_pose\(&self\.entries,\s*indices,\s*&pose\)/);
+  assert.match(matcher,/pose\.oam_bits & \*owned/);
   assert.doesNotMatch(matcher,/last_hd|last_pose|retain_previous/i);
+  assert.match(matcher,/had_primary && pose\.oam_bits & missing_oam == 0/);
+  assert.match(matcher,/fallback_accepted \+= 1/);
+  assert.match(matcher,/source_key_unmatched/);
+  assert.match(matcher,/palette_mismatch/);
 });
 
 test('scene report includes only compact verified source hashes and fallback counters',()=>{
