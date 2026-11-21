@@ -1,5 +1,5 @@
 import {inspectRom} from './rom-check.mjs';
-import {SnesAudio} from './audio.mjs';
+import {SnesAudio} from './audio.mjs?build=v49';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
 import {StoryFrameGate} from './story-frame-gate.mjs';
