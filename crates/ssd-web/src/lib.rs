@@ -18,6 +18,8 @@ mod live_mode7;
 mod live_portraits;
 mod hd_profile;
 mod hd_luma;
+mod cheat_bridge;
+use ssd_menus::cheats::Cheats;
 use hd_profile::Profile;
 use live_portraits::LivePortraits;
 use live_bg::LiveBackgrounds;
@@ -107,6 +109,7 @@ mod classic_zh_pixel_tests {
 pub struct WebGame {
     machine: Machine,
     audio: AudioFrame,
+    cheats: Cheats,
     rom: Vec<u8>,
     translation: Option<Translation>,
     native_overlay: Option<Arc<TextOverlay>>,
@@ -171,7 +174,7 @@ impl WebGame {
         machine.set_audio_frequency(48_000);
         let text_font = HdFont::standard(&rom).ok().map(Arc::new);
         let hd_renderer = tracked_renderer(text_font.clone(), None);
-        Ok(Self { machine, audio: AudioFrame::default(), rom, translation: None,
+        Ok(Self { machine, audio: AudioFrame::default(), cheats: Cheats::neutral(), rom, translation: None,
             native_overlay: None, native_page_hint: None, native_painted: false,
             native_page_key: None, native_late_page: false,
             recent_pages: Vec::new(), native_visible_fallback: false,
@@ -197,7 +200,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v49".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v50".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -207,6 +210,20 @@ impl WebGame {
         self.machine.set_audio_frequency(u64::from(hz));
         self.audio.samples.clear();
         Ok(())
+    }
+
+    /// Query the first-phase gameplay cheats. Never exposes ROM, RAM or save data.
+    pub fn cheat_state(&self) -> String { cheat_bridge::status(self.cheats) }
+
+    /// Apply only the upstream's whitelisted gameplay settings. Changes are
+    /// limited to the running session and are not embedded in exported states.
+    pub fn set_cheat_option(&mut self, key: &str, value: &str) -> Result<String, JsValue> {
+        let next = cheat_bridge::choose(self.cheats, key, value)
+            .map_err(|err| JsValue::from_str(&err))?;
+        cheat_bridge::configure(&mut self.machine, self.cheats, next)
+            .map_err(|err| JsValue::from_str(&err))?;
+        self.cheats = next;
+        Ok(cheat_bridge::status(self.cheats))
     }
 
     /// The bit layout is given by ssd_oracle::input::JOYPAD_BUTTONS.
@@ -232,6 +249,8 @@ impl WebGame {
         // Sample one frame in eight: timings are local-only, never sent.
         let profile_on=self.hd_enabled && self.machine.frame_count()%8==0;
         let mut profile_clock=if profile_on{hd_profile::now()}else{0.0};
+        cheat_bridge::before_frame(&mut self.machine, self.cheats)
+            .map_err(|err| JsValue::from_str(&format!("作弊設定執行失敗：{err}")))?;
         self.machine.run_frame(joypad_from_bits(joypad_bits), &mut self.audio)
             .map_err(|err| JsValue::from_str(&format!("遊戲執行失敗：{err}")))?;
         self.hd_profile.mark(hd_profile::EMU,profile_on,&mut profile_clock);
@@ -1002,6 +1021,12 @@ impl WebGame {
         self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         self.machine.load_state(state)
-            .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))
+            .map_err(|err| JsValue::from_str(&format!("讀取存檔失敗：{err}")))?;
+        // Existing .sav files remain byte-for-byte compatible. Never inherit
+        // a stale cheat block or an unknown script-battle gate from a state.
+        self.cheats = Cheats::neutral();
+        cheat_bridge::clear_after_state_load(&mut self.machine)
+            .map_err(|err| JsValue::from_str(&format!("重設作弊設定失敗：{err}")))?;
+        Ok(())
     }
 }
