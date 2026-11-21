@@ -14,6 +14,7 @@ export class WebGame {
     browser_build_tag(): string;
     card_matches(): string;
     card_probe(): string;
+    classic_zh_mode(): boolean;
     /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
@@ -104,6 +105,11 @@ export class WebGame {
      * the ROM's PPU palettes (base and roles).
      */
     set_card_index(json: string): number;
+    /**
+     * Render real PPU pixels at 1x, with Traditional Chinese drawn by the
+     * existing glyph-matched translator. No HD artwork is required.
+     */
+    set_classic_zh_mode(enabled: boolean): void;
     set_fighter_art(index: number, width: number, height: number, rgba: Uint8Array): void;
     /**
      * A/B compare exact same battle frame with background HD left on.
@@ -179,6 +185,7 @@ export interface InitOutput {
     readonly webgame_browser_build_tag: (a: number) => [number, number];
     readonly webgame_card_matches: (a: number) => [number, number];
     readonly webgame_card_probe: (a: number) => [number, number];
+    readonly webgame_classic_zh_mode: (a: number) => number;
     readonly webgame_current_dialogue: (a: number) => [number, number];
     readonly webgame_drain_audio: (a: number) => [number, number];
     readonly webgame_fighter_matches: (a: number) => [number, number];
@@ -217,6 +224,7 @@ export interface InitOutput {
     readonly webgame_set_card_art: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly webgame_set_card_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_card_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_classic_zh_mode: (a: number, b: number) => void;
     readonly webgame_set_fighter_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_fighter_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_fighter_index: (a: number, b: number, c: number) => [number, number, number];

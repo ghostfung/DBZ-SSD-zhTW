@@ -76,6 +76,13 @@ export class WebGame {
         }
     }
     /**
+     * @returns {boolean}
+     */
+    classic_zh_mode() {
+        const ret = wasm.webgame_classic_zh_mode(this.__wbg_ptr);
+        return ret !== 0;
+    }
+    /**
      * Returns the original translator's keyed dialogue as JSON for testing.
      * This does not redraw the SNES picture: the companion browser UI displays
      * a non-destructive Chinese subtitle until the HD overlay is ported.
@@ -514,6 +521,14 @@ export class WebGame {
             throw takeFromExternrefTable0(ret[1]);
         }
         return ret[0] >>> 0;
+    }
+    /**
+     * Render real PPU pixels at 1x, with Traditional Chinese drawn by the
+     * existing glyph-matched translator. No HD artwork is required.
+     * @param {boolean} enabled
+     */
+    set_classic_zh_mode(enabled) {
+        wasm.webgame_set_classic_zh_mode(this.__wbg_ptr, enabled);
     }
     /**
      * @param {number} index
