@@ -169,7 +169,7 @@ test('offline worker reads active version only, serves cached navigation without
 test('malformed release manifest refuses an upgrade; existing offline cache stays safe',async()=>{
   const mock=mockStore();await install(mock);
   const check=await checkReleaseOnceDaily({storage:mock.storage,root:ROOT,
-    now:()=>90_000_000,fetcher:async()=>new Response(JSON.stringify({
+    now:()=>90_000_000,online:()=>true,fetcher:async()=>new Response(JSON.stringify({
       version:'v61',wasmSize:OFFLINE_WASM_SIZE,
       files:['index.html','../external-script.js','pkg/ssd_web_bg.wasm']
     }),{status:200})});
