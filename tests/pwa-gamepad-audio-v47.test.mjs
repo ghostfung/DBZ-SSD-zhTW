@@ -29,7 +29,8 @@ test('file-state restore resumes Safari sound and offers manual recovery on deni
   assert.equal([...html.matchAll(/id="sound"/g)].length,1);
   assert.match(html,/id="sound" type="button" hidden/);
   assert.match(app,/async function restoreAudioAfterInterruption/);
-  assert.match(app,/game\.load_state\(new Uint8Array/);
+  assert.ok(app.includes('game.load_state(bytes)'));
+  assert.ok(app.includes('await applyLoadedSave(new Uint8Array'));
   assert.match(app,/const restored=await restoreAudioAfterInterruption\(\)/);
   assert.match(app,/game\.set_audio_rate\(sound\.sampleRate\)/);
   assert.match(app,/document\.addEventListener\('visibilitychange'/);
