@@ -428,3 +428,51 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
  .save-slots-list{max-height:min(45dvh,275px)}
  .playing #game .playbar{grid-template-rows:repeat(5,minmax(0,auto))}
 }
+
+
+/* v56: one physically reparented speed button. Portrait: above Start.
+   Landscape: above the directional pad, never over the game picture.
+   Existing SNES bits and all controller positions stay unchanged. */
+.playing #game .start-speed-stack{display:block;position:relative;min-width:0}
+.playing #game .start-speed-stack>.playbar-key{display:block;width:100%;height:100%}
+.playing #game .dpad{position:relative}
+.playing #game .speed-portrait-anchor{
+  position:absolute;bottom:calc(100% + 5px);left:50%;
+  transform:translateX(-50%);width:max-content;z-index:5;
+  display:flex;justify-content:center;align-items:center
+}
+.playing #game .speed-landscape-anchor{display:none}
+.playing #game #speed-toggle{
+  display:block;width:76px;max-width:100%;
+  min-height:27px;height:27px;padding:3px 8px;
+  background:#365f75;border:1px solid #81a4b8;border-radius:8px;
+  color:#fff;font-weight:750;font-size:11px;line-height:1.15;
+  touch-action:manipulation;white-space:nowrap;user-select:none;
+  -webkit-user-select:none;
+}
+.playing #game #speed-toggle[data-speed="1.5"],
+.playing #game #speed-toggle[data-speed="2"]{
+  background:#8a531e;border-color:#d5a252
+}
+.speed-update-sheet{width:min(100%,450px)}
+#speed-update-description{font-size:.9rem;line-height:1.8;white-space:pre-line}
+#speed-update-close{background:#335f9d;min-height:44px}
+
+@media (orientation:portrait){
+  /* Reserve a finger-height slot, so speed button never overlaps D-pad. */
+  .playing #game .playbar{margin:clamp(37px,4.6dvh,44px) auto 0}
+  .playing #game .screen{
+    max-height:min(calc(100dvh - 455px),calc(100vw * 478 / 512))
+  }
+}
+@media (orientation:landscape) and (max-height:650px){
+  .playing #game .speed-portrait-anchor{display:none}
+  .playing #game .speed-landscape-anchor{
+    display:flex;position:absolute;
+    bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);
+    z-index:6;width:76px;justify-content:center;align-items:center;
+  }
+  .playing #game .start-speed-stack>.playbar-key{min-height:28px;height:auto}
+  .playing #game #speed-toggle{width:76px;min-height:28px;height:28px;font-size:11px;padding:2px 6px}
+  .playing #game .playbar{margin:0}
+}
