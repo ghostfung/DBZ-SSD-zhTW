@@ -698,6 +698,106 @@ mod tests {
             key:0xabcd,x:1,y:1,width:2,height:2,oam_bits:1<<5,colours,
         }
     }
+
+    fn goku_collision_catalog(extra_id:&str) -> String {
+        let mut pal=vec![serde_json::Value::Null;16];
+        pal[1]=serde_json::json!([255,0,0]);
+        pal[2]=serde_json::json!([0,255,0]);
+        serde_json::json!([
+            {"id":"battle-goku-000","key":"abcd","width":2,"height":2,
+             "art":"class2/normal.png","available":true,"palette":pal},
+            {"id":"battle-goku-ssj-000","key":"abcd","width":2,"height":2,
+             "art":"class2/super.png","available":true,"palette":pal},
+            {"id":extra_id,"key":"abcd","width":2,"height":2,
+             "art":"class2/extra.png","available":true,"palette":pal}
+        ]).to_string()
+    }
+    fn goku_roster(normal:bool,super_saiyan:bool)->Vec<u8>{
+        let mut wram=vec![0_u8;0x20000];
+        let at=(ssd_game::data::PARTY_RECORDS & 0xffff) as usize;
+        if normal {
+            wram[at]=0xc0;
+            wram[at+1]=0;
+            wram[at+0x1c]=0;
+        }
+        if super_saiyan {
+            wram[at+0x20]=0xc0;
+            wram[at+0x21]=0x3b;
+        }
+        wram
+    }
+
+    #[test]
+    fn active_roster_is_required_and_unknown_or_conflicting_form_is_rejected(){
+        assert_eq!(goku_form_from_wram(&[]),None);
+        assert_eq!(goku_form_from_wram(&vec![0;0x20000]),None);
+        assert_eq!(goku_form_from_wram(&goku_roster(true,false)),Some(GokuForm::Normal));
+        assert_eq!(goku_form_from_wram(&goku_roster(false,true)),Some(GokuForm::SuperSaiyan));
+        assert_eq!(goku_form_from_wram(&goku_roster(true,true)),None);
+        let mut inactive=goku_roster(true,false);
+        let at=(ssd_game::data::PARTY_RECORDS & 0xffff) as usize;
+        inactive[at]=0x40;
+        assert_eq!(goku_form_from_wram(&inactive),None);
+        let mut not_goku=goku_roster(true,false);
+        not_goku[at+0x1c]=3;
+        assert_eq!(goku_form_from_wram(&not_goku),None);
+    }
+
+    #[test]
+    fn real_reported_three_way_collision_chooses_only_verified_goku_form(){
+        let mut live=LiveFighters::default();
+        live.load_catalog(&goku_collision_catalog("field-goku-ki-001")).unwrap();
+        let current=pose();
+        let indices=live.lookup.get(&0xabcd).unwrap().clone();
+        assert_eq!(pose_rejection_reason(&live.entries,&indices,&current),"ambiguous_palette");
+        assert_eq!(choose_pose(&live.entries,&indices,&current),None);
+        assert_eq!(choose_pose_for(&live.entries,&indices,&current,Some(GokuForm::Normal)),Some(0));
+        assert_eq!(choose_pose_for(&live.entries,&indices,&current,Some(GokuForm::SuperSaiyan)),Some(1));
+        assert_eq!(choose_pose_for(&live.entries,&indices,&current,None),None);
+        live.goku_form=goku_form_from_wram(&goku_roster(true,false));
+        let mut owned=0;
+        assert!(live.accept_primary(current.clone(),&mut owned));
+        assert_eq!(live.entries[live.active[0].index].id,"battle-goku-000");
+        assert_eq!(live.goku_ambiguities_resolved,1);
+        assert_eq!(live.probe_json().contains("\\"gokuAmbiguitiesResolved\\":1"),true);
+        // No Goku unit evidence: do not render from catalogue order.
+        live.active.clear();
+        live.goku_form=None;
+        owned=0;
+        assert!(!live.accept_primary(current,&mut owned));
+        assert_eq!(owned,0);
+    }
+
+    #[test]
+    fn non_goku_or_multiple_goku_collision_keeps_original_sprite(){
+        let mut live=LiveFighters::default();
+        live.load_catalog(&goku_collision_catalog("battle-piccolo-000")).unwrap();
+        let ix=live.lookup.get(&0xabcd).unwrap();
+        assert_eq!(choose_pose_for(&live.entries,ix,&pose(),Some(GokuForm::Normal)),None);
+        live.load_catalog(&goku_collision_catalog("battle-goku-001")).unwrap();
+        let ix=live.lookup.get(&0xabcd).unwrap();
+        assert_eq!(choose_pose_for(&live.entries,ix,&pose(),Some(GokuForm::Normal)),None);
+        // No change to single-asset or non-Goku exact matching.
+        live.load_catalog(&entry()).unwrap();
+        assert_eq!(choose_pose_for(&live.entries,&[0],&pose(),None),Some(0));
+    }
+
+    #[test]
+    fn visible_palette_wins_over_stale_party_unit_during_transformation(){
+        let mut live=LiveFighters::default();
+        let raw=goku_collision_catalog("field-goku-ki-001");
+        let mut catalog:serde_json::Value=serde_json::from_str(&raw).unwrap();
+        // Both can pass the original RGB tolerance, but the visible pixels
+        // are strictly nearer the normal palette in this transition frame.
+        catalog[1]["palette"][1]=serde_json::json!([255,0,3]);
+        live.load_catalog(&catalog.to_string()).unwrap();
+        let indices=live.lookup.get(&0xabcd).unwrap();
+        assert_eq!(choose_pose_for(&live.entries,indices,&pose(),Some(GokuForm::SuperSaiyan)),Some(0));
+        let mut super_frame=pose();
+        super_frame.colours[1]=[255,0,3];
+        assert_eq!(choose_pose_for(&live.entries,indices,&super_frame,Some(GokuForm::Normal)),Some(1));
+    }
+
     #[test]
     fn catalogue_rejects_unsafe_paths_and_unknown_palette() {
         let mut live=LiveFighters::default();
