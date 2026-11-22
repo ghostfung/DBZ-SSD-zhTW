@@ -2,7 +2,7 @@ name: DBZ iPhone Web POC (WASM)
 
 on:
   push:
-    branches: [iphone-web-poc, iphone-hd-integration-batch, feature-classic-zh-lite, feature-phase1-cheats, feature-cheats-persistence, feature-hd-fighter-diagnostics, feature-hd-fighter-multimatch, feature-hd-goku-identity-v52]
+    branches: [iphone-web-poc, iphone-hd-integration-batch, feature-classic-zh-lite, feature-phase1-cheats, feature-cheats-persistence, feature-hd-fighter-diagnostics, feature-hd-fighter-multimatch, feature-hd-goku-identity-v52, feature-hd-goku-candidates-v53]
     paths:
       - 'crates/ssd-web/**'
       - 'crates/ssd-hd/**'
@@ -103,7 +103,7 @@ jobs:
           git commit -m "ci(iphone): record failed portrait build [skip ci]"
           git push origin HEAD:iphone-web-poc
       - name: Publish compiled browser package to isolated test branch
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/iphone-web-poc' || github.ref == 'refs/heads/iphone-hd-integration-batch' || github.ref == 'refs/heads/feature-classic-zh-lite' || github.ref == 'refs/heads/feature-phase1-cheats' || github.ref == 'refs/heads/feature-cheats-persistence' || github.ref == 'refs/heads/feature-hd-fighter-diagnostics' || github.ref == 'refs/heads/feature-hd-fighter-multimatch' || github.ref == 'refs/heads/feature-hd-goku-identity-v52')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/iphone-web-poc' || github.ref == 'refs/heads/iphone-hd-integration-batch' || github.ref == 'refs/heads/feature-classic-zh-lite' || github.ref == 'refs/heads/feature-phase1-cheats' || github.ref == 'refs/heads/feature-cheats-persistence' || github.ref == 'refs/heads/feature-hd-fighter-diagnostics' || github.ref == 'refs/heads/feature-hd-fighter-multimatch' || github.ref == 'refs/heads/feature-hd-goku-identity-v52' || github.ref == 'refs/heads/feature-hd-goku-candidates-v53')
         run: |
           set -euo pipefail
           test -s web/pkg/ssd_web_bg.wasm
@@ -114,7 +114,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Another edit may have landed while wasm was compiling; never publish an older build.
-          test "$GITHUB_REF_NAME" = 'iphone-web-poc' || test "$GITHUB_REF_NAME" = 'iphone-hd-integration-batch' || test "$GITHUB_REF_NAME" = 'feature-classic-zh-lite' || test "$GITHUB_REF_NAME" = 'feature-phase1-cheats' || test "$GITHUB_REF_NAME" = 'feature-cheats-persistence' || test "$GITHUB_REF_NAME" = 'feature-hd-fighter-diagnostics' || test "$GITHUB_REF_NAME" = 'feature-hd-fighter-multimatch' || test "$GITHUB_REF_NAME" = 'feature-hd-goku-identity-v52'
+          test "$GITHUB_REF_NAME" = 'iphone-web-poc' || test "$GITHUB_REF_NAME" = 'iphone-hd-integration-batch' || test "$GITHUB_REF_NAME" = 'feature-classic-zh-lite' || test "$GITHUB_REF_NAME" = 'feature-phase1-cheats' || test "$GITHUB_REF_NAME" = 'feature-cheats-persistence' || test "$GITHUB_REF_NAME" = 'feature-hd-fighter-diagnostics' || test "$GITHUB_REF_NAME" = 'feature-hd-fighter-multimatch' || test "$GITHUB_REF_NAME" = 'feature-hd-goku-identity-v52' || test "$GITHUB_REF_NAME" = 'feature-hd-goku-candidates-v53'
           git fetch --no-tags origin "$GITHUB_REF_NAME"
           latest="$(git rev-parse FETCH_HEAD)"
           if [ "$GITHUB_SHA" != "$latest" ]; then
