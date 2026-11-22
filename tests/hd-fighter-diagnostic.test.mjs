@@ -31,7 +31,7 @@ test('bounded sampling records only at 5 Hz and auto stops by duration',()=>{
   game.step();
   assert.equal(trace.capture(game,options,1100),false);
   assert.equal(trace.recording,false);
-  const report=trace.report({build:'dbz-hd-tw-pwa-v51'});
+  const report=trace.report({build:'dbz-hd-tw-pwa-v52'});
   assert.equal(report.summary.sampleCount,3);
   assert.equal(report.summary.categoryCounts.source_key_unmatched,3);
   assert.equal(report.summary.unindexedSourceKeys[0].key,'abcdef0123456789/32x48');
@@ -125,8 +125,8 @@ test('records rejected Goku candidate while matched Saibaman still paints HD',()
   t.start(0);
   t.capture(g,options,0);
   g.step();t.capture(g,options,205);
-  const report=t.report({build:'dbz-hd-tw-pwa-v51'});
-  assert.equal(report.format,'fighter-pose-trace-v2');
+  const report=t.report({build:'dbz-hd-tw-pwa-v52'});
+  assert.equal(report.format,'fighter-pose-trace-v3');
   assert.equal(report.summary.sampleCount,2);
   assert.equal(report.summary.partialMatches,2);
   assert.equal(report.summary.samplesWithRejectedPoses,2);
@@ -159,6 +159,46 @@ test('sanitizes rejected-pose evidence, refuses paths and caps samples',()=>{
   assert.ok(payload.length<30_000);
 });
 
+
+test('Goku collision resolution and evidence are sanitized and counted without exposing roster RAM',()=>{
+  const g=fakeGame({
+    probe:{
+      poses:2,keyHits:2,matched:2,
+      gokuAmbiguitiesResolved:1,gokuFormEvidence:'normal',
+      rejectedPoses:[],fallbackAccepted:0
+    },
+    matches:[
+      {id:'battle-goku-000',key:'732890cac370e639',ready:true,luma:false,width:50,height:48},
+      {id:'battle-saibaman-001',key:'0abc5ab8b0bee7b0',ready:true,luma:false,width:34,height:32}
+    ],
+    pixels:1290
+  });
+  const t=new HdFighterDiagnostic();t.start(0);
+  t.capture(g,options,0);g.step();t.capture(g,options,201);
+  const report=t.report({build:'dbz-hd-tw-pwa-v52'});
+  assert.equal(report.format,'fighter-pose-trace-v3');
+  assert.equal(report.summary.gokuAmbiguitiesResolvedAcrossSamples,2);
+  assert.equal(report.summary.gokuFormEvidenceCounts.normal,2);
+  assert.equal(report.summary.gokuFormEvidenceCounts.super,0);
+  assert.equal(report.summary.rejectionReasons.ambiguous_palette,undefined);
+  assert.equal(report.samples[0].probe.gokuFormEvidence,'normal');
+  assert.equal(report.samples[0].probe.gokuAmbiguitiesResolved,1);
+  assert.deepEqual(report.samples[0].matches.map(x=>x.id),['battle-goku-000','battle-saibaman-001']);
+  assert.doesNotMatch(JSON.stringify(report),/partyRecords|wram|characterId|0x0B00/i);
+});
+test('untrusted Goku form evidence never leaks arbitrary data into exported JSON',()=>{
+  const g=fakeGame({
+    probe:{poses:1,keyHits:1,gokuAmbiguitiesResolved:0,
+      gokuFormEvidence:'../../../secrets'},
+    matches:[],pixels:0
+  });
+  const t=new HdFighterDiagnostic();t.start(0);t.capture(g,options,0);
+  const report=t.report();
+  assert.equal(report.samples[0].probe.gokuFormEvidence,'unknown');
+  assert.equal(report.summary.gokuFormEvidenceCounts.unknown,1);
+  assert.doesNotMatch(JSON.stringify(report),/secrets/);
+});
+
 test('test-only diagnostic UI is reachable from existing game menu without adding a new gamepad key',()=>{
   const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -167,12 +207,12 @@ test('test-only diagnostic UI is reachable from existing game menu without addin
   assert.match(html,/id="fighter-diagnostic-panel"/);
   assert.match(html,/id="fighter-diagnostic-start"/);
   assert.match(html,/id="fighter-diagnostic-export"/);
-  assert.match(html,/app\.mjs\?build=v51&ui=v57/);
+  assert.match(html,/app\.mjs\?build=v52&ui=v58/);
   assert.match(app,/fighterDiagnostic\.capture\(game/);
   assert.match(app,/fighterDiagnostic\.recording/);
   assert.match(app,/const fighterDiagnostic = new HdFighterDiagnostic/);
   assert.match(app,/if\(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen\)/);
-  assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v51\.json'/);
+  assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v52\.json'/);
   assert.match(css,/\.fighter-diagnostic-entry\{/);
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
   assert.doesNotMatch(playbar,/fighter-diagnostic/);
