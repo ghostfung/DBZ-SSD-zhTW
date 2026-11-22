@@ -7,11 +7,11 @@ import {SnesAudio} from '../web/audio.mjs';
 const src=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const STEP=1000/60.0988;
 
-test('single speed button cycles 1x -> 1.5x -> 2x -> 1x',()=>{
-  assert.deepEqual(SPEED_LEVELS,[1,1.5,2]);
-  assert.equal(nextSpeed(1),1.5);
-  assert.equal(nextSpeed(1.5),2);
-  assert.equal(nextSpeed(2),1);
+test('single speed button cycles 1x -> 2x -> 3x -> 1x',()=>{
+  assert.deepEqual(SPEED_LEVELS,[1,2,3]);
+  assert.equal(nextSpeed(1),2);
+  assert.equal(nextSpeed(2),3);
+  assert.equal(nextSpeed(3),1);
   assert.equal(nextSpeed(999),1);
 });
 
@@ -28,26 +28,26 @@ function simulate(rate,{hz=60.0988,averageTickMs=2,seconds=8}={}){
   }
   return {fps:ticks/seconds,peak,accumulatorMs};
 }
-test('60 Hz display achieves intended 1x 1.5x 2x when emulator is fast',()=>{
-  for(const [rate,target] of [[1,60.0988],[1.5,90.1482],[2,120.1976]]){
+test('60 Hz display achieves intended 1x 2x 3x when emulator is fast',()=>{
+  for(const [rate,target] of [[1,60.0988],[2,120.1976],[3,180.2964]]){
     const out=simulate(rate);
     assert.ok(Math.abs(out.fps-target)<1,JSON.stringify({rate,...out}));
   }
 });
-test('120 Hz display is not mistakenly twice as fast at 1x',()=>{
-  for(const [rate,target] of [[1,60.0988],[1.5,90.1482],[2,120.1976]]){
+test('120 Hz display achieves 1x 2x 3x independently of refresh rate',()=>{
+  for(const [rate,target] of [[1,60.0988],[2,120.1976],[3,180.2964]]){
     const out=simulate(rate,{hz:120});
     assert.ok(Math.abs(out.fps-target)<1,JSON.stringify({rate,...out}));
   }
 });
 test('HD-heavy devices cap work instead of generating an unlimited catchup burst',()=>{
-  const result=simulate(2,{averageTickMs:STEP});
+  const result=simulate(3,{averageTickMs:STEP});
   assert.equal(result.peak,1);
   assert.ok(result.fps<=61);
-  const stale=speedFramePlan({rate:2,gapMs:9000,accumulatorMs:100000,averageTickMs:0,stepMs:STEP});
+  const stale=speedFramePlan({rate:3,gapMs:9000,accumulatorMs:100000,averageTickMs:0,stepMs:STEP});
   assert.ok(stale.ticks<=3);
   assert.ok(stale.remainingMs<=STEP*3);
-  assert.throws(()=>speedFramePlan({rate:3,gapMs:16,accumulatorMs:0}),/不支援/);
+  assert.throws(()=>speedFramePlan({rate:1.5,gapMs:16,accumulatorMs:0}),/不支援/);
 });
 test('fast audio is silent, and restoring 1x preserves enabled AudioContext',()=>{
   const fake=new SnesAudio(null);
@@ -76,7 +76,10 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.match(html,/id="speed-landscape-anchor"/);
   assert.match(html,/id="speed-update-panel"/);
   assert.match(html,/id="speed-update-close"/);
-  assert.match(html,/按一下可依序切換|每按一下可依序切換/);
+  assert.match(html,/新增 10 格存檔、讀取及備份功能/);
+  assert.match(html,/HD 美術包快速啟動，不再每次完整驗證/);
+  assert.match(html,/新增一鍵倍速：1× → 2× → 3×/);
+  assert.doesNotMatch(html,/1\.5×/);
   assert.match(app,/landscapeSpeedPlacement\.matches/);
   assert.match(app,/anchor\.appendChild\(\$\('speed-toggle'\)\)/);
   assert.match(css,/\.playing #game \.speed-portrait-anchor/);
@@ -86,9 +89,13 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.match(app,/localStorage\.getItem\(SPEED_NOTICE_KEY\)/);
   assert.match(app,/localStorage\.setItem\(SPEED_NOTICE_KEY,'1'\)/);
   assert.match(app,/if\(showSpeedUpdateNoticeOnce\(\)\)running=false/);
-  assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-speed-update-v56-seen');
-  assert.match(html,/app\.mjs\?build=v53&ui=v61/);
-  assert.match(html,/style\.css\?build=v50&ui=v58/);
+  const switchHandler=app.slice(app.indexOf("$('speed-toggle').addEventListener"),app.indexOf('function showSpeedUpdateNoticeOnce'));
+  assert.ok(switchHandler.includes('updateSpeedButton()'));
+  assert.doesNotMatch(switchHandler,/gameToast\(/,'speed switching must not paint a toast across the speed button');
+  assert.match(css,/speed-toggle\[data-speed="3"\]/);
+  assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-update-2026-11-22-v56b-seen');
+  assert.match(html,/app\.mjs\?build=v53&ui=v62/);
+  assert.match(html,/style\.css\?build=v50&ui=v59/);
   for(const bit of [0,1,2,3,4,5,6,7,8,9])
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
 });
