@@ -268,7 +268,11 @@ impl LiveFighters {
         }
         *owned |= pose.oam_bits;
         if goku_battle_id(&self.entries[index].id).is_some()
-            && choose_pose(&self.entries,indices,&pose).is_none(){
+            && indices.iter().copied().filter(|&i|{
+                let e=&self.entries[i];
+                !e.luma && e.width==pose.width && e.height==pose.height
+                    && palette_matches(e,&pose)
+            }).take(2).count()>1 {
             self.goku_ambiguities_resolved+=1;
         }
         self.active.push(Matching { index, pose });
@@ -317,7 +321,11 @@ impl LiveFighters {
         }
         *owned |= pose.oam_bits;
         if goku_battle_id(&self.entries[index].id).is_some()
-            && choose_pose(&self.entries,indices,&pose).is_none(){
+            && indices.iter().copied().filter(|&i|{
+                let e=&self.entries[i];
+                !e.luma && e.width==pose.width && e.height==pose.height
+                    && palette_matches(e,&pose)
+            }).take(2).count()>1 {
             self.goku_ambiguities_resolved+=1;
         }
         self.active.push(Matching { index, pose });
