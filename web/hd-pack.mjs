@@ -112,3 +112,43 @@ export async function verifyOfficialPack(file,{onProgress=()=>{},signal}={}) {
     count:zip.count,imageCount:zip.imageCount,manifest:zip.manifest,index:zip.index,
     entries:zip.entries};
 }
+
+
+/**
+ * Reopen an already verified, locally stored official HD pack without hashing
+ * its entire 484 MB again. The OPFS writer only commits metadata after the
+ * initial SHA-256 check and all chunks have been saved.
+ *
+ * readSavedHdPack() independently validates metadata and every chunk length.
+ * We additionally read the ZIP central directory to reject missing/invalid
+ * indexes and mismatched file/image counts. Each extracted asset still checks
+ * its ZIP CRC32 at use time (extractZipEntry).
+ *
+ * This is a trusted-local-receipt fast path, NOT a new full SHA-256 check.
+ */
+export async function restoreOfficialPackFast(file,receipt,{inspect=inspectZip}={}){
+  if(!file || file.size!==OFFICIAL_PACK.bytes ||
+     !receipt || ![1,2].includes(receipt.version) ||
+     receipt.bytes!==OFFICIAL_PACK.bytes ||
+     receipt.sha256!==OFFICIAL_PACK.sha256 ||
+     receipt.name!==OFFICIAL_PACK.name){
+    throw Error('本機 HD 驗證紀錄不相容，須重新完整驗證');
+  }
+  const savedEntries=receipt.version===2?receipt.entries:receipt.count;
+  if(!Number.isSafeInteger(savedEntries)||savedEntries<1||
+     !Number.isSafeInteger(receipt.imageCount)||receipt.imageCount<1){
+    throw Error('本機 HD 索引紀錄不完整，須重新驗證');
+  }
+  // Central directory inspection reads only the ZIP tail and directory,
+  // never scans all compressed image bytes.
+  const zip=await inspect(file);
+  if(zip.count!==savedEntries || zip.imageCount!==receipt.imageCount ||
+     !Array.isArray(zip.entries)||zip.entries.length!==zip.count)
+    throw Error('本機 HD 索引與首次驗證結果不符');
+  return {
+    name:OFFICIAL_PACK.name,version:OFFICIAL_PACK.version,
+    bytes:OFFICIAL_PACK.bytes,sha256:OFFICIAL_PACK.sha256,
+    count:zip.count,imageCount:zip.imageCount,manifest:zip.manifest,index:zip.index,
+    entries:zip.entries,restoreMethod:'trusted-local-index'
+  };
+}
