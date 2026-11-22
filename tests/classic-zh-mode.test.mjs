@@ -37,8 +37,8 @@ test('three-way display selection is persisted and updates both WASM switches',(
   assert.match(app,/game\.set_classic_zh_mode\(classicZhEnabled\)/);
   assert.match(app,/classicZhEnabled\?'中文 1x':'原版'/);
   assert.match(src('web/index.html'),/Classic 繁中 1x/);
-  assert.match(app,/const BUILD_ID='dbz-hd-tw-pwa-v51'/);
-  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v51/);
+  assert.match(app,/const BUILD_ID='dbz-hd-tw-pwa-v52'/);
+  assert.match(src('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v52/);
 });
 
 test('original audio and save-state handlers remain intact',()=>{
