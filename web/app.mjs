@@ -15,10 +15,10 @@ import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
-import {HdFighterDiagnostic} from './hd-fighter-diagnostic.mjs?ui=v3';
+import {HdFighterDiagnostic} from './hd-fighter-diagnostic.mjs?ui=v4';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v52';
+const BUILD_ID='dbz-hd-tw-pwa-v53';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let cheatPanelOpen = false;
@@ -365,7 +365,7 @@ $('fighter-diagnostic-export').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const link=document.createElement('a');
-  link.href=url;link.download='dbz-hd-fighter-diagnostic-v52.json';
+  link.href=url;link.download='dbz-hd-fighter-diagnostic-v53.json';
   document.body.appendChild(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
   refreshFighterDiagnosticUi('已建立診斷 JSON；請從 iPhone「檔案」分享給我分析。');
@@ -481,12 +481,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v52');
+    const mod = await import('./pkg/ssd_web.js?build=v53');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v52',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v53',import.meta.url);
     await mod.default({module_or_path:wasmUrl});
     moduleReady = mod;
     return mod;
