@@ -281,6 +281,12 @@
         <p>記錄悟空／栽培人未套用 HD 的來源鍵值、尺寸、拒絕原因及安全替代匹配結果。不讀取或上傳 ROM、存檔和圖片。</p>
         <button id="fighter-diagnostic-open" type="button" aria-haspopup="dialog" aria-controls="fighter-diagnostic-panel">開啟 HD 人物診斷</button>
       </div>
+      <div class="fighter-diagnostic-entry">
+        <strong>娜美星 HD 頭像閃爍診斷（只讀）</strong>
+        <p>返回娜美星選單，讓頭像閃爍約 10 秒；然後開啟「遊戲修改」，點下面按鈕下載 JSON。無須重新錄影或重匯存檔。</p>
+        <button id="portrait-menu-export" type="button">下載娜美星頭像診斷 JSON</button>
+        <output id="portrait-menu-feedback" role="status" aria-live="polite">尚未下載；資料只保存在手機，按鈕不會上傳任何內容。</output>
+      </div>
       <div class="cheats-actions">
         <button type="button" id="cheat-reset">全部重設</button>
         <button type="button" id="cheat-done">返回遊戲</button>
@@ -308,6 +314,7 @@
   </section>
 
   <script type="module" src="app.mjs?build=v53&ui=v62"></script>
+  <script type="module" src="portrait-menu-diagnostic.mjs?build=v57trace1"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
 </body>
 </html>
