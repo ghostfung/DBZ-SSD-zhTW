@@ -1,27 +1,47 @@
-// v59: cache-first static app shell. NEVER cache users' ROM or HD art.
-const CACHE='dbz-ssd-offline-v59';
-self.addEventListener('install',e=>e.waitUntil(self.skipWaiting()));
-self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
-self.addEventListener('fetch',e=>{
-  const request=e.request;
-  if(request.method!=='GET')return;
-  const uri=new URL(request.url);
-  if(uri.origin!==self.location.origin)return;
-  // WASM is fetched directly (no SW stream interception). Offline engine
-  // passes cached Uint8Array straight to WebAssembly.instantiate().
-  if(uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')||uri.pathname.endsWith('/service-worker.js'))return;
-  if((request.cache==='reload'||request.cache==='no-store')&&request.mode!=='navigate')return;
-  e.respondWith((async()=>{
-    const c=await caches.open(CACHE);
-    const hit=await c.match(request,{ignoreSearch:true});
-    if(hit)return hit;
-    try{return await fetch(request);}
-    catch(err){
-      if(request.mode==='navigate'){
-        const fallback=await c.match(new URL('./index.html',self.registration.scope).href,{ignoreSearch:true});
+// Cache-first, version-neutral offline runtime. Cache pointers move only after
+// complete, validated updates and a player-approved restart. Never read ROMs,
+// save states, IPS or HD ZIP. Direct WASM loading avoids iOS streaming hangs.
+const CONTROL='dbz-ssd-offline-control-v1';
+const DEFAULT='dbz-ssd-offline-v60';
+self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
+self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
+async function activeCache(){
+  try{
+    const control=await caches.open(CONTROL);
+    const response=await control.match(
+      new URL('./__dbz-offline-active__',self.registration.scope).href);
+    if(!response)return DEFAULT;
+    const entry=await response.json();
+    if(typeof entry.version==='string'&&/^v[1-9][0-9]*(?:\\.[0-9]+){0,2}$/.test(entry.version))
+      return 'dbz-ssd-offline-'+entry.version;
+  }catch{}
+  return DEFAULT;
+}
+self.addEventListener('fetch',event=>{
+  const req=event.request;
+  if(req.method!=='GET')return;
+  const url=new URL(req.url);
+  if(url.origin!==self.location.origin)return;
+  // WASM never travels through respondWith() (WebKit previously failed).
+  // Metadata must bypass every offline cache to detect new releases.
+  if(url.pathname.endsWith('/pkg/ssd_web_bg.wasm')||
+     url.pathname.endsWith('/service-worker.js')||
+     url.pathname.endsWith('/offline-release.json'))return;
+  // Installer uses reload to request fresh assets, not old cache entries.
+  // Navigations retain offline fallback even on user-initiated reload.
+  if((req.cache==='reload'||req.cache==='no-store')&&req.mode!=='navigate')return;
+  event.respondWith((async()=>{
+    const cache=await caches.open(await activeCache());
+    const result=await cache.match(req,{ignoreSearch:true});
+    if(result)return result;
+    try{return await fetch(req);}
+    catch(error){
+      if(req.mode==='navigate'){
+        const fallback=await cache.match(
+          new URL('./index.html',self.registration.scope).href,{ignoreSearch:true});
         if(fallback)return fallback;
       }
-      throw err;
+      throw error;
     }
   })());
 });
