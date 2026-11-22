@@ -1,7 +1,7 @@
 // Test-only HD fighter trace. Never records ROM/IPS, save-state, HD images,
 // screenshots, browser identifiers or file paths. All data remains on device
 // until the player explicitly downloads a bounded JSON report.
-export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v3';
+export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v4';
 const SAMPLE_MS = 200; // At most 5 FPS; expensive WASM/JSON probes only while recording.
 const MAX_MS = 60_000;
 const MAX_SAMPLES = 300;
@@ -49,7 +49,13 @@ function safeRejections(input) {
       w:item.w,h:item.h,reason:item.reason,origin:item.origin,
       candidateIds:Array.isArray(item.candidateIds)?
         item.candidateIds.filter(v=>typeof v==='string'&&SAFE_ID.test(v))
-          .slice(0,3):[]
+          .slice(0,8):[],
+      paletteEligibleCount:Number.isInteger(item.paletteEligibleCount)
+        && item.paletteEligibleCount>=0 && item.paletteEligibleCount<=20000
+        ?item.paletteEligibleCount:0,
+      paletteEligibleIds:Array.isArray(item.paletteEligibleIds)?
+        item.paletteEligibleIds.filter(v=>typeof v==='string'&&SAFE_ID.test(v))
+          .slice(0,8):[]
     });
   }
   return cleaned;
