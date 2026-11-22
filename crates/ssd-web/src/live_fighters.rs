@@ -18,6 +18,77 @@ const MAX_REJECTED: usize = 8;
 const MAX_REJECT_CANDIDATES: usize = 3;
 const WIDTH: usize = 256;
 
+/// Identity from active roster records, following the desktop's Goku rules.
+#[derive(Debug,Clone,Copy,PartialEq,Eq)]
+enum GokuForm { Normal, SuperSaiyan }
+
+fn goku_form_from_wram(wram: &[u8]) -> Option<GokuForm> {
+    let start=(ssd_game::data::PARTY_RECORDS & 0xFFFF) as usize;
+    let (mut normal,mut super_saiyan)=(false,false);
+    for slot in 0..9 {
+        let record=wram.get(start+slot*32..start+(slot+1)*32)?;
+        if record[0]&0x80==0 {continue;}
+        match record[1] {
+            0 if record[0x1C]==0 => normal=true,
+            0x3B => super_saiyan=true,
+            _=>{}
+        }
+    }
+    match (normal,super_saiyan) {
+        (true,false)=>Some(GokuForm::Normal),
+        (false,true)=>Some(GokuForm::SuperSaiyan),
+        _=>None
+    }
+}
+fn goku_battle_id(id:&str)->Option<GokuForm>{
+    if id.starts_with("battle-goku-ssj-"){Some(GokuForm::SuperSaiyan)}
+    else if id.starts_with("battle-goku-"){Some(GokuForm::Normal)}
+    else {None}
+}
+
+/// Only distinguish exactly one normal Goku and one SSJ Goku using the
+/// upstream's common-palette-colour comparison. Roster breaks colour ties.
+/// Other characters, duplicated battle assets and unknown states stay SNES.
+fn resolve_goku_collision(entries:&[Entry],exact:&[usize],pose:&LiveFighterPose,
+                          hint:Option<GokuForm>)->Option<usize>{
+    let (mut normal,mut super_saiyan)=(None,None);
+    for &index in exact{
+        match goku_battle_id(&entries[index].id){
+            Some(GokuForm::Normal)=>{
+                if normal.replace(index).is_some(){return None;}
+            }
+            Some(GokuForm::SuperSaiyan)=>{
+                if super_saiyan.replace(index).is_some(){return None;}
+            }
+            None if entries[index].id.starts_with("field-goku-")=>{}
+            None=>return None,
+        }
+    }
+    let (n,ss)=(normal?,super_saiyan?);
+    let mut normal_distance=0_u32;
+    let mut super_distance=0_u32;
+    // Compare only colour indices used by BOTH palettes, never unused hair.
+    for (slot,(n_rgb,ss_rgb)) in entries[n].palette.iter()
+        .zip(&entries[ss].palette).enumerate().skip(1){
+        if let (Some(n_rgb),Some(ss_rgb))=(n_rgb,ss_rgb){
+            for channel in 0..3{
+                normal_distance+=u32::from(pose.colours[slot][channel].abs_diff(n_rgb[channel]));
+                super_distance+=u32::from(pose.colours[slot][channel].abs_diff(ss_rgb[channel]));
+            }
+        }
+    }
+    match normal_distance.cmp(&super_distance){
+        std::cmp::Ordering::Less=>Some(n),
+        std::cmp::Ordering::Greater=>Some(ss),
+        std::cmp::Ordering::Equal=>match hint{
+            Some(GokuForm::Normal)=>Some(n),
+            Some(GokuForm::SuperSaiyan)=>Some(ss),
+            None=>None,
+        }
+    }
+}
+
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Entry {
@@ -90,6 +161,8 @@ pub(crate) struct LiveFighters {
     fallback_accepted: usize,
     unindexed_keys: Vec<String>,
     rejected: Vec<RejectedPose>,
+    goku_form: Option<GokuForm>,
+    goku_ambiguities_resolved: usize,
 }
 
 fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
@@ -113,25 +186,28 @@ fn palette_matches(entry: &Entry, pose: &LiveFighterPose) -> bool {
 /// allow exactly one greyscale transfer asset for the same source. Multiple
 /// indistinguishable candidates are never chosen by catalogue order.
 fn choose_pose(entries:&[Entry],indices:&[usize],pose:&LiveFighterPose)->Option<usize>{
+    choose_pose_for(entries,indices,pose,None)
+}
+fn choose_pose_for(entries:&[Entry],indices:&[usize],pose:&LiveFighterPose,
+                   form_hint:Option<GokuForm>)->Option<usize>{
     let sized:Vec<usize>=indices.iter().copied()
         .filter(|&i|entries[i].width==pose.width && entries[i].height==pose.height)
         .collect();
     let exact:Vec<usize>=sized.iter().copied()
         .filter(|&i|!entries[i].luma&&palette_matches(&entries[i],pose))
         .collect();
-    match exact.as_slice() {
+    match exact.as_slice(){
         [only]=>return Some(*only),
-        [_,_,..]=>return None,
+        [_,_,..]=>return resolve_goku_collision(entries,&exact,pose,form_hint),
         _=>{}
     }
     let greys:Vec<usize>=sized.iter().copied()
         .filter(|&i|entries[i].luma).collect();
-    match greys.as_slice() {
+    match greys.as_slice(){
         [only]=>Some(*only),
         _=>None,
     }
 }
-
 
 /// Explain exactly why an existing source key was not accepted. Never
 /// weaken the original unique-palette / unique-luma matching rule.
@@ -178,7 +254,7 @@ impl LiveFighters {
             return false;
         };
         self.key_hits += 1;
-        let Some(index) = choose_pose(&self.entries, indices, &pose) else {
+        let Some(index) = choose_pose_for(&self.entries, indices, &pose, self.goku_form) else {
             self.palette_rejections += 1;
             let reason = pose_rejection_reason(&self.entries, indices, &pose);
             let rejected = RejectedPose::new(&pose, "primary", reason, indices);
@@ -191,6 +267,10 @@ impl LiveFighters {
             return false;
         }
         *owned |= pose.oam_bits;
+        if choose_pose(&self.entries,indices,&pose).is_none()
+            && goku_battle_id(&self.entries[index].id).is_some(){
+            self.goku_ambiguities_resolved+=1;
+        }
         self.active.push(Matching { index, pose });
         true
     }
@@ -221,7 +301,7 @@ impl LiveFighters {
             return false;
         };
         self.fallback_key_hits += 1;
-        let Some(index) = choose_pose(&self.entries, indices, &pose) else {
+        let Some(index) = choose_pose_for(&self.entries, indices, &pose, self.goku_form) else {
             self.palette_rejections += 1;
             let reason = pose_rejection_reason(&self.entries, indices, &pose);
             let rejected = RejectedPose::new(&pose, "refined", reason, indices);
@@ -236,6 +316,10 @@ impl LiveFighters {
             return false;
         }
         *owned |= pose.oam_bits;
+        if choose_pose(&self.entries,indices,&pose).is_none()
+            && goku_battle_id(&self.entries[index].id).is_some(){
+            self.goku_ambiguities_resolved+=1;
+        }
         self.active.push(Matching { index, pose });
         self.fallback_accepted += 1;
         true
@@ -291,10 +375,12 @@ impl LiveFighters {
         self.fallback_accepted=0;
         self.unindexed_keys.clear();
         self.rejected.clear();
+        self.goku_form=None;
+        self.goku_ambiguities_resolved=0;
         Ok(self.entries.len())
     }
 
-    pub(crate) fn refresh(&mut self, log: &FrameLog) {
+    pub(crate) fn refresh(&mut self, log: &FrameLog, wram: &[u8]) {
         self.active.clear();
         self.probes=0;
         self.key_hits=0;
@@ -305,6 +391,8 @@ impl LiveFighters {
         self.fallback_accepted=0;
         self.unindexed_keys.clear();
         self.rejected.clear();
+        self.goku_ambiguities_resolved=0;
+        self.goku_form=goku_form_from_wram(wram);
         if self.lookup.is_empty() { return; }
 
         // Respect primary battle grouping and its exact source key, size,
@@ -353,6 +441,12 @@ impl LiveFighters {
             "fallbackKeyHits":self.fallback_key_hits,
             "fallbackAttempted":self.fallback_attempted,
             "fallbackAccepted":self.fallback_accepted,
+            "gokuAmbiguitiesResolved":self.goku_ambiguities_resolved,
+            "gokuFormEvidence":match self.goku_form {
+                Some(GokuForm::Normal)=>"normal",
+                Some(GokuForm::SuperSaiyan)=>"super",
+                None=>"unknown",
+            },
             "unindexedKeys":&self.unindexed_keys,
             "rejectedPoses":self.rejected.iter().map(|rejected| {
                 serde_json::json!({
