@@ -26,7 +26,7 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v57"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v58"/>
 </head>
 <body>
   <main>
@@ -125,6 +125,7 @@
       <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v53；WASM 啟動時核對</p>
       <div class="controls">
         <div class="dpad">
+          <span id="speed-landscape-anchor" class="speed-landscape-anchor" aria-label="遊戲倍速按鈕位置"></span>
           <button data-bit="4" class="up" aria-label="上">▲</button>
           <button data-bit="6" class="left" aria-label="左">◀</button>
           <button data-bit="7" class="right" aria-label="右">▶</button>
@@ -139,7 +140,12 @@
       </div>
       <div class="playbar">
         <button data-bit="2" class="playbar-key">Select</button>
-        <button data-bit="3" class="playbar-key">Start</button>
+        <span class="start-speed-stack">
+          <span id="speed-portrait-anchor" class="speed-portrait-anchor">
+            <button id="speed-toggle" type="button" aria-label="遊戲速度 1 倍，點按切換" title="遊戲倍速：1×／1.5×／2×">速度 1×</button>
+          </span>
+          <button data-bit="3" class="playbar-key">Start</button>
+        </span>
         <button id="hd-toggle" type="button" title="點擊切換 HD 2x／Classic 繁中 1x／Classic 英文">原版</button>
         <button id="locale-toggle" type="button">台灣繁中</button>
         <button id="save" type="button" aria-haspopup="dialog" aria-controls="save-slots-panel">儲存遊戲</button>
@@ -223,6 +229,23 @@
     </div>
   </section>
 
+  <section id="speed-update-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="speed-update-title" aria-describedby="speed-update-description" hidden>
+    <div class="cheats-sheet speed-update-sheet">
+      <header class="cheats-heading">
+        <div><h2 id="speed-update-title">遊戲更新：新增倍速功能</h2><p>新功能通知 · 只顯示一次</p></div>
+      </header>
+      <p id="speed-update-description" class="cheats-note">
+        新增獨立「速度」按鈕。手機直向遊玩時，按鈕在 Start 上方；橫向時，在方向鍵上方。
+        每按一下可依序切換 1× → 1.5× → 2× → 1×。
+        倍速期間會暫停遊戲音效，切回 1× 自動恢復；實際加速效果視手機效能而定。
+        舊版存檔、遊戲修改及 HD 素材不受影響。
+      </p>
+      <div class="cheats-actions">
+        <button id="speed-update-close" type="button">我知道了，開始遊戲</button>
+      </div>
+    </div>
+  </section>
+
   <section id="cheats-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="cheats-title" hidden>
     <div class="cheats-sheet">
       <header class="cheats-heading">
@@ -284,7 +307,7 @@
     </div>
   </section>
 
-  <script type="module" src="app.mjs?build=v53&ui=v60"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v61"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
 </body>
 </html>
