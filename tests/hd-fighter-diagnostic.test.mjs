@@ -246,11 +246,11 @@ test('test-only diagnostic UI is reachable from existing game menu without addin
   assert.match(html,/id="fighter-diagnostic-panel"/);
   assert.match(html,/id="fighter-diagnostic-start"/);
   assert.match(html,/id="fighter-diagnostic-export"/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v60/);
+  assert.match(html,/app\.mjs\?build=v53&ui=v61/);
   assert.match(app,/fighterDiagnostic\.capture\(game/);
   assert.match(app,/fighterDiagnostic\.recording/);
   assert.match(app,/const fighterDiagnostic = new HdFighterDiagnostic/);
-  assert.match(app,/if\(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen\)/);
+  assert.ok(app.includes('if(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen)'));
   assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v53\.json'/);
   assert.match(css,/\.fighter-diagnostic-entry\{/);
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
