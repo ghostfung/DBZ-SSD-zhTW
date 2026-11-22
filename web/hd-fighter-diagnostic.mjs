@@ -1,7 +1,7 @@
 // Test-only HD fighter trace. Never records ROM/IPS, save-state, HD images,
 // screenshots, browser identifiers or file paths. All data remains on device
 // until the player explicitly downloads a bounded JSON report.
-export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v2';
+export const FIGHTER_TRACE_VERSION = 'fighter-pose-trace-v3';
 const SAMPLE_MS = 200; // At most 5 FPS; expensive WASM/JSON probes only while recording.
 const MAX_MS = 60_000;
 const MAX_SAMPLES = 300;
@@ -18,7 +18,7 @@ const SAFE_ID = /^[a-z0-9._-]{1,90}$/i;
 const KEY_RE = /^[0-9a-f]{16}\/\d{1,3}x\d{1,3}$/i;
 const COUNT_KEYS = [
   'poses','keyHits','paletteRejected','matched','ready','lumaMatched',
-  'fallbackPoses','fallbackKeyHits'
+  'fallbackPoses','fallbackKeyHits','gokuAmbiguitiesResolved'
 ];
 
 function safeMatches(input) {
@@ -68,6 +68,8 @@ function safeProbe(input) {
   out.fallbackAttempted=input.fallbackAttempted===true;
   out.fallbackAccepted=Number.isInteger(input.fallbackAccepted)&&input.fallbackAccepted>=0
     ?Math.min(input.fallbackAccepted,MAX_MATCHES):0;
+  out.gokuFormEvidence=['normal','super','unknown'].includes(input.gokuFormEvidence)
+    ?input.gokuFormEvidence:'unknown';
   out.rejectedPoses=safeRejections(input.rejectedPoses);
   return out;
 }
@@ -169,6 +171,8 @@ export class HdFighterDiagnostic {
     let rejectedSamples=0;
     let fallbackAttemptedSamples=0;
     let fallbackAccepted=0;
+    let gokuAmbiguitiesResolved=0;
+    const gokuFormEvidenceCounts={normal:0,super:0,unknown:0};
     for(const sample of this.samples) {
       categories[sample.category]=(categories[sample.category]||0)+1;
       if(sample.hdActive)samplesWithActiveHD++;
@@ -186,6 +190,9 @@ export class HdFighterDiagnostic {
       }
       if(sample.probe?.fallbackAttempted)fallbackAttemptedSamples++;
       fallbackAccepted+=sample.probe?.fallbackAccepted||0;
+      gokuAmbiguitiesResolved+=sample.probe?.gokuAmbiguitiesResolved||0;
+      const evidence=sample.probe?.gokuFormEvidence;
+      gokuFormEvidenceCounts[evidence==='normal'||evidence==='super'?evidence:'unknown']++;
       for(const item of rejected){
         rejectionCounts.set(item.reason,(rejectionCounts.get(item.reason)||0)+1);
         const signature=[item.key,item.w+'x'+item.h,item.reason,item.origin].join(':');
@@ -212,6 +219,8 @@ export class HdFighterDiagnostic {
         partialMatches,
         fallbackAttemptedSamples,
         acceptedRefinedPosesAcrossSamples:fallbackAccepted,
+        gokuAmbiguitiesResolvedAcrossSamples:gokuAmbiguitiesResolved,
+        gokuFormEvidenceCounts,
         rejectionReasons:Object.fromEntries(rejectionCounts),
         rejectedPoseExamples:[...rejectedExamples.values()]
           .sort((a,b)=>b.count-a.count).slice(0,MAX_SUMMARY_REJECTIONS),
