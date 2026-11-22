@@ -1,4 +1,5 @@
-import {inspectRom} from './rom-check.mjs';
+import {inspectRom,crc32,crcHex} from './rom-check.mjs';
+import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
 import {SnesAudio} from './audio.mjs?build=v49';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -35,7 +36,7 @@ try {
     hdPreference=pref;hdEnabled=pref==='hd';classicZhEnabled=pref==='classic-zh';
   }
 }catch {}
-let savedRom=null,savedIps=null;
+let savedRom=null,savedIps=null,currentRomKey='';
 let language='zh-tw';
 try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
 const translationCache=new Map();
@@ -524,6 +525,8 @@ $('start').addEventListener('click', async () => {
     const rom = new Uint8Array(await (romInput.files?.[0]??savedRom.blob).arrayBuffer());
     const ipsFile=ipsInput.files?.[0]??savedIps?.blob;
     const ips = ipsFile ? new Uint8Array(await ipsFile.arrayBuffer()) : new Uint8Array(0);
+    // Bind slots to the exact player-supplied ROM and IPS. No bytes leave the PWA.
+    currentRomKey=crcHex(crc32(rom))+':'+crcHex(crc32(ips));
     // Cached HD ZIP may still be hashing when the player presses Start.
     // Wait for completed verification before attaching any HD catalogs.
     if(globalThis.hdRestorePromise){
@@ -1123,39 +1126,231 @@ window.addEventListener('pageshow',()=>{
     void restoreAudioAfterInterruption();
   }
 });
-$('save').addEventListener('click',()=>{
+// v54: all ten slots are stored privately in IndexedDB. ROM, IPS, HD images
+// and save data are never sent to any server. The .sav format stays unchanged.
+let slotMode=null,slotSelection=null,slotBusy=false,backupOpen=false;
+let pendingImportBytes=null,currentSlotRecords=new Map(),slotThumbUrls=[];
+
+function pauseForProgressMenu(){
+  held=0;
+  if(running){running=false;cancelAnimationFrame(raf);}
+  sound.reset();
+}
+function resumeFromProgressMenu(){
+  if(game&&!document.hidden&&!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!slotMode&&!backupOpen){
+    running=true;lastTick=0;accumulator=0;
+    raf=requestAnimationFrame(requestFrame);
+  }
+}
+function clearSlotThumbUrls(){
+  for(const url of slotThumbUrls)URL.revokeObjectURL(url);
+  slotThumbUrls=[];
+}
+function slotButtonLabel(){
+  if(slotMode==='load')return '讀取 Slot '+String(slotSelection??'--').padStart(2,'0');
+  if(slotMode==='import')return '匯入至 Slot '+String(slotSelection??'--').padStart(2,'0');
+  return '儲存至 Slot '+String(slotSelection??'--').padStart(2,'0');
+}
+function slotAvailable(slot){
+  const record=currentSlotRecords.get(slot);
+  return slotMode!=='load'||Boolean(record&&!record.corrupt&&record.romKey===currentRomKey);
+}
+function updateSlotChoice(){
+  for(const button of $('save-slots-list').querySelectorAll('[data-slot]'))
+    button.setAttribute('aria-pressed',String(Number(button.dataset.slot)===slotSelection));
+  $('save-slots-confirm').disabled=slotBusy||!slotSelection||!slotAvailable(slotSelection);
+  $('save-slots-confirm').textContent=slotButtonLabel();
+}
+async function refreshSlotPicker(){
+  clearSlotThumbUrls();currentSlotRecords=new Map();
+  const list=$('save-slots-list');list.replaceChildren();
+  $('save-slots-feedback').textContent='正在讀取本機存檔…';
+  $('save-slots-confirm').disabled=true;
+  let records;
+  try { records=await listSaveSlots(); }
+  catch(error){
+    $('save-slots-feedback').textContent='本機存檔無法使用：'+(error?.message||error);
+    return;
+  }
+  if(!slotMode)return;
+  for(const record of records)currentSlotRecords.set(record.slot,record);
+  for(let slot=1;slot<=SLOT_COUNT;slot++){
+    const record=currentSlotRecords.get(slot);
+    const incompatible=record&&!record.corrupt&&record.romKey!==currentRomKey;
+    const button=document.createElement('button');
+    button.type='button';button.className='save-slot';
+    button.dataset.slot=String(slot);
+    button.setAttribute('aria-pressed',String(slot===slotSelection));
+    button.disabled=slotMode==='load'&&(!record||record.corrupt||incompatible);
+    const preview=record?.thumbnail instanceof Blob&&record.thumbnail.size
+      ?document.createElement('img'):document.createElement('span');
+    if(preview.tagName==='IMG'){
+      const url=URL.createObjectURL(record.thumbnail);slotThumbUrls.push(url);
+      preview.src=url;preview.alt='存檔 '+slot+' 的遊戲畫面';preview.className='save-slot-thumb';
+    }else{
+      preview.className='save-slot-thumb save-slot-empty';
+      preview.textContent=record?'無法預覽':'空白';
+    }
+    const meta=document.createElement('span');meta.className='save-slot-meta';
+    const title=document.createElement('strong');
+    title.textContent='Slot '+String(slot).padStart(2,'0');
+    const line=document.createElement('span');
+    line.textContent=record?.corrupt?'進度損壞，不可讀取'
+      :record?(incompatible?'不同 ROM／IPS 的進度 · ' : '')+
+        new Date(record.savedAt).toLocaleString('zh-TW',{hour12:false})
+      :'尚未儲存';
+    meta.append(title,line);button.append(preview,meta);
+    button.addEventListener('click',()=>{
+      if(slotBusy||button.disabled)return;
+      slotSelection=slot;updateSlotChoice();
+    });
+    list.append(button);
+  }
+  $('save-slots-feedback').textContent=slotMode==='load'
+    ?'請選擇要讀取的進度；不同 ROM／IPS 的欄位不能讀取。'
+    :slotMode==='import'?'請選擇要接收 .sav 備份的欄位。'
+      :'請選擇儲存欄位。已有進度的欄位會要求確認覆蓋。';
+  updateSlotChoice();
+}
+async function openSlotPicker(mode){
+  if(!game||slotMode||(!['save','load','import'].includes(mode)))return;
+  if(mode==='import'&&!pendingImportBytes)return;
+  if(backupOpen){backupOpen=false;$('backup-panel').hidden=true;}
+  pauseForProgressMenu();
+  slotMode=mode;slotSelection=null;slotBusy=false;
+  $('save-slots-title').textContent=
+    mode==='save'?'儲存遊戲':mode==='load'?'讀取遊戲':'匯入進度';
+  $('save-slots-hint').textContent='10 個本機進度欄位';
+  $('save-slots-panel').hidden=false;
+  $('save-slots-close').focus({preventScroll:true});
+  await refreshSlotPicker();
+}
+function closeSlotPicker(){
+  if(!slotMode||slotBusy)return;
+  slotMode=null;slotSelection=null;pendingImportBytes=null;
+  $('save-slots-panel').hidden=true;clearSlotThumbUrls();
+  $('save').focus({preventScroll:true});
+  resumeFromProgressMenu();
+}
+function openBackupPanel(){
+  if(!game||backupOpen||slotMode||cheatPanelOpen||fighterDiagnosticPanelOpen)return;
+  pauseForProgressMenu();backupOpen=true;
+  $('backup-feedback').textContent='';
+  $('backup-panel').hidden=false;
+  $('backup-close').focus({preventScroll:true});
+}
+function closeBackupPanel(){
+  if(!backupOpen)return;
+  backupOpen=false;$('backup-panel').hidden=true;
+  $('backup-open').focus({preventScroll:true});
+  resumeFromProgressMenu();
+}
+async function captureSaveThumbnail(){
+  const source=$('screen');
+  if(!source.width||!source.height)return null;
+  const thumb=document.createElement('canvas');
+  thumb.width=160;thumb.height=Math.max(1,Math.round(160*source.height/source.width));
+  const ctx2=thumb.getContext('2d',{alpha:false});
+  if(!ctx2)return null;
+  ctx2.imageSmoothingEnabled=Boolean(game?.hd_active?.());
+  ctx2.drawImage(source,0,0,thumb.width,thumb.height);
+  const image=await new Promise(resolve=>thumb.toBlob(resolve,'image/webp',.72));
+  return image&&image.size<=512*1024?image:null;
+}
+async function applyLoadedSave(bytes){
+  validStateBytes(bytes);
+  const previous=game.save_state();
+  try{game.load_state(bytes);}
+  catch(error){
+    // An invalid backup must not destroy the in-memory game in progress.
+    try{game.load_state(previous);}catch(restoreError){
+      console.error('無法恢復匯入前遊戲狀態',restoreError);
+    }
+    throw error;
+  }
+  if(fighterDiagnostic.recording)fighterDiagnostic.stop('state_imported',performance.now());
+  const importedCheats=restoreActiveCheats();
+  refreshCheatPanel(pendingCheatRestore
+    ?'進度已讀取；戰鬥中暫不修改，回到安全階段後自動恢復作弊'
+    :importedCheats.error
+      ?'讀取進度成功，但作弊恢復失敗：'+importedCheats.error
+      :importedCheats.applied>0
+        ?'讀取進度成功，已恢復本機作弊設定'
+        :'讀取進度成功；作弊維持關閉');
+  hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
+  storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
+  fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
+  cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();
+  sound.reset();translationKey='';updateTranslation();
+  // A save restores emulation state, not the iPhone AudioContext's permissions.
+  await restoreAudioAfterInterruption();
+}
+$('save').addEventListener('click',()=>{void openSlotPicker('save');});
+$('load').addEventListener('click',()=>{void openSlotPicker('load');});
+$('backup-open').addEventListener('click',openBackupPanel);
+$('backup-close').addEventListener('click',closeBackupPanel);
+$('save-slots-close').addEventListener('click',closeSlotPicker);
+$('save-slots-cancel').addEventListener('click',closeSlotPicker);
+$('backup-export').addEventListener('click',()=>{
   if(!game)return;
-  const bytes=game.save_state();
-  const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
-  const a=document.createElement('a');a.href=url;a.download='dbz-ssd-web.sav';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  try{
+    const bytes=validStateBytes(game.save_state());
+    const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
+    const a=document.createElement('a');a.href=url;a.download='dbz-ssd-web.sav';
+    a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    $('backup-feedback').textContent='已建立目前進度的 .sav 備份檔。';
+  }catch(error){$('backup-feedback').textContent='備份失敗：'+(error?.message||error);}
 });
-$('state-file').addEventListener('change',async e=>{
-  const file=e.target.files?.[0];
-  if(!game||!file)return;
-  try {
-    game.load_state(new Uint8Array(await file.arrayBuffer()));
-    if(fighterDiagnostic.recording)fighterDiagnostic.stop('state_imported',performance.now());
-    // load_state clears any stale cheat WRAM, then we restore the user's
-    // validated local preferences. Battle saves retry safely once back on map.
-    const importedCheats=restoreActiveCheats();
-    refreshCheatPanel(pendingCheatRestore
-      ? '進度已讀取；戰鬥中暫不修改，回到安全階段後自動恢復作弊'
-      : importedCheats.error
-        ? '讀取進度成功，但作弊恢復失敗：'+importedCheats.error
-        : importedCheats.applied>0
-          ? '讀取進度成功，已恢復本機作弊設定'
-          : '讀取進度成功；作弊維持關閉');
-    hdSceneTrace.reset();transientHoldBudget.reset();perfHistory=[];
-    storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();
-    fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();
-    cardFrameGate.reset();mode7FrameGate.reset();transitionArtifactGate.reset();
-    sound.reset();translationKey='';updateTranslation();
-    // The native core preserves host audio rate, but mobile file selection
-    // may leave AudioContext suspended. Resume and reassert its sample rate.
-    const restored=await restoreAudioAfterInterruption();
-    gameToast(restored?'讀取進度成功':'讀取進度成功；如無聲請點「恢復聲音」');
-  }catch(err){gameToast('讀取進度失敗：'+(err?.message||err));}
-  finally {e.target.value='';}
+$('state-file').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];
+  if(!file||!game)return;
+  try{
+    if(!file.size||file.size>MAX_STATE_BYTES)throw Error('進度備份檔大小不正確');
+    pendingImportBytes=validStateBytes(new Uint8Array(await file.arrayBuffer()));
+    await openSlotPicker('import');
+  }catch(error){
+    pendingImportBytes=null;
+    $('backup-feedback').textContent='匯入失敗：'+(error?.message||error);
+  }finally{event.target.value='';}
+});
+$('save-slots-confirm').addEventListener('click',async()=>{
+  const slot=slotSelection,mode=slotMode;
+  if(!game||!mode||!slot||slotBusy||!slotAvailable(slot))return;
+  const previous=currentSlotRecords.get(slot);
+  if(mode!=='load'&&previous&&
+    !window.confirm('Slot '+String(slot).padStart(2,'0')+' 已有進度，確定要覆蓋？'))return;
+  slotBusy=true;updateSlotChoice();
+  $('save-slots-feedback').textContent='正在'+(mode==='load'?'讀取':'儲存')+'進度…';
+  try{
+    if(mode==='load'){
+      const record=await readSaveSlot(slot);
+      if(!record||record.romKey!==currentRomKey)throw Error('進度不存在或 ROM／IPS 不相容');
+      await applyLoadedSave(new Uint8Array(await record.state.arrayBuffer()));
+      slotBusy=false;closeSlotPicker();gameToast('已讀取 Slot '+String(slot).padStart(2,'0'));
+    }else if(mode==='import'){
+      if(!pendingImportBytes)throw Error('沒有已選取的 .sav 備份');
+      // Validate with the real emulator before writing. Then paint one emulated
+      // frame so the thumbnail describes the imported state, not the old game.
+      await applyLoadedSave(pendingImportBytes);
+      game.tick(0);drawFrame();
+      const thumb=await captureSaveThumbnail();
+      await writeSaveSlot(slot,validStateBytes(game.save_state()),{
+        romKey:currentRomKey,thumbnail:thumb
+      });
+      slotBusy=false;closeSlotPicker();gameToast('已匯入並儲存至 Slot '+String(slot).padStart(2,'0'));
+    }else{
+      const state=validStateBytes(game.save_state());
+      const thumb=await captureSaveThumbnail();
+      await writeSaveSlot(slot,state,{romKey:currentRomKey,thumbnail:thumb});
+      slotBusy=false;closeSlotPicker();gameToast('已儲存至 Slot '+String(slot).padStart(2,'0'));
+    }
+  }catch(error){
+    $('save-slots-feedback').textContent='操作失敗：'+(error?.message||error)+
+      '。原有欄位未被清除。';
+  }finally{
+    slotBusy=false;
+    if(slotMode)updateSlotChoice();
+  }
 });
 // Do not register a Service Worker. Large WASM streaming must bypass it.
 // Legacy registrations from v41-v43 are retired before the user selects files
