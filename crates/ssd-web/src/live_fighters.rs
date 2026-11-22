@@ -23,6 +23,11 @@ const WIDTH: usize = 256;
 enum GokuForm { Normal, SuperSaiyan }
 
 fn goku_form_from_wram(wram: &[u8]) -> Option<GokuForm> {
+    // Only use roster identity to break ambiguous battle-pose ties in a
+    // confirmed battle. An unrelated field/ending sprite must not inherit
+    // Goku's currently active party unit as its own identity.
+    let mode=wram.get((ssd_game::data::GAME_MODE & 0xFFFF) as usize)? & 0x7f;
+    if !matches!(mode,0x02|0x04|0x0c) {return None;}
     let start=(ssd_game::data::PARTY_RECORDS & 0xFFFF) as usize;
     let (mut normal,mut super_saiyan)=(false,false);
     for slot in 0..9 {
@@ -723,6 +728,7 @@ mod tests {
     fn goku_roster(normal:bool,super_saiyan:bool)->Vec<u8>{
         let mut wram=vec![0_u8;0x20000];
         let at=(ssd_game::data::PARTY_RECORDS & 0xffff) as usize;
+        wram[(ssd_game::data::GAME_MODE & 0xffff) as usize]=2; // active battle
         if normal {
             wram[at]=0xc0;
             wram[at+1]=0;
@@ -742,6 +748,12 @@ mod tests {
         assert_eq!(goku_form_from_wram(&goku_roster(true,false)),Some(GokuForm::Normal));
         assert_eq!(goku_form_from_wram(&goku_roster(false,true)),Some(GokuForm::SuperSaiyan));
         assert_eq!(goku_form_from_wram(&goku_roster(true,true)),None);
+        let mut field=goku_roster(true,false);
+        field[(ssd_game::data::GAME_MODE & 0xffff) as usize]=0;
+        assert_eq!(goku_form_from_wram(&field),None,"no roster guessing on field");
+        let mut ending=goku_roster(false,true);
+        ending[(ssd_game::data::GAME_MODE & 0xffff) as usize]=0x11;
+        assert_eq!(goku_form_from_wram(&ending),None,"no automatic SSJ art in ending");
         let mut inactive=goku_roster(true,false);
         let at=(ssd_game::data::PARTY_RECORDS & 0xffff) as usize;
         inactive[at]=0x40;
