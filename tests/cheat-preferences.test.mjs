@@ -142,6 +142,6 @@ test('PWA wires auto-restore on launch and save on successful change/reset only'
   assert.match(app,/if\(pendingCheatRestore && n && game\.frame_count\(\)%60===0\)/);
   assert.match(app,/pendingCheatRestore=Boolean\(result\.error\?\.includes\('戰鬥進行中'\)\)/);
   assert.match(html,/設定會自動儲存在本機/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v60/);
+  assert.match(html,/app\.mjs\?build=v53&ui=v61/);
   assert.match(app,/reconnectFromGesture\(\)/);
 });
