@@ -31,7 +31,7 @@ test('bounded sampling records only at 5 Hz and auto stops by duration',()=>{
   game.step();
   assert.equal(trace.capture(game,options,1100),false);
   assert.equal(trace.recording,false);
-  const report=trace.report({build:'dbz-hd-tw-pwa-v52'});
+  const report=trace.report({build:'dbz-hd-tw-pwa-v53'});
   assert.equal(report.summary.sampleCount,3);
   assert.equal(report.summary.categoryCounts.source_key_unmatched,3);
   assert.equal(report.summary.unindexedSourceKeys[0].key,'abcdef0123456789/32x48');
@@ -125,8 +125,8 @@ test('records rejected Goku candidate while matched Saibaman still paints HD',()
   t.start(0);
   t.capture(g,options,0);
   g.step();t.capture(g,options,205);
-  const report=t.report({build:'dbz-hd-tw-pwa-v52'});
-  assert.equal(report.format,'fighter-pose-trace-v3');
+  const report=t.report({build:'dbz-hd-tw-pwa-v53'});
+  assert.equal(report.format,'fighter-pose-trace-v4');
   assert.equal(report.summary.sampleCount,2);
   assert.equal(report.summary.partialMatches,2);
   assert.equal(report.summary.samplesWithRejectedPoses,2);
@@ -175,8 +175,8 @@ test('Goku collision resolution and evidence are sanitized and counted without e
   });
   const t=new HdFighterDiagnostic();t.start(0);
   t.capture(g,options,0);g.step();t.capture(g,options,201);
-  const report=t.report({build:'dbz-hd-tw-pwa-v52'});
-  assert.equal(report.format,'fighter-pose-trace-v3');
+  const report=t.report({build:'dbz-hd-tw-pwa-v53'});
+  assert.equal(report.format,'fighter-pose-trace-v4');
   assert.equal(report.summary.gokuAmbiguitiesResolvedAcrossSamples,2);
   assert.equal(report.summary.gokuFormEvidenceCounts.normal,2);
   assert.equal(report.summary.gokuFormEvidenceCounts.super,0);
@@ -199,6 +199,45 @@ test('untrusted Goku form evidence never leaks arbitrary data into exported JSON
   assert.doesNotMatch(JSON.stringify(report),/secrets/);
 });
 
+
+test('v53 trace distinguishes raw shared-key assets from palette-qualified candidates',()=>{
+  const g=fakeGame({probe:{
+    poses:2,keyHits:2,matched:1,gokuFormEvidence:'normal',
+    rejectedPoses:[{
+      key:'732890cac370e639',w:50,h:48,
+      origin:'primary',reason:'ambiguous_palette',
+      candidateIds:['battle-goku-000','battle-goku-ssj-000','field-goku-ki-001','battle-piccolo-other'],
+      paletteEligibleIds:['battle-goku-000','field-goku-ki-001','battle-piccolo-other'],
+      paletteEligibleCount:3
+    }]},
+    matches:[{id:'battle-saibaman-001',key:'0abc5ab8b0bee7b0',ready:true,width:34,height:32}],
+    pixels:489});
+  const t=new HdFighterDiagnostic();t.start(0);t.capture(g,options,0);
+  const report=t.report({build:'dbz-hd-tw-pwa-v53'});
+  assert.equal(report.format,'fighter-pose-trace-v4');
+  const rejected=report.samples[0].probe.rejectedPoses[0];
+  assert.equal(rejected.paletteEligibleCount,3);
+  assert.deepEqual(rejected.paletteEligibleIds,
+    ['battle-goku-000','field-goku-ki-001','battle-piccolo-other']);
+  assert.equal(rejected.candidateIds.length,4);
+  assert.equal(report.summary.rejectedPoseExamples[0].paletteEligibleCount,3);
+});
+test('v53 diagnostics reject unsafe candidate IDs and unreasonable eligibility counts',()=>{
+  const g=fakeGame({probe:{poses:1,keyHits:1,
+    rejectedPoses:[{
+      key:'732890cac370e639',w:50,h:48,
+      origin:'primary',reason:'ambiguous_palette',
+      paletteEligibleCount:9999999,
+      candidateIds:['battle-goku-000','../../secret'],
+      paletteEligibleIds:['battle-goku-000','../secret','/tmp/private']
+    }]},matches:[],pixels:0});
+  const t=new HdFighterDiagnostic();t.start(0);t.capture(g,options,0);
+  const rejected=t.report().samples[0].probe.rejectedPoses[0];
+  assert.equal(rejected.paletteEligibleCount,0);
+  assert.deepEqual(rejected.candidateIds,['battle-goku-000']);
+  assert.deepEqual(rejected.paletteEligibleIds,['battle-goku-000']);
+  assert.doesNotMatch(JSON.stringify(t.report()),/secret|private/);
+});
 test('test-only diagnostic UI is reachable from existing game menu without adding a new gamepad key',()=>{
   const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
@@ -207,12 +246,12 @@ test('test-only diagnostic UI is reachable from existing game menu without addin
   assert.match(html,/id="fighter-diagnostic-panel"/);
   assert.match(html,/id="fighter-diagnostic-start"/);
   assert.match(html,/id="fighter-diagnostic-export"/);
-  assert.match(html,/app\.mjs\?build=v52&ui=v58/);
+  assert.match(html,/app\.mjs\?build=v53&ui=v59/);
   assert.match(app,/fighterDiagnostic\.capture\(game/);
   assert.match(app,/fighterDiagnostic\.recording/);
   assert.match(app,/const fighterDiagnostic = new HdFighterDiagnostic/);
   assert.match(app,/if\(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen\)/);
-  assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v52\.json'/);
+  assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v53\.json'/);
   assert.match(css,/\.fighter-diagnostic-entry\{/);
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
   assert.doesNotMatch(playbar,/fighter-diagnostic/);
