@@ -17,14 +17,12 @@ import {LiveHdMode7} from './hd-mode7-live.mjs';
 import {FrameMetrics} from './frame-metrics.mjs';
 import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
-import {HdFighterDiagnostic} from './hd-fighter-diagnostic.mjs?ui=v4';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const BUILD_ID='dbz-hd-tw-pwa-v53';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let cheatPanelOpen = false;
-let fighterDiagnosticPanelOpen = false;
 let gameSpeed=1,speedNoticeOpen=false,speedNoticeShownInSession=false;
 let pendingCheatRestore = false;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -113,7 +111,7 @@ $('speed-update-close').addEventListener('click',()=>{
   speedNoticeOpen=false;
   $('speed-update-panel').hidden=true;
   $('speed-toggle').focus({preventScroll:true});
-  if(game&&!running&&!document.hidden&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen){
+  if(game&&!running&&!document.hidden&&!cheatPanelOpen){
     running=true;lastTick=0;accumulator=0;
     raf=requestAnimationFrame(requestFrame);
   }
@@ -122,7 +120,6 @@ const frameMetrics = new FrameMetrics();
 const transientHoldBudget = new HdPresentationBudget();
 let perfHistory=[];
 const hdSceneTrace = new HdSceneTrace();
-const fighterDiagnostic = new HdFighterDiagnostic();
 let lastPresentedFrame=null,lastPresentation=null;
 const transitionArtifactGate = new TransitionArtifactGate({maxFrames:5});
 const sound = new SnesAudio();
@@ -292,7 +289,7 @@ function refreshCheatPanel(message='') {
       '已啟用 '+state.active+' 項 · 戰鬥中不能調整');
 }
 function openCheatPanel(){
-  if(!game||cheatPanelOpen||fighterDiagnosticPanelOpen)return;
+  if(!game||cheatPanelOpen)return;
   cheatPanelOpen=true;
   held=0;
   if(running){running=false;cancelAnimationFrame(raf);}
@@ -305,7 +302,7 @@ function closeCheatPanel(){
   if(!cheatPanelOpen)return;
   cheatPanelOpen=false;
   $('cheats-panel').hidden=true;
-  if(game&&!document.hidden&&!running&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen){
+  if(game&&!document.hidden&&!running&&!speedNoticeOpen){
     running=true;lastTick=0;accumulator=0;
     raf=requestAnimationFrame(requestFrame);
   }
@@ -338,91 +335,6 @@ $('cheat-reset').addEventListener('click',()=>{
   }catch(error){
     refreshCheatPanel('無法重設：'+(error?.message||String(error)));
   }
-});
-
-// Test-only read-only HD fighter trace. Reuse the existing pause/resume menu,
- // so no ninth button changes the accepted gamepad or landscape layout.
-function refreshFighterDiagnosticUi(message=''){
-  const state=fighterDiagnostic;
-  const count=state.samples.length;
-  $('fighter-diagnostic-status').textContent=message||
-    (state.recording?'正在記錄 HD 人物姿勢：'+count+' 筆（最多 60 秒）'
-      :count?'已停止，記錄 '+count+' 筆，可下載 JSON':'尚未記錄。');
-  $('fighter-diagnostic-start').disabled=!game;
-  $('fighter-diagnostic-stop').disabled=!state.recording;
-  $('fighter-diagnostic-export').disabled=count===0;
-  const report=state.report({build:BUILD_ID});
-  const counts=report.summary.categoryCounts;
-  $('fighter-diagnostic-summary').textContent=count
-    ?'HD 有替換：'+(counts.hd_pixels_replaced||0)+
-       ' 幀；來源未命中：'+(counts.source_key_unmatched||0)+
-       ' 幀；調色盤／尺寸：'+(counts.palette_size_or_ambiguity||0)+
-       ' 幀；載入中：'+(counts.matched_art_not_ready||0)+
-       ' 幀；有素材但未繪製：'+(counts.ready_but_not_painted||0)+
-       ' 幀；部分人物未匹配：'+(report.summary.partialMatches||0)+
-       ' 筆；替代匹配成功：'+(report.summary.acceptedRefinedPosesAcrossSamples||0)+
-       ' 筆；悟空歧義已安全解決：'+(report.summary.gokuAmbiguitiesResolvedAcrossSamples||0)+
-       ' 筆。詳見 JSON 中的角色形態證據及拒絕原因；不能推算全遊戲覆蓋率。'
-    :'啟動記錄後會在遊玩期間自動採樣。';
-}
-function openFighterDiagnosticPanel(){
-  if(!game || fighterDiagnosticPanelOpen)return;
-  fighterDiagnosticPanelOpen=true;
-  if(cheatPanelOpen)closeCheatPanel();
-  held=0;
-  if(running){running=false;cancelAnimationFrame(raf);}
-  sound.reset();
-  $('fighter-diagnostic-panel').hidden=false;
-  // A recording stops when the player returns to the control panel;
-  // this prevents pause time from being mistaken for missing poses.
-  if(fighterDiagnostic.recording)fighterDiagnostic.stop('player_opened_panel',performance.now());
-  refreshFighterDiagnosticUi();
-  $('fighter-diagnostic-close').focus({preventScroll:true});
-}
-function closeFighterDiagnosticPanel(){
-  if(!fighterDiagnosticPanelOpen)return;
-  fighterDiagnosticPanelOpen=false;
-  $('fighter-diagnostic-panel').hidden=true;
-  if(game&&!document.hidden&&!running&&!cheatPanelOpen){
-    running=true;lastTick=0;accumulator=0;
-    raf=requestAnimationFrame(requestFrame);
-  }
-  $('cheat-open').focus({preventScroll:true});
-}
-$('fighter-diagnostic-open').addEventListener('click',openFighterDiagnosticPanel);
-$('fighter-diagnostic-close').addEventListener('click',closeFighterDiagnosticPanel);
-$('fighter-diagnostic-start').addEventListener('click',()=>{
-  if(!game || !hdEnabled || game.hd_active?.()!==true){
-    refreshFighterDiagnosticUi('請先切換為 HD 2x 並啟動遊戲，才能記錄有效的 HD 人物診斷。');
-    return;
-  }
-  if(!liveFighters.assets || liveFighters.catalog.length===0){
-    refreshFighterDiagnosticUi('尚未載入 HD 人物 class2 索引；請先確認官方 HD 美術包已匯入。');
-    return;
-  }
-  if(!$('fighter-hd-toggle').checked){
-    refreshFighterDiagnosticUi('人物 HD 已關閉；請先啟用人物 HD 再記錄。');
-    return;
-  }
-  fighterDiagnostic.start(performance.now());
-  closeFighterDiagnosticPanel();
-  gameToast('HD 人物診斷錄製中（最多 60 秒）。返回「遊戲修改 → HD 人物診斷」下載 JSON。');
-});
-$('fighter-diagnostic-stop').addEventListener('click',()=>{
-  fighterDiagnostic.stop('manual',performance.now());
-  refreshFighterDiagnosticUi('已停止錄製；請按「下載診斷 JSON」。');
-});
-$('fighter-diagnostic-export').addEventListener('click',()=>{
-  if(!fighterDiagnostic.samples.length)return;
-  fighterDiagnostic.stop('export',performance.now());
-  const report=fighterDiagnostic.report({build:BUILD_ID});
-  const blob=new Blob([JSON.stringify(report,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;link.download='dbz-hd-fighter-diagnostic-v53.json';
-  document.body.appendChild(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),3000);
-  refreshFighterDiagnosticUi('已建立診斷 JSON；請從 iPhone「檔案」分享給我分析。');
 });
 
 function unlockAudio() {
@@ -662,7 +574,7 @@ $('start').addEventListener('click', async () => {
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();syncSpeedPlacement();
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
-    hdSceneTrace.reset();fighterDiagnostic.reset();lastPresentedFrame=null;lastPresentation=null;
+    hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
     averageTickMs=0;
     transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
@@ -957,21 +869,8 @@ function requestFrame(now) {
     // frame. Repainting the same 512x478 ImageData wasted bandwidth.
     const drawStart=performance.now();
     if (n) drawFrame();
-    if (n && fighterDiagnostic.recording){
-      const wasRecording=fighterDiagnostic.recording;
-      fighterDiagnostic.capture(game,{
-        catalogReady:Boolean(liveFighters.assets&&liveFighters.catalog.length),
-        catalogEntries:liveFighters.catalog.length,
-        fighterEnabled:$('fighter-hd-toggle').checked,
-        loading:liveFighters.loading.size,
-        failed:liveFighters.failed.size,
-        presentation:lastPresentation
-      },now);
-      if(wasRecording&&!fighterDiagnostic.recording)
-        gameToast('HD 人物診斷已錄製完成；由「遊戲修改」下載 JSON');
-    }
-    // Avoid duplicate WASM/JSON probes while the dedicated trace is active.
-    if (n && !fighterDiagnostic.recording) hdSceneTrace.capture(game,lastPresentation);
+    // Keep the bounded HD scene trace for read-only troubleshooting.
+    if(n)hdSceneTrace.capture(game,lastPresentation);
     const drawMs=performance.now()-drawStart;
     const perf=frameMetrics.add({now,gap:rafGap,tickMs:simulationMs,drawMs,ticks:n});
     if(perf){
@@ -1143,7 +1042,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();fighterDiagnostic.reset();fighterDiagnosticPanelOpen=false;$('fighter-diagnostic-panel').hidden=true;pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
@@ -1163,12 +1062,11 @@ $('translation-debug').addEventListener('click',()=>{
 });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&game){
-    if(fighterDiagnostic.recording)fighterDiagnostic.stop('page_hidden',performance.now());
     if(running){running=false;cancelAnimationFrame(raf);}
     held=0;sound.reset();
     offerManualSoundRecovery=Boolean(sound.enabled);
   }else if(!document.hidden&&game){
-    if(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen){
+    if(!running&&!cheatPanelOpen&&!speedNoticeOpen){
       running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
     }
     offerManualSoundRecovery=Boolean(sound.enabled);
@@ -1194,7 +1092,7 @@ function pauseForProgressMenu(){
   sound.reset();
 }
 function resumeFromProgressMenu(){
-  if(game&&!document.hidden&&!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!slotMode&&!backupOpen&&!speedNoticeOpen){
+  if(game&&!document.hidden&&!running&&!cheatPanelOpen&&!slotMode&&!backupOpen&&!speedNoticeOpen){
     running=true;lastTick=0;accumulator=0;
     raf=requestAnimationFrame(requestFrame);
   }
@@ -1290,7 +1188,7 @@ function closeSlotPicker(){
   resumeFromProgressMenu();
 }
 function openBackupPanel(){
-  if(!game||backupOpen||slotMode||cheatPanelOpen||fighterDiagnosticPanelOpen)return;
+  if(!game||backupOpen||slotMode||cheatPanelOpen)return;
   pauseForProgressMenu();backupOpen=true;
   $('backup-feedback').textContent='';
   $('backup-panel').hidden=false;
@@ -1330,7 +1228,6 @@ async function applyLoadedSave(bytes){
     }
     throw error;
   }
-  if(fighterDiagnostic.recording)fighterDiagnostic.stop('state_imported',performance.now());
   const importedCheats=restoreActiveCheats();
   refreshCheatPanel(pendingCheatRestore
     ?'進度已讀取；戰鬥中暫不修改，回到安全階段後自動恢復作弊'
