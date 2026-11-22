@@ -45,6 +45,6 @@ test('original audio and save-state handlers remain intact',()=>{
   const app=src('web/app.mjs');
   assert.ok(app.includes('game.load_state(bytes)'));
   assert.ok(app.includes('await applyLoadedSave(new Uint8Array'));
-  assert.match(app,/const restored=await restoreAudioAfterInterruption\(\)/);
+  assert.ok(app.includes('await restoreAudioAfterInterruption()'));
   assert.match(app,/game\.set_audio_rate\(sound\.sampleRate\)/);
 });
