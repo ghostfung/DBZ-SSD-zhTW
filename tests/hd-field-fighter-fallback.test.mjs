@@ -17,7 +17,7 @@ test('cutscene fallback uses bounded upstream field reconstruction, not old-fram
   assert.match(matcher,/ssd_hd::live_field_fighter_poses\(log,&mut has_battle_art\)/);
   assert.match(matcher,/entries\[i\]\.id\.starts_with\("battle-"\)/);
   assert.match(matcher,/entries\[i\]\.id\.starts_with\("field-fg-"\)/);
-  assert.match(matcher,/choose_pose\(&self\.entries,\s*indices,\s*&pose\)/);
+  assert.match(matcher,/choose_pose_for\(&self\.entries,\s*indices,\s*&pose,\s*self\.goku_form\)/);
   assert.match(matcher,/pose\.oam_bits & \*owned/);
   assert.doesNotMatch(matcher,/last_hd|last_pose|retain_previous/i);
   assert.match(matcher,/had_primary && pose\.oam_bits & missing_oam == 0/);
