@@ -1,6 +1,7 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v59';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -453,7 +454,11 @@ async function ensureEngine(phase=async()=>{}) {
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
     const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v53',import.meta.url);
-    await mod.default({module_or_path:wasmUrl});
+    // Read verified, previously installed WASM bytes directly from
+    // CacheStorage, never via an intercepting Service Worker Response.
+    // Without an offline copy retain the exact v58 direct-network loader.
+    const offlineWasm=await loadOfflineWasm(wasmUrl);
+    await mod.default({module_or_path:offlineWasm??wasmUrl});
     moduleReady = mod;
     return mod;
   } catch (error) {

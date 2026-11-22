@@ -13,26 +13,17 @@
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
-  <script>
-    // Old versions intercepted 18 MiB WASM streams. Remove their origin-
-    // scoped worker *before* file selection and reload once if it was
-    // controlling this tab. ROM, IPS and HD ZIP are never inspected here.
-    if ('serviceWorker' in navigator) {
-      const wasControlled=Boolean(navigator.serviceWorker.controller);
-      navigator.serviceWorker.getRegistration().then(async registration=>{
-        if (!registration) return;
-        const removed=await registration.unregister();
-        if (removed && wasControlled) location.reload();
-      }).catch(error=>console.warn('舊版快取控制清理失敗',error));
-    }
-  </script>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v59"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v60"/>
 </head>
 <body>
   <main>
     <h1>七龍珠Z 超賽亞傳說 <small>HD 繁體中文版</small></h1>
     <p class="notice">將此網頁透過 Safari「分享 → 加入主畫面」，即可像 App 一樣使用。遊戲檔案只在本機儲存與運行。</p>
     <section id="setup">
+      <div id="offline-status" class="offline-status" role="status" aria-live="polite">
+        <span id="offline-status-message">正在檢查離線程式…</span>
+        <button id="offline-retry" type="button" hidden>重試離線安裝</button>
+      </div>
       <div id="launch-cover" class="launch-cover">
         <img id="title-cover" src="./dbz-title.webp" width="886" height="782"
           alt="七龍珠Z 超賽亞傳說遊戲標題畫面" decoding="async"/>
@@ -284,7 +275,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v53&ui=v63"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v64"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
+  <script type="module" src="offline-installer.mjs?offline=v59"></script>
 </body>
 </html>
