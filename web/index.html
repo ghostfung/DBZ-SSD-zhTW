@@ -26,7 +26,7 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v56"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v57"/>
 </head>
 <body>
   <main>
@@ -142,10 +142,11 @@
         <button data-bit="3" class="playbar-key">Start</button>
         <button id="hd-toggle" type="button" title="點擊切換 HD 2x／Classic 繁中 1x／Classic 英文">原版</button>
         <button id="locale-toggle" type="button">台灣繁中</button>
-        <button id="save" type="button">匯出進度</button>
-        <label class="upload playbar-upload">匯入進度<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
+        <button id="save" type="button" aria-haspopup="dialog" aria-controls="save-slots-panel">儲存遊戲</button>
+        <button id="load" type="button" aria-haspopup="dialog" aria-controls="save-slots-panel">讀取遊戲</button>
         <button id="sound" type="button" hidden>恢復聲音</button>
         <button id="cheat-open" type="button" aria-haspopup="dialog" aria-controls="cheats-panel">遊戲修改</button>
+        <button id="backup-open" type="button" aria-haspopup="dialog" aria-controls="backup-panel">備份紀錄</button>
         <output id="play-toast" role="status" aria-live="polite" hidden></output>
       </div>
       <div class="utility" hidden>
@@ -190,6 +191,38 @@
       </details>
     </section>
    </main>
+  <!-- A local-only save-state picker. The slot list never uploads user data. -->
+  <section id="save-slots-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="save-slots-title" hidden>
+    <div class="cheats-sheet save-slots-sheet">
+      <header class="cheats-heading">
+        <div><h2 id="save-slots-title">儲存遊戲</h2><p id="save-slots-hint">10 個本機進度欄位</p></div>
+        <button id="save-slots-close" type="button">返回遊戲</button>
+      </header>
+      <p class="cheats-note">進度只儲存在這部裝置的 PWA。清除網站資料、移除 PWA 或裝置損壞可能令資料遺失，請定期使用「備份紀錄」匯出 .sav。</p>
+      <div id="save-slots-list" class="save-slots-list" role="group" aria-label="存檔欄位"></div>
+      <output id="save-slots-feedback" class="save-slots-feedback" role="status" aria-live="polite"></output>
+      <div class="save-slots-actions">
+        <button id="save-slots-cancel" type="button">取消</button>
+        <button id="save-slots-confirm" type="button" disabled>儲存至所選欄位</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="backup-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="backup-title" hidden>
+    <div class="cheats-sheet backup-sheet">
+      <header class="cheats-heading">
+        <div><h2 id="backup-title">備份紀錄</h2><p>原有 .sav 匯入／匯出功能</p></div>
+        <button id="backup-close" type="button">返回遊戲</button>
+      </header>
+      <p class="cheats-note">匯入會先選擇 10 個存檔欄位之一，並將該進度載入遊戲；匯出則備份目前遊戲進度。備份檔可轉移至其他裝置。</p>
+      <div class="backup-actions">
+        <label class="upload backup-file-label" for="state-file">匯入進度（.sav）<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
+        <button id="backup-export" type="button">匯出進度（.sav）</button>
+      </div>
+      <output id="backup-feedback" role="status" aria-live="polite"></output>
+    </div>
+  </section>
+
   <section id="cheats-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="cheats-title" hidden>
     <div class="cheats-sheet">
       <header class="cheats-heading">
@@ -251,7 +284,7 @@
     </div>
   </section>
 
-  <script type="module" src="app.mjs?build=v53&ui=v59"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v60"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v52"></script>
 </body>
 </html>
