@@ -109,9 +109,12 @@ fn palette_distance(entry: &Entry, sample: LiveTilePixel, cgram: &[u16]) -> Opti
 }
 
 /// A cutscene may stream unrelated glyphs or animate unrelated palettes
-/// mid-frame. Reject a portrait only when a write overlaps one of its
-/// *verified visible* source tiles or its own CGRAM bank. Global write flags
-/// used to blank otherwise unchanged faces during dialogue animations.
+/// mid-frame. Reject only a *changing* write overlapping the portrait's
+/// verified visible tiles or its own CGRAM bank. The SNES often rewrites the
+/// SAME VRAM/CGRAM word (e.g. on menus); treating redundant writes as a
+/// change made still-valid HD faces alternate with native faces every frame.
+/// Every actual mid-frame value change still fails closed, even if it later
+/// restores the original value; no guessed portrait or previous frame pixels.
 fn source_changed_for_portrait(
     log: &FrameLog, samples: &[LiveTilePixel], entry: &Entry, x: usize, y: usize,
 ) -> bool {
@@ -135,11 +138,13 @@ fn source_changed_for_portrait(
         }
     }
     log.vram_writes.iter().any(|write| {
-        let at=write.address as usize;
+        let at=usize::from(write.address);
         tile_words.iter().any(|base|at>=*base && at<*base+16)
+            && log.vram.get(at).copied()!=Some(write.value)
     }) || log.cgram_writes.iter().any(|write| {
-        let at=write.index as usize;
+        let at=usize::from(write.index);
         palettes.iter().any(|base|at>=*base && at<*base+16)
+            && log.cgram_start.get(at).copied()!=Some(write.value)
     })
 }
 
@@ -198,6 +203,11 @@ impl LivePortraits {
     }
 
     pub(crate) fn refresh(&mut self, log: &FrameLog, samples: &[LiveTilePixel]) {
+        // Remember only validated identities/locations. If the menu redraws
+        // a portrait and the sparse sampling lattice misses its source
+        // anchors, re-check that same prior candidate with the full exact
+        // ROM tile/palette/source-write validation below; never freeze art.
+        let prior=self.active.clone();
         self.active.clear();
         self.probes=0;
         self.recognised=0;
@@ -238,6 +248,16 @@ impl LivePortraits {
                 }
             }
             if !candidate.is_empty(){break;}
+        }
+        // A previously authenticated position is a *candidate*, not a
+        // rendered match. It still needs the same >=8 exact ROM tile hashes,
+        // multi-row, palette and changed-source checks as any new match.
+        for old in prior {
+            if self.pictures.contains_key(&old.index) &&
+                old.x+32<=WIDTH && old.y+32<=h
+            {
+                candidate.insert((old.index,old.x,old.y));
+            }
         }
         self.probes=candidate.len() as u32;
         let mut found=Vec::new();
