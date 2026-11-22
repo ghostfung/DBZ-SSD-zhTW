@@ -13,6 +13,7 @@ export class SnesAudio {
     this.pendingFrames = 0;
     this.offsetFrames = 0;
     this.nextStart = 0;
+    this.fastMuted = false;
   }
 
   get sampleRate() { return this.context?.sampleRate || 48000; }
@@ -99,9 +100,18 @@ export class SnesAudio {
     this.nextStart = 0;
   }
 
+  // Fast gameplay is silent by design. Preserve the user's audio permission
+  // and current AudioContext so 1x can resume without another gesture.
+  setFastMuted(muted) {
+    const next=Boolean(muted);
+    if(this.fastMuted===next)return;
+    this.fastMuted=next;
+    this.reset();
+  }
+
   // Accept interleaved float32 samples: L0, R0, L1, R1, ...
   enqueue(samples) {
-    if (!this.enabled || this.context?.state !== 'running' || !samples?.length) return;
+    if (this.fastMuted || !this.enabled || this.context?.state !== 'running' || !samples?.length) return;
     if (samples.length % 2) throw new Error('模擬器提供的 PCM 樣本數不是雙聲道');
     this.pending.push(samples);
     this.pendingFrames += samples.length / 2;
