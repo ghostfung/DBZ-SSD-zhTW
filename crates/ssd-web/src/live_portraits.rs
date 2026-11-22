@@ -564,7 +564,57 @@ mod tests {
         log.cgram_writes[0].index=1;
         output.fill(0);
         assert_eq!(live.composite(&log,&samples,&mut output,512,64),0,
-            "source palette writes must never produce the wrong HD face");
+            "changed source palette writes must never produce the wrong HD face");
+
+        // Namek's face menu repeatedly writes the same VRAM/CGRAM values.
+        // They are not actual picture changes and must never blank all the
+        // HD portraits or create alternating native/HD frames.
+        log.vram_writes[0].address=16;
+        log.vram_writes[0].value=log.vram[16];
+        log.cgram_writes[0].value=log.cgram_start[1];
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1,
+            "identical in-place VRAM/CGRAM writes preserve the exact face");
+        output.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut output,512,64),1024);
+
+        // A changed write followed by an identical one is still unsafe.
+        log.vram_writes.push(ssd_oracle::VramWrite{
+            entry:1,address:16,value:log.vram[16].wrapping_add(1),
+        });
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),0,
+            "a real source modification is not hidden by identical writes");
+        log.vram_writes.pop();
+
+        // Sparse PPU sampling can miss an otherwise unchanged animated face:
+        // re-probe only the previously verified location with exact tile
+        // hashes and palette; never just paste last frame's image.
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1);
+        for y in (0..32_usize).step_by(2) {
+            for x in (0..32_usize).step_by(2) {
+                samples[y*256+x]=LiveTilePixel::default();
+            }
+        }
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),1,
+            "unchanged face remains authenticated when both anchor lattices miss");
+        output.fill(0);
+        assert!(live.composite(&log,&samples,&mut output,512,64)>0);
+
+        // If another character replaces the source tiles in the same panel,
+        // discard the old match immediately, even at the same coordinates.
+        for cell in 0..12 {
+            log.vram[cell*16]=0;
+        }
+        log.vram_writes.clear();
+        log.cgram_writes.clear();
+        live.refresh(&log,&samples);
+        assert!(live.active.is_empty(),
+            "no stale HD portrait may survive a different source identity");
+        output.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut output,512,64),0);
     }
 
     #[test]
