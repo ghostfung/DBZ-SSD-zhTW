@@ -1263,7 +1263,12 @@ async function applyLoadedSave(bytes){
   try{game.load_state(bytes);}
   catch(error){
     // An invalid backup must not destroy the in-memory game in progress.
-    try{game.load_state(previous);}catch(restoreError){
+    try{
+      game.load_state(previous);
+      // load_state always clears runtime cheat memory; restore the player's
+      // on-device preferences even when a corrupt .sav was rejected.
+      restoreActiveCheats();
+    }catch(restoreError){
       console.error('無法恢復匯入前遊戲狀態',restoreError);
     }
     throw error;
