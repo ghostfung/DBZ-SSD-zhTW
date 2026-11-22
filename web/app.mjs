@@ -1,7 +1,7 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
-import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56';
+import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
@@ -83,6 +83,8 @@ function updateSpeedButton(){
   button.textContent='速度 '+gameSpeed+'×';
   button.dataset.speed=String(gameSpeed);
   button.setAttribute('aria-label','目前遊戲速度 '+gameSpeed+' 倍，點擊切換');
+  button.title=gameSpeed===1?'遊戲原速，點擊切換至 2×':
+    '遊戲倍速 '+gameSpeed+'×（暫停音效），點擊切換';
   button.setAttribute('aria-pressed',String(gameSpeed!==1));
 }
 $('speed-toggle').addEventListener('click',()=>{
@@ -90,9 +92,9 @@ $('speed-toggle').addEventListener('click',()=>{
   gameSpeed=nextSpeed(gameSpeed);
   sound.setFastMuted(gameSpeed!==1);
   lastTick=0;accumulator=0;
+  // The button itself shows the selected speed. Do not show the old
+  // full-width toast: on portrait iPhone it overlaps this compact control.
   updateSpeedButton();
-  gameToast(gameSpeed===1?'已恢復原速 1×，音效正常播放'
-    :'遊戲速度 '+gameSpeed+'× · 倍速暫停音效（視手機效能而定）');
 });
 updateSpeedButton();
 
