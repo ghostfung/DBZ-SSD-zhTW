@@ -1,6 +1,7 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
-import {SnesAudio} from './audio.mjs?build=v49';
+import {SnesAudio} from './audio.mjs?build=v56';
+import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
@@ -24,6 +25,7 @@ const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let cheatPanelOpen = false;
 let fighterDiagnosticPanelOpen = false;
+let gameSpeed=1,speedNoticeOpen=false,speedNoticeShownInSession=false;
 let pendingCheatRestore = false;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
 let averageTickMs = 0;
@@ -65,6 +67,55 @@ async function getTranslation(code){
 }
 
 const STEP = 1000/60.0988;
+
+// Exactly one speed button: portrait above Start, landscape above D-pad.
+// Move its existing DOM node on orientation change, never clone handlers.
+const landscapeSpeedPlacement=window.matchMedia('(orientation:landscape) and (max-height:650px)');
+function syncSpeedPlacement(){
+  const anchor=$(landscapeSpeedPlacement.matches?'speed-landscape-anchor':'speed-portrait-anchor');
+  if(anchor&&$('speed-toggle').parentElement!==anchor)anchor.appendChild($('speed-toggle'));
+}
+landscapeSpeedPlacement.addEventListener?.('change',syncSpeedPlacement);
+window.addEventListener('resize',syncSpeedPlacement);
+syncSpeedPlacement();
+function updateSpeedButton(){
+  const button=$('speed-toggle');
+  button.textContent='速度 '+gameSpeed+'×';
+  button.dataset.speed=String(gameSpeed);
+  button.setAttribute('aria-label','目前遊戲速度 '+gameSpeed+' 倍，點擊切換');
+  button.setAttribute('aria-pressed',String(gameSpeed!==1));
+}
+$('speed-toggle').addEventListener('click',()=>{
+  if(!game||speedNoticeOpen)return;
+  gameSpeed=nextSpeed(gameSpeed);
+  sound.setFastMuted(gameSpeed!==1);
+  lastTick=0;accumulator=0;
+  updateSpeedButton();
+  gameToast(gameSpeed===1?'已恢復原速 1×，音效正常播放'
+    :'遊戲速度 '+gameSpeed+'× · 倍速暫停音效（視手機效能而定）');
+});
+updateSpeedButton();
+
+function showSpeedUpdateNoticeOnce(){
+  if(speedNoticeShownInSession)return false;
+  try{if(localStorage.getItem(SPEED_NOTICE_KEY)==='1')return false;}catch{}
+  speedNoticeShownInSession=true;
+  speedNoticeOpen=true;held=0;
+  $('speed-update-panel').hidden=false;
+  $('speed-update-close').focus({preventScroll:true});
+  return true;
+}
+$('speed-update-close').addEventListener('click',()=>{
+  if(!speedNoticeOpen)return;
+  try{localStorage.setItem(SPEED_NOTICE_KEY,'1');}catch{}
+  speedNoticeOpen=false;
+  $('speed-update-panel').hidden=true;
+  $('speed-toggle').focus({preventScroll:true});
+  if(game&&!running&&!document.hidden&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen){
+    running=true;lastTick=0;accumulator=0;
+    raf=requestAnimationFrame(requestFrame);
+  }
+});
 const frameMetrics = new FrameMetrics();
 const transientHoldBudget = new HdPresentationBudget();
 let perfHistory=[];
@@ -252,7 +303,7 @@ function closeCheatPanel(){
   if(!cheatPanelOpen)return;
   cheatPanelOpen=false;
   $('cheats-panel').hidden=true;
-  if(game&&!document.hidden&&!running&&!fighterDiagnosticPanelOpen){
+  if(game&&!document.hidden&&!running&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen){
     running=true;lastTick=0;accumulator=0;
     raf=requestAnimationFrame(requestFrame);
   }
@@ -607,13 +658,15 @@ $('start').addEventListener('click', async () => {
     updateRenderModeButton();
     button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
+    gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();syncSpeedPlacement();
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
     hdSceneTrace.reset();fighterDiagnostic.reset();lastPresentedFrame=null;lastPresentation=null;
     averageTickMs=0;
     transitionArtifactGate.reset();
     $('frame-perf').textContent='卡頓監測：正在收集影格耗時…';
     $('hd-phase-perf').textContent='HD 分段耗時：正在採樣…';
-    raf = requestAnimationFrame(requestFrame);
+    if(showSpeedUpdateNoticeOnce())running=false;
+    else raf = requestAnimationFrame(requestFrame);
   } catch (error) {
     button.disabled=false;
     button.textContent=originalLabel;
@@ -831,15 +884,17 @@ function requestFrame(now) {
     // Keep at most two simulation steps and discard stale backlog rather
     // than chasing elapsed wall-clock time with an unbounded burst.
     const rafGap=now-lastTick;
-    accumulator += Math.min(rafGap, STEP*2);
+    // Fast-forward the emulation clock, never the RAF clock. The scheduler
+    // caps catch-up work to avoid freezing HD scenes on older iPhones.
+    const plan=speedFramePlan({
+      gapMs:rafGap,accumulatorMs:accumulator,rate:gameSpeed,
+      averageTickMs,stepMs:STEP
+    });
+    accumulator=plan.remainingMs;
     let n = 0;
-    // A slow HD render cannot catch up by running two expensive frames in
-    // the same RAF. Adaptive cap avoids 43 ms simulation bursts while fast
-    // frames still recover up to two missed steps.
-    const maxCatchup=averageTickMs>=STEP*.90 ? 1 : 2;
     const simulationStart=performance.now();
-    while(accumulator >= STEP && n < maxCatchup) {
-      game.tick(held);countFrames++;n++;accumulator -= STEP;
+    while(n<plan.ticks){
+      game.tick(held);countFrames++;n++;
     }
     const simulationMs=performance.now()-simulationStart;
     if(n){
@@ -1086,7 +1141,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{fighterDiagnostic.reset();fighterDiagnosticPanelOpen=false;$('fighter-diagnostic-panel').hidden=true;pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();fighterDiagnostic.reset();fighterDiagnosticPanelOpen=false;$('fighter-diagnostic-panel').hidden=true;pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
@@ -1111,7 +1166,7 @@ document.addEventListener('visibilitychange',()=>{
     held=0;sound.reset();
     offerManualSoundRecovery=Boolean(sound.enabled);
   }else if(!document.hidden&&game){
-    if(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen){
+    if(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen){
       running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
     }
     offerManualSoundRecovery=Boolean(sound.enabled);
@@ -1137,7 +1192,7 @@ function pauseForProgressMenu(){
   sound.reset();
 }
 function resumeFromProgressMenu(){
-  if(game&&!document.hidden&&!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!slotMode&&!backupOpen){
+  if(game&&!document.hidden&&!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!slotMode&&!backupOpen&&!speedNoticeOpen){
     running=true;lastTick=0;accumulator=0;
     raf=requestAnimationFrame(requestFrame);
   }
