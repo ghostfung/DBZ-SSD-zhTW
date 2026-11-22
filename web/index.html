@@ -26,7 +26,7 @@
       }).catch(error=>console.warn('舊版快取控制清理失敗',error));
     }
   </script>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v58"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v59"/>
 </head>
 <body>
   <main>
@@ -142,7 +142,7 @@
         <button data-bit="2" class="playbar-key">Select</button>
         <span class="start-speed-stack">
           <span id="speed-portrait-anchor" class="speed-portrait-anchor">
-            <button id="speed-toggle" type="button" aria-label="遊戲速度 1 倍，點按切換" title="遊戲倍速：1×／1.5×／2×">速度 1×</button>
+            <button id="speed-toggle" type="button" aria-label="遊戲速度 1 倍，點按切換" title="遊戲倍速：1×／2×／3×">速度 1×</button>
           </span>
           <button data-bit="3" class="playbar-key">Start</button>
         </span>
@@ -232,13 +232,13 @@
   <section id="speed-update-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="speed-update-title" aria-describedby="speed-update-description" hidden>
     <div class="cheats-sheet speed-update-sheet">
       <header class="cheats-heading">
-        <div><h2 id="speed-update-title">遊戲更新：新增倍速功能</h2><p>新功能通知 · 只顯示一次</p></div>
+        <div><h2 id="speed-update-title">本次遊戲更新</h2><p>更新內容 · 只顯示一次</p></div>
       </header>
       <p id="speed-update-description" class="cheats-note">
-        新增獨立「速度」按鈕。手機直向遊玩時，按鈕在 Start 上方；橫向時，在方向鍵上方。
-        每按一下可依序切換 1× → 1.5× → 2× → 1×。
-        倍速期間會暫停遊戲音效，切回 1× 自動恢復；實際加速效果視手機效能而定。
-        舊版存檔、遊戲修改及 HD 素材不受影響。
+        <span class="update-line">💾 新增 10 格存檔、讀取及備份功能。</span>
+        <span class="update-line">⚡ HD 美術包快速啟動，不再每次完整驗證。</span>
+        <span class="update-line">⏩ 新增一鍵倍速：1× → 2× → 3×。</span>
+        <small class="update-footnote">倍速期間暫停音效，切回 1× 即恢復。</small>
       </p>
       <div class="cheats-actions">
         <button id="speed-update-close" type="button">我知道了，開始遊戲</button>
@@ -307,7 +307,7 @@
     </div>
   </section>
 
-  <script type="module" src="app.mjs?build=v53&ui=v61"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v62"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
 </body>
 </html>
