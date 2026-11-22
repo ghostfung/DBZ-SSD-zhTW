@@ -12,7 +12,7 @@ const PENDING='__dbz-offline-pending__';
 const LAST_CHECK='__dbz-offline-last-check__';
 const READY='__dbz-offline-ready__';
 const VERSION_FORMAT=/^v[1-9][0-9]*(?:[.][0-9]+){0,2}$/;
-const PATH_FORMAT=new RegExp('^[a-zA-Z0-9][a-zA-Z0-9._/-]*
+const PATH_FORMAT=new RegExp('^[a-zA-Z0-9][a-zA-Z0-9._/-]*$');
 const rootFor=root=>new URL(root??new URL('./',import.meta.url).href);
 const asset=(file,root)=>new URL('./'+file,rootFor(root)).href;
 const keyUrl=(key,root)=>new URL('./'+key,rootFor(root)).href;

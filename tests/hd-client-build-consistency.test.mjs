@@ -6,7 +6,7 @@ const src=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 test('Safari shell caches JS but never intercepts WASM stream; browser and core IDs still agree',()=>{
  const worker=src('web/service-worker.js');
  assert.match(worker,/addEventListener\('fetch'/);
- assert.match(worker,/uri\.pathname\.endsWith\('\/pkg\/ssd_web_bg\.wasm'\)/);
+ assert.ok(worker.includes("url.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
  assert.match(src('web/app.mjs'),/loadOfflineWasm\(wasmUrl\)/);
  assert.doesNotMatch(src('web/index.html'),/registration\.unregister\(\)/);
  assert.match(src('web/index.html'),/app\.mjs\?build=v53/);

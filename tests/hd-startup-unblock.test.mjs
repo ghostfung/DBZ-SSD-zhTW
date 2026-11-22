@@ -22,7 +22,7 @@ test('WASM uses cached bytes or direct network URL, not a WebKit SW stream',()=>
  assert.ok(app.includes('module_or_path:offlineWasm??wasmUrl'));
  assert.ok(!app.includes('module_or_path:wasmResponse'));
  assert.ok(!app.includes('new AbortController()'));
- assert.ok(sw.includes("uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
+ assert.ok(sw.includes("url.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
  assert.ok(!sw.includes('Response.clone('));
 });
 test('legacy unregister is gone, current worker installs offline shell',()=>{
