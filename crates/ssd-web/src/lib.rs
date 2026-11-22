@@ -200,7 +200,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v51".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v52".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -333,7 +333,7 @@ impl WebGame {
                         // the genuine PPU pixels beneath them and reapply HD
                         // background art. Then draw the transparent HD pose.
                         // No guessed rectangles or solid colour masking.
-                        self.live_fighters.refresh(log);
+                        self.live_fighters.refresh(log,self.machine.wram());
                         self.live_specials.refresh(log);
                         let fighters=if self.hd_fighter_enabled {
                             self.live_fighters.ready_oam_bits()
