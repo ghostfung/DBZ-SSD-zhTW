@@ -15,7 +15,7 @@ const MAX_ENTRIES: usize = 20_000;
 const MAX_PICTURE_BYTES: usize = 4 * 1024 * 1024;
 const MAX_POSES: usize = 8;
 const MAX_REJECTED: usize = 8;
-const MAX_REJECT_CANDIDATES: usize = 3;
+const MAX_REJECT_CANDIDATES: usize = 8;
 const WIDTH: usize = 256;
 
 /// Identity from active roster records, following the desktop's Goku rules.
@@ -73,7 +73,18 @@ fn resolve_goku_collision(entries:&[Entry],exact:&[usize],pose:&LiveFighterPose,
             None=>return None,
         }
     }
-    let (n,ss)=(normal?,super_saiyan?);
+    // A matching normal-Goku asset must not be rejected merely because the
+    // SSJ asset uses a different palette (or is unavailable), and vice versa.
+    // The roster must still prove the form, and the chosen image must match
+    // the live source key, dimensions and palette.
+    let expected=match confirmed_form {
+        GokuForm::Normal=>normal?,
+        GokuForm::SuperSaiyan=>super_saiyan?,
+    };
+    let (n,ss)=match (normal,super_saiyan){
+        (Some(n),Some(ss))=>(n,ss),
+        _=>return Some(expected),
+    };
     let mut normal_distance=0_u32;
     let mut super_distance=0_u32;
     // Compare only colour indices used by BOTH palettes, never unused hair.
@@ -141,6 +152,8 @@ struct RejectedPose {
     origin: &'static str,
     reason: &'static str,
     candidates: Vec<usize>,
+    palette_eligible: Vec<usize>,
+    palette_eligible_count: usize,
 }
 
 impl RejectedPose {
@@ -149,7 +162,23 @@ impl RejectedPose {
         Self {
             key: pose.key, width: pose.width, height: pose.height, origin, reason,
             candidates: indices.iter().copied().take(MAX_REJECT_CANDIDATES).collect(),
+            palette_eligible: Vec::new(),
+            palette_eligible_count: 0,
         }
+    }
+    fn with_palette_eligible(mut self, entries:&[Entry],
+                             indices:&[usize], pose:&LiveFighterPose)->Self {
+        for &i in indices {
+            let entry=&entries[i];
+            if !entry.luma && entry.width==pose.width &&
+               entry.height==pose.height && palette_matches(entry,pose) {
+                self.palette_eligible_count+=1;
+                if self.palette_eligible.len()<MAX_REJECT_CANDIDATES {
+                    self.palette_eligible.push(i);
+                }
+            }
+        }
+        self
     }
 }
 
@@ -265,7 +294,8 @@ impl LiveFighters {
         let Some(index) = choose_pose_for(&self.entries, indices, &pose, self.goku_form) else {
             self.palette_rejections += 1;
             let reason = pose_rejection_reason(&self.entries, indices, &pose);
-            let rejected = RejectedPose::new(&pose, "primary", reason, indices);
+            let rejected = RejectedPose::new(&pose, "primary", reason, indices)
+                .with_palette_eligible(&self.entries,indices,&pose);
             self.record_rejection(rejected);
             return false;
         };
@@ -316,7 +346,8 @@ impl LiveFighters {
         let Some(index) = choose_pose_for(&self.entries, indices, &pose, self.goku_form) else {
             self.palette_rejections += 1;
             let reason = pose_rejection_reason(&self.entries, indices, &pose);
-            let rejected = RejectedPose::new(&pose, "refined", reason, indices);
+            let rejected = RejectedPose::new(&pose, "refined", reason, indices)
+                .with_palette_eligible(&self.entries,indices,&pose);
             self.record_rejection(rejected);
             return false;
         };
@@ -470,6 +501,12 @@ impl LiveFighters {
                     "w":rejected.width,"h":rejected.height,
                     "origin":rejected.origin,"reason":rejected.reason,
                     "candidateIds":rejected.candidates.iter()
+                        .filter_map(|&i|self.entries.get(i).map(|e|e.id.as_str()))
+                        .collect::<Vec<_>>(),
+                    // Eligible means *actual* width, height and palette match;
+                    // unlike candidateIds these have passed the colour check.
+                    "paletteEligibleCount":rejected.palette_eligible_count,
+                    "paletteEligibleIds":rejected.palette_eligible.iter()
                         .filter_map(|&i|self.entries.get(i).map(|e|e.id.as_str()))
                         .collect::<Vec<_>>()
                 })
