@@ -829,6 +829,55 @@ mod tests {
         assert_eq!(owned,0);
     }
 
+
+    #[test]
+    fn normal_goku_can_match_with_field_alias_when_ssj_palette_is_ineligible(){
+        let mut catalog:serde_json::Value=
+            serde_json::from_str(&goku_collision_catalog("field-goku-ki-001")).unwrap();
+        // The source index still lists both Goku forms, but only normal
+        // Goku and the unrelated field alias match the current colours.
+        catalog[1]["palette"][1]=serde_json::json!([0,0,255]);
+        let mut live=LiveFighters::default();
+        live.load_catalog(&catalog.to_string()).unwrap();
+        let indices=live.lookup.get(&0xabcd).unwrap().clone();
+        assert_eq!(pose_rejection_reason(&live.entries,&indices,&pose()),
+            "ambiguous_palette");
+        assert_eq!(choose_pose_for(&live.entries,&indices,&pose(),None),None);
+        assert_eq!(choose_pose_for(&live.entries,&indices,&pose(),
+            Some(GokuForm::SuperSaiyan)),None);
+        assert_eq!(choose_pose_for(&live.entries,&indices,&pose(),
+            Some(GokuForm::Normal)),Some(0));
+        live.goku_form=goku_form_from_wram(&goku_roster(true,false));
+        let mut owned=0_u128;
+        assert!(live.accept_primary(pose(),&mut owned));
+        assert_eq!(live.entries[live.active[0].index].id,"battle-goku-000");
+        assert_eq!(live.goku_ambiguities_resolved,1);
+    }
+
+    #[test]
+    fn rejected_ambiguity_reports_eligible_colours_not_just_first_index_entries(){
+        let mut catalog:serde_json::Value=
+            serde_json::from_str(&goku_collision_catalog("field-goku-ki-001")).unwrap();
+        let other=serde_json::json!({
+            "id":"battle-piccolo-other","key":"abcd","width":2,"height":2,
+            "art":"class2/other.png","available":true,
+            "palette":catalog[0]["palette"].clone()
+        });
+        catalog.as_array_mut().unwrap().push(other);
+        let mut live=LiveFighters::default();
+        live.load_catalog(&catalog.to_string()).unwrap();
+        live.goku_form=Some(GokuForm::Normal);
+        let mut claimed=0;
+        assert!(!live.accept_primary(pose(),&mut claimed));
+        let report:serde_json::Value=serde_json::from_str(&live.probe_json()).unwrap();
+        let rejected=&report["rejectedPoses"][0];
+        assert_eq!(rejected["reason"],"ambiguous_palette");
+        assert_eq!(rejected["paletteEligibleCount"],4);
+        assert_eq!(rejected["paletteEligibleIds"][3],"battle-piccolo-other");
+        assert_eq!(rejected["candidateIds"].as_array().unwrap().len(),4);
+        assert_eq!(claimed,0,"no other character's OAM can be claimed");
+    }
+
     #[test]
     fn non_goku_or_multiple_goku_collision_keeps_original_sprite(){
         let mut live=LiveFighters::default();
