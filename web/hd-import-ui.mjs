@@ -1,5 +1,5 @@
 // HD archive import UI. All reads are local File/OPFS, never fetch/POST player assets.
-import {inspectZip,extractZipEntry,verifyOfficialPack,OFFICIAL_PACK} from './hd-pack.mjs';
+import {inspectZip,extractZipEntry,verifyOfficialPack,restoreOfficialPackFast,OFFICIAL_PACK} from './hd-pack.mjs?restore=v55';
 import {opfsAvailable,saveVerifiedHdPack,readSavedHdPack,clearSavedHdPack} from './hd-storage.mjs';
 import {LocalHdAssets} from './hd-local-assets.mjs';
 import {readBackgroundCatalog} from './hd-background-index.mjs';
@@ -408,7 +408,7 @@ $('hd-verify').addEventListener('click',async()=>{
         const restored=await readSavedHdPack();
         if(!restored)throw Error('寫入完成但未能重新讀取');
         persisted=true;
-        status(explanation(checked)+extra+'\n驗證及本機保存均成功。下次開啟 PWA 會重新核對 SHA-256，不用再選取 ZIP。');
+        status(explanation(checked)+extra+'\n驗證及本機保存均成功。下次開啟 PWA 會快速檢查本機索引，不需要再掃描整份 ZIP，也不用重新選取 ZIP。');
       }catch(error){
         persisted=false;
         status(explanation(checked)+extra+'\nHD 美術包已通過驗證，可直接遊玩；但自動保存失敗：'+
@@ -496,18 +496,30 @@ globalThis.hdRestorePromise=(async()=>{
     const epoch=selectionEpoch;
     const cached=await readSavedHdPack();
     if(cached) {
-      status('正在重新驗證已儲存的 HD ZIP（本機 SHA-256）…');
-      // The metadata is only a previous verification receipt. Rehash
-      // retained bytes on every new session before making art available.
-      // This never transmits the ZIP and catches corrupted/evicted parts.
-      const checked=await verifyOfficialPack(cached.file,{
-        onProgress:(n,total)=>{
-          progress('正在驗證已保存美術包',n,total);
-          document.dispatchEvent(new CustomEvent('hd-restore-progress',{
-            detail:{done:n,total}
-          }));
-        }
-      });
+      status('正在快速檢查已儲存的 HD 美術包索引…');
+      let checked,method='fast';
+      try {
+        // The original import already passed a FULL SHA-256 check. OPFS
+        // metadata is only committed once all 2 MiB parts have been saved.
+        // readSavedHdPack checks every part's presence and exact length;
+        // restoreOfficialPackFast checks the ZIP directory and receipt.
+        // It does not read/hash all 484 MB on every PWA launch.
+        checked=await restoreOfficialPackFast(cached.file,cached.metadata);
+      }catch(fastError){
+        // Invalid index/receipt: fail closed and do a one-time full recheck.
+        // Do not attach untrusted HD art if even that check fails.
+        if(epoch!==selectionEpoch)return;
+        method='full';
+        status('HD 快速檢查異常：'+(fastError?.message||String(fastError))+'。正在完整重驗 SHA-256…');
+        checked=await verifyOfficialPack(cached.file,{
+          onProgress:(n,total)=>{
+            progress('發現異常，正在完整重驗 HD 美術包',n,total);
+            document.dispatchEvent(new CustomEvent('hd-restore-progress',{
+              detail:{done:n,total}
+            }));
+          }
+        });
+      }
       // A newly selected ZIP must not be overwritten by the stale restore.
       if(epoch!==selectionEpoch)return;
       activeFile=cached.file;
@@ -516,7 +528,9 @@ globalThis.hdRestorePromise=(async()=>{
       persisted=true;
       prepareLocalReader(cached.file,verified);
       busyMode(false);
-      status('HD 美術包已從 iPhone 本機儲存區恢復，並重新通過 SHA-256 驗證。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片。可直接開始 HD 遊戲，無須重選 ZIP。');
+      status(method==='fast'
+        ?'HD 美術包已從 iPhone 本機恢復，快速檢查通過（分段及 ZIP 索引）。不需重新計算整份 SHA-256。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片，可以直接啟動。'
+        :'HD 美術包已重新通過完整 SHA-256 驗證。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片，可以直接啟動。');
     } else {
       status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；驗證完成後會自動嘗試保存，成功時下次可免重選。');
     }
