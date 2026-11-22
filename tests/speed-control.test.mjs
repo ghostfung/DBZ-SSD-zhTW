@@ -54,7 +54,10 @@ test('fast audio is silent, and restoring 1x preserves enabled AudioContext',()=
   const seen=[];
   fake.context={state:'running',currentTime:0};
   fake.enabled=true;
-  fake.schedule=()=>seen.push('scheduled');
+  fake.schedule=frames=>{
+    seen.push('scheduled');
+    fake.take(frames,new Float32Array(frames),new Float32Array(frames));
+  };
   fake.setFastMuted(true);
   fake.enqueue(new Float32Array(4096));
   assert.equal(fake.pendingFrames,0);
