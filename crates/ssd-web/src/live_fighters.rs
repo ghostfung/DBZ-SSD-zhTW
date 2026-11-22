@@ -759,7 +759,8 @@ mod tests {
         assert!(live.accept_primary(current.clone(),&mut owned));
         assert_eq!(live.entries[live.active[0].index].id,"battle-goku-000");
         assert_eq!(live.goku_ambiguities_resolved,1);
-        assert_eq!(live.probe_json().contains("\\"gokuAmbiguitiesResolved\\":1"),true);
+        let probe:serde_json::Value=serde_json::from_str(&live.probe_json()).unwrap();
+        assert_eq!(probe["gokuAmbiguitiesResolved"],1);
         // No Goku unit evidence: do not render from catalogue order.
         live.active.clear();
         live.goku_form=None;
