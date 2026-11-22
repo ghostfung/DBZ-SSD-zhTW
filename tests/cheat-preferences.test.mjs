@@ -137,8 +137,8 @@ test('PWA wires auto-restore on launch and save on successful change/reset only'
     >app.indexOf('game = new WebGame(rom, ips)'));
   assert.ok(app.indexOf('const cheatRestore=restoreActiveCheats()')
     <app.indexOf('raf = requestAnimationFrame(requestFrame)'));
-  assert.ok(app.indexOf('game.load_state(new Uint8Array(await file.arrayBuffer()));') >= 0); 
-  assert.ok(app.indexOf('const importedCheats=restoreActiveCheats()') > app.indexOf('game.load_state(new Uint8Array(await file.arrayBuffer()));'));
+  assert.ok(app.indexOf('await applyLoadedSave(new Uint8Array(await record.state.arrayBuffer()))') >= 0); 
+  assert.ok(app.indexOf('const importedCheats=restoreActiveCheats()') > app.indexOf('try{game.load_state(bytes);}'));
   assert.match(app,/if\(pendingCheatRestore && n && game\.frame_count\(\)%60===0\)/);
   assert.match(app,/pendingCheatRestore=Boolean\(result\.error\?\.includes\('戰鬥進行中'\)\)/);
   assert.match(html,/設定會自動儲存在本機/);
