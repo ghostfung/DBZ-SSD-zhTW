@@ -26,7 +26,7 @@ fn goku_form_from_wram(wram: &[u8]) -> Option<GokuForm> {
     // Only use roster identity to break ambiguous battle-pose ties in a
     // confirmed battle. An unrelated field/ending sprite must not inherit
     // Goku's currently active party unit as its own identity.
-    let mode=wram.get((ssd_game::data::GAME_MODE & 0xFFFF) as usize)? & 0x7f;
+    let mode=*wram.get((ssd_game::data::GAME_MODE & 0xFFFF) as usize)? & 0x7f;
     if !matches!(mode,0x02|0x04|0x0c) {return None;}
     let start=(ssd_game::data::PARTY_RECORDS & 0xFFFF) as usize;
     let (mut normal,mut super_saiyan)=(false,false);
