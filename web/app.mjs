@@ -1,7 +1,7 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v59';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v60';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -259,6 +259,11 @@ function gameToast(message){
   toast.textContent=message;toast.hidden=false;
   toastTimeout=setTimeout(()=>{toast.hidden=true;},2800);
 }
+
+document.addEventListener('dbz-offline-update-ready',event=>{
+  const version=event.detail?.version||'新版';
+  if(game)gameToast(version+' 已經下載完成。請先儲存進度，返回首頁後重新啟動更新。');
+});
 
 // First-phase cheat settings are separate browser-local preferences; existing
 // ROM, save-state and emulation data formats remain unchanged.

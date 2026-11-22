@@ -12,7 +12,7 @@ async function activeCache(){
       new URL('./__dbz-offline-active__',self.registration.scope).href);
     if(!response)return DEFAULT;
     const entry=await response.json();
-    if(typeof entry.version==='string'&&/^v[1-9][0-9]*(?:\\.[0-9]+){0,2}$/.test(entry.version))
+    if(typeof entry.version==='string'&&/^v[1-9][0-9]*(?:[.][0-9]+){0,2}$/.test(entry.version))
       return 'dbz-ssd-offline-'+entry.version;
   }catch{}
   return DEFAULT;

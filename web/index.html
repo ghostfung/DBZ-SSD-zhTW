@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v60"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v61"/>
 </head>
 <body>
   <main>
@@ -23,6 +23,8 @@
       <div id="offline-status" class="offline-status" role="status" aria-live="polite">
         <span id="offline-status-message">正在檢查離線程式…</span>
         <button id="offline-retry" type="button" hidden>重試離線安裝</button>
+        <button id="offline-check" type="button" hidden>檢查更新</button>
+        <button id="offline-update-apply" type="button" hidden>重新啟動更新</button>
       </div>
       <div id="launch-cover" class="launch-cover">
         <img id="title-cover" src="./dbz-title.webp" width="886" height="782"
@@ -275,8 +277,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v53&ui=v64"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v65"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v59"></script>
+  <script type="module" src="offline-installer.mjs?offline=v60"></script>
 </body>
 </html>
