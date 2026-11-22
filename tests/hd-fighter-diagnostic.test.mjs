@@ -246,7 +246,7 @@ test('test-only diagnostic UI is reachable from existing game menu without addin
   assert.match(html,/id="fighter-diagnostic-panel"/);
   assert.match(html,/id="fighter-diagnostic-start"/);
   assert.match(html,/id="fighter-diagnostic-export"/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v59/);
+  assert.match(html,/app\.mjs\?build=v53&ui=v60/);
   assert.match(app,/fighterDiagnostic\.capture\(game/);
   assert.match(app,/fighterDiagnostic\.recording/);
   assert.match(app,/const fighterDiagnostic = new HdFighterDiagnostic/);
