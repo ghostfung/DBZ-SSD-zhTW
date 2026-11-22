@@ -14,5 +14,5 @@ test('only stage-proven Raditz story pages receive supplemental alignments',()=>
  assert.ok(!source.includes('str3:0x3F/p3\t'));
  assert.equal(entries[1][1],'究竟能不能救出悟飯！？');
  assert.match(get('web/app.mjs'),/fetch\('\.\/zh-tw-page-alignments\.tsv'\)/);
- assert.match(get('web/service-worker.js'),/uri\.pathname\.endsWith\('\/pkg\/ssd_web_bg\.wasm'\)/);
+  assert.ok(get('web/service-worker.js').includes("uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
 });

@@ -35,7 +35,7 @@ test('only transient matches may request holds; story/background protections rem
   assert.match(app,/fighterMatches\.length>0/);
   assert.match(app,/mode7Matches\.length>0/);
   assert.match(app,/event\.detail\.framePerformance=/);
-  assert.match(source('web/service-worker.js'),/uri\.pathname\.endsWith\('\/pkg\/ssd_web_bg\.wasm'\)/);
+  assert.ok(source('web/service-worker.js').includes("uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
   assert.match(source('crates/ssd-web/src/lib.rs'),/dbz-hd-tw-pwa-v53/);
 });
 

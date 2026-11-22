@@ -14,26 +14,25 @@ test('startup shows a distinct stage and restores button on WASM failure',()=>{
  assert.match(app,/button\.textContent=originalLabel/);
 });
 
-test('WASM uses offline CacheStorage bytes, or native direct URL when not cached',()=>{
+test('WASM uses cached bytes or direct network URL, not a WebKit SW stream',()=>{
  const app=source('web/app.mjs'),sw=source('web/service-worker.js');
- assert.match(app,/ssd_web\\.js\\?build=v53/);
- assert.match(app,/ssd_web_bg\\.wasm\\?build=v53/);
- assert.match(app,/const offlineWasm=await loadOfflineWasm\\(wasmUrl\\)/);
- assert.match(app,/module_or_path:offlineWasm\\?\\?wasmUrl/);
- assert.doesNotMatch(app,/module_or_path:wasmResponse/);
- assert.doesNotMatch(app,/new AbortController\\(\\)/);
- assert.match(sw,/uri\\.pathname\\.endsWith\\('\/pkg\/ssd_web_bg\\.wasm'\\)/);
- assert.doesNotMatch(sw,/Response\\.clone\\(/);
+ assert.ok(app.includes('ssd_web.js?build=v53'));
+ assert.ok(app.includes('ssd_web_bg.wasm?build=v53'));
+ assert.ok(app.includes('const offlineWasm=await loadOfflineWasm(wasmUrl)'));
+ assert.ok(app.includes('module_or_path:offlineWasm??wasmUrl'));
+ assert.ok(!app.includes('module_or_path:wasmResponse'));
+ assert.ok(!app.includes('new AbortController()'));
+ assert.ok(sw.includes("uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')"));
+ assert.ok(!sw.includes('Response.clone('));
 });
-test('old SW unregister is removed and v59 installs offline shell',()=>{
+test('legacy unregister is gone, current worker installs offline shell',()=>{
  const html=source('web/index.html'),offline=source('web/offline-installer.mjs');
- assert.doesNotMatch(html,/registration\\.unregister\\(\\)/);
- assert.match(offline,/serviceWorker\\.getRegistration/);
- assert.match(offline,/serviceWorker\\.register/);
- assert.match(html,/offline-installer\\.mjs\\?offline=v59/);
- assert.match(html,/app\\.mjs\\?build=v53/);
+ assert.ok(!html.includes('registration.unregister('));
+ assert.ok(offline.includes('serviceWorker.getRegistration'));
+ assert.ok(offline.includes('serviceWorker.register'));
+ assert.ok(html.includes('offline-installer.mjs?offline=v59'));
+ assert.ok(html.includes('app.mjs?build=v53'));
 });
-
 test('v42 display optimization survives and V44 core build matches client',()=>{
  const app=source('web/app.mjs'),rust=source('crates/ssd-web/src/lib.rs');
  assert.match(app,/const transientOnly=holdReasons\.length>0&&!storyHold&&!hdHold/);
