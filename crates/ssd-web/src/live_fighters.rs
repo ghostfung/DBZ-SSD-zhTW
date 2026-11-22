@@ -56,6 +56,10 @@ fn goku_battle_id(id:&str)->Option<GokuForm>{
 /// Other characters, duplicated battle assets and unknown states stay SNES.
 fn resolve_goku_collision(entries:&[Entry],exact:&[usize],pose:&LiveFighterPose,
                           hint:Option<GokuForm>)->Option<usize>{
+    // Identical source pixels alone cannot establish who is on screen.
+    // Refuse ALL disputed artwork without a validated active battle unit,
+    // even if two catalogues happen to have slightly different colours.
+    let confirmed_form=hint?;
     let (mut normal,mut super_saiyan)=(None,None);
     for &index in exact{
         match goku_battle_id(&entries[index].id){
@@ -85,11 +89,10 @@ fn resolve_goku_collision(entries:&[Entry],exact:&[usize],pose:&LiveFighterPose,
     match normal_distance.cmp(&super_distance){
         std::cmp::Ordering::Less=>Some(n),
         std::cmp::Ordering::Greater=>Some(ss),
-        std::cmp::Ordering::Equal=>match hint{
-            Some(GokuForm::Normal)=>Some(n),
-            Some(GokuForm::SuperSaiyan)=>Some(ss),
-            None=>None,
-        }
+        std::cmp::Ordering::Equal=>Some(match confirmed_form {
+            GokuForm::Normal=>n,
+            GokuForm::SuperSaiyan=>ss,
+        })
     }
 }
 
@@ -813,6 +816,8 @@ mod tests {
         catalog[1]["palette"][1]=serde_json::json!([255,0,3]);
         live.load_catalog(&catalog.to_string()).unwrap();
         let indices=live.lookup.get(&0xabcd).unwrap();
+        assert_eq!(choose_pose_for(&live.entries,indices,&pose(),None),None,
+            "a field/cutscene must never inherit Goku battle art without active-unit proof");
         assert_eq!(choose_pose_for(&live.entries,indices,&pose(),Some(GokuForm::SuperSaiyan)),Some(0));
         let mut super_frame=pose();
         super_frame.colours[1]=[255,0,3];
