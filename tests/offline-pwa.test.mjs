@@ -97,6 +97,9 @@ test('offline worker serves cached static files with zero network; never interce
   assert.match(await js.text(),/export const x/);
   const html=await go('missing-route',{mode:'navigate'});
   assert.match(await html.text(),/offline app/);
+  const reloaded=await go('index.html',{mode:'navigate',cache:'reload'});
+  assert.match(await reloaded.text(),/offline app/,
+    'reload in airplane mode must not bypass the offline navigation cache');
   assert.equal(await go('pkg/ssd_web_bg.wasm?build=v53'),undefined,
     'WASM request must never be intercepted');
   assert.deepEqual(net,[ROOT+'missing-route']);

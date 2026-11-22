@@ -10,7 +10,7 @@ self.addEventListener('fetch',e=>{
   // WASM is fetched directly (no SW stream interception). Offline engine
   // passes cached Uint8Array straight to WebAssembly.instantiate().
   if(uri.pathname.endsWith('/pkg/ssd_web_bg.wasm')||uri.pathname.endsWith('/service-worker.js'))return;
-  if(request.cache==='reload'||request.cache==='no-store')return;
+  if((request.cache==='reload'||request.cache==='no-store')&&request.mode!=='navigate')return;
   e.respondWith((async()=>{
     const c=await caches.open(CACHE);
     const hit=await c.match(request,{ignoreSearch:true});
