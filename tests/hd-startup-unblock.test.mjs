@@ -14,25 +14,24 @@ test('startup shows a distinct stage and restores button on WASM failure',()=>{
  assert.match(app,/button\.textContent=originalLabel/);
 });
 
-test('WASM uses proven wasm-pack URL loader, not WebKit intercepted Response',()=>{
+test('WASM uses offline CacheStorage bytes, or native direct URL when not cached',()=>{
  const app=source('web/app.mjs'),sw=source('web/service-worker.js');
- assert.match(app,/ssd_web\.js\?build=v53/);
- assert.match(app,/ssd_web_bg\.wasm\?build=v53/);
- assert.match(app,/mod\.default\(\{module_or_path:wasmUrl\}\)/);
+ assert.match(app,/ssd_web\\.js\\?build=v53/);
+ assert.match(app,/ssd_web_bg\\.wasm\\?build=v53/);
+ assert.match(app,/const offlineWasm=await loadOfflineWasm\\(wasmUrl\\)/);
+ assert.match(app,/module_or_path:offlineWasm\\?\\?wasmUrl/);
  assert.doesNotMatch(app,/module_or_path:wasmResponse/);
- assert.doesNotMatch(app,/new AbortController\(\)/);
- assert.doesNotMatch(app,/serviceWorker\.register/);
- assert.doesNotMatch(sw,/addEventListener\('fetch'/);
- assert.doesNotMatch(sw,/event\.respondWith\(|await caches\.open\(/);
+ assert.doesNotMatch(app,/new AbortController\\(\\)/);
+ assert.match(sw,/uri\\.pathname\\.endsWith\\('\/pkg\/ssd_web_bg\\.wasm'\\)/);
+ assert.doesNotMatch(sw,/Response\\.clone\\(/);
 });
-
-test('legacy service workers are retired before file selection',()=>{
- const html=source('web/index.html');
- assert.match(html,/navigator\.serviceWorker\.getRegistration\(\)/);
- assert.match(html,/registration\.unregister\(\)/);
- assert.match(html,/if \(removed && wasControlled\) location\.reload\(\)/);
- assert.ok(html.indexOf('registration.unregister')<html.indexOf('id="hd-zip"'));
- assert.match(html,/app\.mjs\?build=v53/);
+test('old SW unregister is removed and v59 installs offline shell',()=>{
+ const html=source('web/index.html'),offline=source('web/offline-installer.mjs');
+ assert.doesNotMatch(html,/registration\\.unregister\\(\\)/);
+ assert.match(offline,/serviceWorker\\.getRegistration/);
+ assert.match(offline,/serviceWorker\\.register/);
+ assert.match(html,/offline-installer\\.mjs\\?offline=v59/);
+ assert.match(html,/app\\.mjs\\?build=v53/);
 });
 
 test('v42 display optimization survives and V44 core build matches client',()=>{
