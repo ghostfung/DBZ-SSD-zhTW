@@ -30,7 +30,7 @@ test('legacy unregister is gone, current worker installs offline shell',()=>{
  assert.ok(!html.includes('registration.unregister('));
  assert.ok(offline.includes('serviceWorker.getRegistration'));
  assert.ok(offline.includes('serviceWorker.register'));
- assert.ok(html.includes('offline-installer.mjs?offline=v59'));
+ assert.ok(html.includes('offline-installer.mjs?offline=v60'));
  assert.ok(html.includes('app.mjs?build=v53'));
 });
 test('v42 display optimization survives and V44 core build matches client',()=>{

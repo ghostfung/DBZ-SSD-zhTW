@@ -247,7 +247,7 @@ test('legacy HD fighter diagnostics are not exposed to players',()=>{
   assert.doesNotMatch(css,/fighter-diagnostic/);
   assert.match(html,/id="cheat-open"/);
   assert.match(html,/id="cheat-done"/);
-  assert.ok(html.includes('app.mjs?build=v53&ui=v64'));
+  assert.ok(html.includes('app.mjs?build=v53&ui=v65'));
   assert.ok(app.includes('if(!running&&!cheatPanelOpen&&!speedNoticeOpen)'));
   assert.ok(app.includes('hdSceneTrace.capture(game,lastPresentation)'));
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
