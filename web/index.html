@@ -276,11 +276,6 @@
         <label class="cheats-check"><input type="checkbox" data-cheat="no_random"/> 關閉隨機遇敵（劇情戰鬥保留）</label>
       </div>
       <output id="cheat-feedback" role="status" aria-live="polite">所有遊戲修改預設關閉。</output>
-      <div class="fighter-diagnostic-entry">
-        <strong>HD 人物姿勢診斷 v4（本測試版專用）</strong>
-        <p>記錄悟空／栽培人未套用 HD 的來源鍵值、尺寸、拒絕原因及安全替代匹配結果。不讀取或上傳 ROM、存檔和圖片。</p>
-        <button id="fighter-diagnostic-open" type="button" aria-haspopup="dialog" aria-controls="fighter-diagnostic-panel">開啟 HD 人物診斷</button>
-      </div>
       <div class="cheats-actions">
         <button type="button" id="cheat-reset">全部重設</button>
         <button type="button" id="cheat-done">返回遊戲</button>
@@ -289,25 +284,7 @@
   </section>
 
 
-  <section id="fighter-diagnostic-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="fighter-diagnostic-title" hidden>
-    <div class="cheats-sheet">
-      <header class="cheats-heading">
-        <div><h2 id="fighter-diagnostic-title">HD 人物診斷</h2><p>獨立測試版 · 不修改遊戲內容</p></div>
-        <button type="button" id="fighter-diagnostic-close">返回遊戲</button>
-      </header>
-      <p class="cheats-note">先在此版本匯入與原進度相同的 ROM／IPS、HD 美術包和你的 <code>dbz-ssd-web.sav</code>，選擇「HD 2x」。進入悟空與栽培人戰鬥後開始記錄，返回遊戲操作約 30～60 秒，再回來下載 JSON。</p>
-      <p class="cheats-note">只收集每秒最多 5 次的 HD 人物匹配及拒絕原因，最多 60 秒；不收集 ROM／IPS、存檔、HD 圖片、螢幕截圖或裝置資訊。檔案不會自動上傳。</p>
-      <output id="fighter-diagnostic-status" role="status" aria-live="polite">尚未記錄。</output>
-      <p id="fighter-diagnostic-summary" class="hd-import-note" aria-live="polite">啟動記錄後會在遊玩期間自動採樣。</p>
-      <div class="fighter-diagnostic-actions">
-        <button id="fighter-diagnostic-start" type="button">開始錄製（返回遊戲）</button>
-        <button id="fighter-diagnostic-stop" type="button" disabled>停止錄製</button>
-        <button id="fighter-diagnostic-export" type="button" disabled>下載診斷 JSON</button>
-      </div>
-    </div>
-  </section>
-
-  <script type="module" src="app.mjs?build=v53&ui=v62"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v63"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
 </body>
 </html>
