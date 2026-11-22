@@ -101,5 +101,5 @@ test('PWA preserves game modification button, legacy backup and no network save'
   assert.match(app,/window\.confirm\('Slot '/);
   assert.match(css,/\.save-slots-list/);
   assert.doesNotMatch(source('web/save-slots.mjs'),/fetch\(|XMLHttpRequest|navigator\.sendBeacon/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v62/);
+  assert.match(html,/app\.mjs\?build=v53&ui=v63/);
 });

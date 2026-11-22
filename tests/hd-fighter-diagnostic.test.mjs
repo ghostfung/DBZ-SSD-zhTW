@@ -238,22 +238,19 @@ test('v53 diagnostics reject unsafe candidate IDs and unreasonable eligibility c
   assert.deepEqual(rejected.paletteEligibleIds,['battle-goku-000']);
   assert.doesNotMatch(JSON.stringify(t.report()),/secret|private/);
 });
-test('test-only diagnostic UI is reachable from existing game menu without adding a new gamepad key',()=>{
+test('legacy HD fighter diagnostics are not exposed to players',()=>{
   const app=readFileSync(new URL('../web/app.mjs',import.meta.url),'utf8');
   const html=readFileSync(new URL('../web/index.html',import.meta.url),'utf8');
   const css=readFileSync(new URL('../web/style.css',import.meta.url),'utf8');
-  assert.match(html,/id="fighter-diagnostic-open"/);
-  assert.match(html,/id="fighter-diagnostic-panel"/);
-  assert.match(html,/id="fighter-diagnostic-start"/);
-  assert.match(html,/id="fighter-diagnostic-export"/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v62/);
-  assert.match(app,/fighterDiagnostic\.capture\(game/);
-  assert.match(app,/fighterDiagnostic\.recording/);
-  assert.match(app,/const fighterDiagnostic = new HdFighterDiagnostic/);
-  assert.ok(app.includes('if(!running&&!cheatPanelOpen&&!fighterDiagnosticPanelOpen&&!speedNoticeOpen)'));
-  assert.match(app,/link\.download='dbz-hd-fighter-diagnostic-v53\.json'/);
-  assert.match(css,/\.fighter-diagnostic-entry\{/);
+  assert.doesNotMatch(html,/fighter-diagnostic/);
+  assert.doesNotMatch(app,/fighterDiagnostic|fighter-diagnostic|HdFighterDiagnostic/);
+  assert.doesNotMatch(css,/fighter-diagnostic/);
+  assert.match(html,/id="cheat-open"/);
+  assert.match(html,/id="cheat-done"/);
+  assert.match(html,/app\\.mjs\\?build=v53&ui=v63/);
+  assert.ok(app.includes('if(!running&&!cheatPanelOpen&&!speedNoticeOpen)'));
+  assert.ok(app.includes('hdSceneTrace.capture(game,lastPresentation)'));
   const playbar=html.split('<div class="playbar">')[1].split('</div>')[0];
-  assert.doesNotMatch(playbar,/fighter-diagnostic/);
   assert.equal((html.match(/data-bit="/g)||[]).length,10);
+  assert.doesNotMatch(playbar,/fighter-diagnostic/);
 });
