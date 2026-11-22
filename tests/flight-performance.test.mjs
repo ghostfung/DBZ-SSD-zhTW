@@ -5,9 +5,9 @@ const source=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 
 test('fast-flight pacing limits expensive HD catch-up bursts',()=>{
   const s=source('web/app.mjs');
-  assert.match(s,/const plan=speedFramePlan\\(/);
-  assert.match(s,/while\\(n<plan.ticks\\)/);
-  assert.match(source('web/speed-control.mjs'),/const maxCatchup=heavy\\?1:/);
+  assert.ok(s.includes('const plan=speedFramePlan('));
+  assert.ok(s.includes('while(n<plan.ticks)'));
+  assert.ok(source('web/speed-control.mjs').includes('const maxCatchup=heavy?1:'));
   assert.match(s,/if \(n\) drawFrame\(\)/);
   assert.match(s,/const perf=frameMetrics\.add/);
   assert.match(s,/FrameMetrics\.describe\(perf\)/);
