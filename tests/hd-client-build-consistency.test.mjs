@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {HdSceneTrace} from '../web/hd-coverage-runtime.mjs';
 const src=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-test('Safari shell retires Service Worker and JS and WASM have matching build IDs',()=>{
- assert.doesNotMatch(src('web/service-worker.js'),/addEventListener\('fetch'/);
+test('Safari shell caches JS but never intercepts WASM stream; browser and core IDs still agree',()=>{
+ const worker=src('web/service-worker.js');
+ assert.match(worker,/addEventListener\('fetch'/);
+ assert.match(worker,/uri\.pathname\.endsWith\('\/pkg\/ssd_web_bg\.wasm'\)/);
+ assert.match(src('web/app.mjs'),/loadOfflineWasm\(wasmUrl\)/);
+ assert.doesNotMatch(src('web/index.html'),/registration\.unregister\(\)/);
  assert.match(src('web/index.html'),/app\.mjs\?build=v53/);
  assert.match(src('web/app.mjs'),/game\.browser_build_tag\?\.\(\)/);
  assert.match(src('crates/ssd-web/src/lib.rs'),/pub fn browser_build_tag\(&self\) -> String/);
