@@ -9,7 +9,9 @@ use std::collections::{HashMap, HashSet};
 
 const WIDTH: usize = 256;
 const MAX_ENTRIES: usize = 512;
-const MAX_ACTIVE: usize = 6;
+// Namek's party status menu renders four faces on each side (eight total).
+// A six-match cap randomly excluded two validated portraits each refresh.
+const MAX_ACTIVE: usize = 8;
 const MAX_ART_BYTES: usize = 64 * 64 * 4;
 const CELLS: [[usize; 16]; 2] = [
     [0,1,2,3,16,17,18,19,4,5,6,7,20,21,22,23],
@@ -545,6 +547,100 @@ mod tests {
         output.fill(0);
         assert_eq!(live.composite(&log,&samples,&mut output,512,64),0,
             "source palette writes must never produce the wrong HD face");
+    }
+
+    #[test]
+    fn eight_namek_menu_faces_remain_hd_in_every_frame_and_switch_safely(){
+        // Reproduce the eight 32x32 class1 panels measured in the player's
+        // Namek trace: x=16/208, y=15/47/79/111. All eight have distinct ROM
+        // tile hashes and exact valid 4bpp PPU samples, not guessed identity.
+        assert_eq!(MAX_ACTIVE,8);
+        let mut log=FrameLog{
+            complete:true,height:224,h_hi_res:false,v_hi_res:false,
+            entries:Vec::new(),cgram_start:vec![0;256],
+            cgram_writes:Vec::new(),vram:vec![0;32768],
+            vram_writes:Vec::new(),oam_low:vec![0;512],
+            oam_high:vec![0;32],oam_writes:Vec::new(),
+        };
+        let mut samples=vec![LiveTilePixel::default();WIDTH*224];
+        let mut live=LivePortraits::default();
+        let mut slots=Vec::new();
+        for row in 0..4_usize {
+            for col in 0..2_usize {
+                let face=row*2+col;
+                let x=if col==0 {16} else {208};
+                let y=15+row*32;
+                slots.push((face,x,y));
+                let mut keys=[0_u64;16];
+                for cell in 0..16_usize {
+                    let address=(face*16+cell)*16;
+                    let word=(face*16+cell+1) as u16;
+                    log.vram[address]=word;
+                    let mut tile=[0_u8;32];
+                    tile[..2].copy_from_slice(&word.to_le_bytes());
+                    keys[cell]=tile_key(&tile);
+                }
+                live.entries.push(Entry{
+                    id:format!("face-{face}"),
+                    art:format!("class1/face-{face}.png"),
+                    keys,palette:vec![None;16],
+                });
+                for (cell,key) in keys.iter().enumerate() {
+                    live.lookup.entry(*key).or_default().push((face,cell));
+                }
+                for cy in 0..32_usize {
+                    for cx in 0..32_usize {
+                        let cell=(cy/8)*4+cx/8;
+                        samples[(y+cy)*WIDTH+x+cx]=LiveTilePixel{
+                            address:((face*16+cell)*16) as u16,
+                            pos:(((cy%8)<<3)|(cx%8)) as u8,
+                            palette:0,layer:1,bpp:4,
+                        };
+                    }
+                }
+            }
+        }
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),8,"all eight Namek menu faces must match");
+        for (face,x,y) in &slots {
+            assert!(live.active.iter().any(|item|{
+                item.index==*face && item.x==*x && item.y==*y
+            }),"one of the eight Namek portraits was evicted");
+        }
+        for (face,_,_) in &slots {
+            let mut art=vec![0_u8;64*64*4];
+            for px in art.chunks_exact_mut(4){
+                px.copy_from_slice(&[70+(*face as u8)*10,35,95,255]);
+            }
+            live.add_picture(*face,64,64,&art).unwrap();
+        }
+        let mut out=vec![0_u8;512*448*4];
+        for _frame in 0..24 {
+            live.refresh(&log,&samples);
+            assert_eq!(live.active.len(),8,"a steady eight-face menu must not flicker");
+            assert_eq!(live.probes,8);
+            out.fill(0);
+            assert_eq!(live.composite(&log,&samples,&mut out,512,448),8192);
+            for (face,x,y) in &slots {
+                let at=((y*2)*512+x*2)*4;
+                assert_eq!(out[at],70+(*face as u8)*10,
+                    "each panel retains its own HD identity");
+            }
+        }
+        // A genuine character change invalidates only that portrait:
+        // remaining seven retain HD art, never reuse the previous identity.
+        let (face,x,y)=slots[0];
+        for cy in 0..32_usize {
+            for cx in 0..32_usize {
+                samples[(y+cy)*WIDTH+x+cx]=LiveTilePixel::default();
+            }
+        }
+        live.refresh(&log,&samples);
+        assert_eq!(live.active.len(),7);
+        assert!(!live.active.iter().any(|item|item.index==face));
+        out.fill(0);
+        assert_eq!(live.composite(&log,&samples,&mut out,512,448),7168);
+        assert_eq!(out[((y*2)*512+x*2)*4],0);
     }
 
     #[test]
