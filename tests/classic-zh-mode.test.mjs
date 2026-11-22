@@ -43,7 +43,8 @@ test('three-way display selection is persisted and updates both WASM switches',(
 
 test('original audio and save-state handlers remain intact',()=>{
   const app=src('web/app.mjs');
-  assert.match(app,/game\.load_state\(new Uint8Array/);
+  assert.ok(app.includes('game.load_state(bytes)'));
+  assert.ok(app.includes('await applyLoadedSave(new Uint8Array'));
   assert.match(app,/const restored=await restoreAudioAfterInterruption\(\)/);
   assert.match(app,/game\.set_audio_rate\(sound\.sampleRate\)/);
 });
