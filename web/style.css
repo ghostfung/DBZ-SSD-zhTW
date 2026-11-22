@@ -450,12 +450,14 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
   touch-action:manipulation;white-space:nowrap;user-select:none;
   -webkit-user-select:none;
 }
-.playing #game #speed-toggle[data-speed="1.5"],
-.playing #game #speed-toggle[data-speed="2"]{
+.playing #game #speed-toggle[data-speed="2"],
+.playing #game #speed-toggle[data-speed="3"]{
   background:#8a531e;border-color:#d5a252
 }
 .speed-update-sheet{width:min(100%,450px)}
-#speed-update-description{font-size:.9rem;line-height:1.8;white-space:pre-line}
+#speed-update-description{font-size:.9rem;line-height:1.55;white-space:normal}
+#speed-update-description .update-line{display:block;margin:7px 0}
+#speed-update-description .update-footnote{display:block;margin-top:9px;font-size:.78rem;opacity:.8}
 #speed-update-close{background:#335f9d;min-height:44px}
 
 @media (orientation:portrait){
