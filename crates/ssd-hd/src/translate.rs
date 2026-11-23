@@ -817,7 +817,10 @@ impl Translator {
                 continue;
             };
             let right = window_x + 8 * screen.lines.get(line).copied().unwrap_or(0) as i32;
-            for y in top.max(0)..(top + 8).min(height) {
+            // The scrolling introduction's bold SNES title glyph spans
+            // both 8-pixel tiles of its 16-pixel text row. Clearing only
+            // the upper tile leaves English visible behind the translation.
+            for y in top.max(0)..(top + INTRO_EM as i32).min(height) {
                 for x in window_x.max(0)..right.min(width as i32) {
                     let at = y as usize * width + x as usize;
                     pixels[at] = Color { a: pixels[at].a, ..under[at] };
@@ -6672,9 +6675,13 @@ mod tests {
         translator.screen = Some(screen);
         let pixels = cleaned(&translator, beneath);
         let at = |x: usize, y: usize| pixels[y * 256 + x];
-        assert_eq!((at(0, 40), at(26, 44), at(31, 47)), (blue, blue, blue), "line 0's four cells");
-        assert_eq!((at(32, 40), at(0, 39), at(0, 48), at(0, 56)), (white, white, white, white));
-        assert_eq!(pixels.iter().filter(|&&pixel| pixel == blue).count(), 32 * 8);
+        assert_eq!(
+            (at(0, 40), at(26, 44), at(31, 47), at(0, 48), at(31, 55)),
+            (blue, blue, blue, blue, blue),
+            "both 8-pixel halves of the original English must disappear"
+        );
+        assert_eq!((at(32, 40), at(0, 39), at(0, 56)), (white, white, white));
+        assert_eq!(pixels.iter().filter(|&&pixel| pixel == blue).count(), 32 * 16);
         // Without the picture under BG1, nothing is taken out
         assert_eq!(cleaned(&translator, [None; 4]), vec![white; 256 * 224]);
     }

@@ -237,8 +237,24 @@ impl Renderer {
         if self.font.is_none() || self.text_capture_only || options.scale < 2 {
             return [None, None, None, None];
         }
-        crate::font::beneath_logs(log, self.text.cells())
-            .map(|blank| blank.and_then(|blank| Renderer::new().render(&blank).ok()))
+        let mut logs = crate::font::beneath_logs(log, self.text.cells());
+        // Both scrolling intro text planes are entirely translated in the
+        // TW/HK tables. Their source PPU image is needed even when the
+        // title-font capture did not mark individual letters as clear.
+        // Re-render each plane separately without its letters, retaining
+        // the underlying blue stripes and every other background layer.
+        if let Some(translator) = self.native_translation.as_ref() {
+            for (bg, quiet) in translator.quiet_layers().into_iter().enumerate() {
+                if quiet && logs[bg].is_none() {
+                    let mut without = log.clone();
+                    for entry in &mut without.entries {
+                        entry.regs.main_bg[bg] = false;
+                    }
+                    logs[bg] = Some(without);
+                }
+            }
+        }
+        logs.map(|blank| blank.and_then(|blank| Renderer::new().render(&blank).ok()))
     }
 
     /// The 1x `frame` as the filter that enlarges it should see it: with the letters of the text
@@ -251,12 +267,21 @@ impl Renderer {
         }
         let beneath_pixels: [Option<&[Color]>; 4] =
             std::array::from_fn(|bg| beneath[bg].as_ref().map(|frame| &frame.pixels[..]));
-        let pixels = crate::font::without_letters(
+        let mut pixels = crate::font::without_letters(
             &frame.pixels,
             frame.width,
             self.text.cells(),
             beneath_pixels,
         );
+        // The scrolling intro is not a dialogue window. English glyphs
+        // belong to BG1/BG2, and Chinese is painted on the final HD image.
+        // Remove the entire translated English line BEFORE enlargement:
+        // simply filtering the HD title font leaves the original 1x text.
+        if let Some(translator) = self.native_translation.as_ref() {
+            translator.clean_intro(
+                &mut pixels, frame.width, self.text.cells(), beneath_pixels, 0,
+            );
+        }
         Some(Frame { pixels, sources: Vec::new(), ..*frame })
     }
 
@@ -274,7 +299,12 @@ impl Renderer {
         if let (Some(font), true) = (&self.font, options.scale >= 2) {
             let beneath_pixels: [Option<&[Color]>; 4] =
                 std::array::from_fn(|bg| beneath[bg].as_ref().map(|frame| &frame.pixels[..]));
-            let cells = cells.unwrap_or(self.text.cells());
+            let all_cells = cells.unwrap_or(self.text.cells());
+            // Native Chinese intro lines replace, not overlay, the English
+            // title font. Keep every other screen's glyphs unchanged.
+            let translated_intro = self.native_translation.as_ref()
+                .and_then(|translator| translator.font_cells(all_cells));
+            let cells = translated_intro.as_deref().unwrap_or(all_cells);
             let (width, scale) = (hd.width as usize, options.scale as usize);
             font.draw_with(
                 &mut hd.rgba,
