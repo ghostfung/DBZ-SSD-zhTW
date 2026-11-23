@@ -63,9 +63,9 @@ test('release manifest contains complete static app, excludes private player dat
   assert.ok(!OFFLINE_FILES.includes('service-worker.js'));
   assert.equal(new Set(OFFLINE_FILES).size,OFFLINE_FILES.length);
   assert.ok(OFFLINE_FILES.every(file=>!/\.(sav|sfc|ips)$|hd-pack\.zip|\brom\.bin/i.test(file)));
-  assert.ok(newerVersion('v61','v60'));
-  assert.ok(newerVersion('v60.1','v60'));
-  assert.ok(!newerVersion('v59','v60'));
+  assert.ok(newerVersion('v62','v61'));
+  assert.ok(newerVersion('v61.1','v61'));
+  assert.ok(!newerVersion('v59','v61'));
 });
 test('installed offline shell loads full WASM locally and relaunches with zero assets downloaded',async()=>{
   const mock=mockStore(),progress=[];
@@ -76,7 +76,7 @@ test('installed offline shell loads full WASM locally and relaunches with zero a
   assert.equal(mock.stats.adds,OFFLINE_FILES.length);
   assert.equal(progress.at(-1)[0],OFFLINE_FILES.length);
   assert.equal(mock.all.has(OFFLINE_CONTROL),true);
-  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v60');
+  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v61');
   assert.ok((await inspectOfflineCache({storage:mock.storage,root:ROOT})).ready);
   const bytes=await loadOfflineWasm(ROOT+'pkg/ssd_web_bg.wasm?build=v53',
     {storage:mock.storage,root:ROOT});
@@ -93,7 +93,7 @@ test('interrupted initial installation never reports ready or destroys a previou
 });
 test('24h release check downloads to separate cache and activates only on restart',async()=>{
   const mock=mockStore();await install(mock);
-  const remote={version:'v61',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
+  const remote={version:'v62',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
   let networkChecks=0;
   const args={storage:mock.storage,root:ROOT,now:()=>10_000_000,
     online:()=>true,fetcher:async(url,options)=>{
@@ -103,18 +103,18 @@ test('24h release check downloads to separate cache and activates only on restar
     }};
   const first=await checkReleaseOnceDaily(args);
   assert.deepEqual([first.checked,first.newer,first.ready,first.version],
-    [true,true,true,'v61']);
+    [true,true,true,'v62']);
   assert.equal(networkChecks,1);
-  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v60');
-  assert.equal((await getPendingRelease({storage:mock.storage,root:ROOT})).version,'v61');
+  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v61');
+  assert.equal((await getPendingRelease({storage:mock.storage,root:ROOT})).version,'v62');
   const oldCache=await mock.cache(OFFLINE_CACHE).match(ROOT+'app.mjs');
-  assert.match(await oldCache.text(),/v60/);
+  assert.match(await oldCache.text(),/v61/);
   const now=await checkReleaseOnceDaily({...args,now:()=>10_000_000+3600000});
   assert.equal(now.checked,false);
   assert.equal(networkChecks,1,'automatic checks are limited to one per 24h');
-  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v60');
-  assert.equal(await activatePendingUpdate({storage:mock.storage,root:ROOT}),'v61');
   assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v61');
+  assert.equal(await activatePendingUpdate({storage:mock.storage,root:ROOT}),'v62');
+  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v62');
   assert.equal(await getPendingRelease({storage:mock.storage,root:ROOT}),null);
   const newer=await loadOfflineWasm(ROOT+'pkg/ssd_web_bg.wasm?build=v53',
     {storage:mock.storage,root:ROOT});
@@ -127,10 +127,10 @@ test('24h release check downloads to separate cache and activates only on restar
 test('failed or incomplete new version never changes current offline game',async()=>{
   const mock=mockStore();await install(mock);
   mock.broken.path='/zh-tw.tsv';
-  const next={version:'v61',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
+  const next={version:'v62',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
   await assert.rejects(stageOfflineUpdate(next,{storage:mock.storage,root:ROOT}),
     /download failed/);
-  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v60');
+  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v61');
   assert.equal(await getPendingRelease({storage:mock.storage,root:ROOT}),null);
   await assert.rejects(activatePendingUpdate({storage:mock.storage,root:ROOT}),/待套用/);
   assert.ok((await inspectOfflineCache({storage:mock.storage,root:ROOT})).ready);
@@ -151,39 +151,39 @@ test('offline worker reads active version only, serves cached navigation without
     handlers.fetch({request,respondWith:promise=>answer=promise});
     return answer;
   }
-  const before=await navigate('app.mjs?build=v53&ui=v65');
-  assert.match(await before.text(),/v60/);
+  const before=await navigate('app.mjs?build=v53&ui=v66');
+  assert.match(await before.text(),/v61/);
   const reload=await navigate('index.html',{mode:'navigate',cache:'reload'});
-  assert.match(await reload.text(),/v60/);
+  assert.match(await reload.text(),/v61/);
   assert.equal(await navigate('pkg/ssd_web_bg.wasm?build=v53'),undefined);
   assert.equal(await navigate('offline-release.json'),undefined);
-  const v61={version:'v61',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
-  await stageOfflineUpdate(v61,{storage:mock.storage,root:ROOT});
+  const v62={version:'v62',wasmSize:OFFLINE_WASM_SIZE,files:[...OFFLINE_FILES]};
+  await stageOfflineUpdate(v62,{storage:mock.storage,root:ROOT});
   const stillOld=await navigate('app.mjs');
-  assert.match(await stillOld.text(),/v60/);
+  assert.match(await stillOld.text(),/v61/);
   await activatePendingUpdate({storage:mock.storage,root:ROOT});
   const newest=await navigate('app.mjs');
-  assert.match(await newest.text(),/v61/);
+  assert.match(await newest.text(),/v62/);
   assert.deepEqual(hit,[]);
 });
 test('malformed release manifest refuses an upgrade; existing offline cache stays safe',async()=>{
   const mock=mockStore();await install(mock);
   const check=await checkReleaseOnceDaily({storage:mock.storage,root:ROOT,
     now:()=>90_000_000,online:()=>true,fetcher:async()=>new Response(JSON.stringify({
-      version:'v61',wasmSize:OFFLINE_WASM_SIZE,
+      version:'v62',wasmSize:OFFLINE_WASM_SIZE,
       files:['index.html','../external-script.js','pkg/ssd_web_bg.wasm']
     }),{status:200})});
   assert.ok(check.error);
-  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v60');
+  assert.equal((await getActiveRelease({storage:mock.storage,root:ROOT})).version,'v61');
   assert.equal(await getPendingRelease({storage:mock.storage,root:ROOT}),null);
 });
-test('v60 user interface exposes safe update controls and keeps save/HD gameplay',()=>{
+test('v61 user interface exposes safe update controls and keeps save/HD gameplay',()=>{
   const html=source('web/index.html'),app=source('web/app.mjs');
   const offline=source('web/offline-installer.mjs'),worker=source('web/service-worker.js');
   assert.ok(html.includes('id="offline-status-message"'));
   assert.ok(html.includes('id="offline-check"'));
   assert.ok(html.includes('id="offline-update-apply"'));
-  assert.ok(html.includes('offline-installer.mjs?offline=v60'));
+  assert.ok(html.includes('offline-installer.mjs?offline=v61'));
   assert.ok(html.includes('id="cheat-open"'));
   assert.ok(html.includes('id="save-slots-panel"'));
   assert.ok(app.includes('loadOfflineWasm(wasmUrl)'));

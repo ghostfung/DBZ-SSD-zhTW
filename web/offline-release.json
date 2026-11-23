@@ -1,6 +1,6 @@
 {
   "format": "dbz-offline-release-v1",
-  "version": "v60",
+  "version": "v61",
   "wasmSize": 18559329,
   "files": [
     "app.mjs",

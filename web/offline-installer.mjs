@@ -1,7 +1,7 @@
 // Offline shell installer / low-request daily release updater. No ROM, HD ZIP,
 // IPS or saved games are stored here: existing private OPFS/IndexedDB stays intact.
-export const OFFLINE_RELEASE='v60';
-export const OFFLINE_CACHE='dbz-ssd-offline-v60';
+export const OFFLINE_RELEASE='v61';
+export const OFFLINE_CACHE='dbz-ssd-offline-v61';
 export const OFFLINE_CONTROL='dbz-ssd-offline-control-v1';
 export const OFFLINE_WASM_SIZE=18559329;
 export const OFFLINE_INTERVAL_MS=24*60*60*1000;
@@ -206,7 +206,7 @@ export async function prepareOffline(){
       const installed=await navigator.serviceWorker.getRegistration(root.href);
       if(!installed?.active?.scriptURL.includes('/service-worker.js')){
         if(!navigator.onLine)throw Error('初次安裝請先連上網絡');
-        await navigator.serviceWorker.register('./service-worker.js?offline=v60',
+        await navigator.serviceWorker.register('./service-worker.js?offline=v61',
           {scope:'./',updateViaCache:'none'});
       }
       await navigator.serviceWorker.ready;
