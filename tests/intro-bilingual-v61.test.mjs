@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,statSync} from 'node:fs';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('original intro English is masked before HD upscale and its title font is omitted',()=>{
  const enhanced=read('crates/ssd-hd/src/enhanced.rs');
@@ -30,4 +30,5 @@ test('v61 retains offline update and keeps ROM/HD/save stores untouched',()=>{
  assert.ok(html.includes('id="save-slots-panel"'));
  assert.ok(html.includes('id="hd-toggle"'));
  assert.equal(JSON.parse(read('web/offline-release.json')).version,'v61');
+ assert.equal(JSON.parse(read('web/offline-release.json')).wasmSize,statSync(new URL('../web/pkg/ssd_web_bg.wasm',import.meta.url)).size);
 });
