@@ -2,7 +2,7 @@ import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v63.1';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v64';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -474,6 +474,7 @@ async function ensureEngine(phase=async()=>{}) {
 }
 
 $('start').addEventListener('click', async () => {
+  if(document.body.classList.contains('offline-preparing'))return;
   // Safari audio unlock must begin synchronously inside the user's tap.
   unlockAudio();
   const button=$('start'),originalLabel='啟動遊戲';
@@ -1054,7 +1055,7 @@ $('sound').addEventListener('click', async () => {
   }
 });
 const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
-lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();};
+lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();document.dispatchEvent(new Event('dbz-return-home'));};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
