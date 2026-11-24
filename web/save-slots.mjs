@@ -83,3 +83,17 @@ export async function writeSaveSlot(slot,bytes,{romKey,thumbnail=null,savedAt=Da
     throw Error('存檔寫入後驗證失敗');
   return check;
 }
+
+// Read image bytes locally instead of referencing an IndexedDB-backed object URL.
+export async function thumbnailDataUrl(thumbnail){
+  if(!(thumbnail instanceof Blob)||!thumbnail.size||thumbnail.size>MAX_THUMB_BYTES)return null;
+  const bytes=new Uint8Array(await thumbnail.arrayBuffer());
+  const png=bytes.length>=8&&[137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b);
+  const webp=bytes.length>=12&&String.fromCharCode(...bytes.subarray(0,4))==='RIFF'&&String.fromCharCode(...bytes.subarray(8,12))==='WEBP';
+  const jpeg=bytes.length>=3&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+  const mime=png?'image/png':webp?'image/webp':jpeg?'image/jpeg':null;
+  if(!mime)return null;
+  let binary='';
+  for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+  return 'data:'+mime+';base64,'+btoa(binary);
+}
