@@ -13,7 +13,8 @@ export class SnesAudio {
     this.pendingFrames = 0;
     this.offsetFrames = 0;
     this.nextStart = 0;
-    this.fastMuted = false;
+    this.playbackRate = 1;
+    this.sources = new Set();
   }
 
   get sampleRate() { return this.context?.sampleRate || 48000; }
@@ -94,24 +95,27 @@ export class SnesAudio {
   }
 
   reset() {
+    // Cancel scheduled old-speed PCM before resetting the timeline.
+    for(const node of this.sources){try{node.stop();}catch{}try{node.disconnect();}catch{}}
+    this.sources.clear();
     this.pending = [];
     this.pendingFrames = 0;
     this.offsetFrames = 0;
     this.nextStart = 0;
   }
 
-  // Fast gameplay is silent by design. Preserve the user's audio permission
-  // and current AudioContext so 1x can resume without another gesture.
-  setFastMuted(muted) {
-    const next=Boolean(muted);
-    if(this.fastMuted===next)return;
-    this.fastMuted=next;
+  // Consume all PCM at the selected emulation speed; Web Audio performs
+  // its own rate conversion. Keep the AudioContext and permission unchanged.
+  setPlaybackRate(rate) {
+    if(![1,2,3].includes(rate))throw new RangeError('Unsupported playback rate');
+    if(this.playbackRate===rate)return;
     this.reset();
+    this.playbackRate=rate;
   }
 
   // Accept interleaved float32 samples: L0, R0, L1, R1, ...
   enqueue(samples) {
-    if (this.fastMuted || !this.enabled || this.context?.state !== 'running' || !samples?.length) return;
+    if (!this.enabled || this.context?.state !== 'running' || !samples?.length) return;
     if (samples.length % 2) throw new Error('模擬器提供的 PCM 樣本數不是雙聲道');
     this.pending.push(samples);
     this.pendingFrames += samples.length / 2;
@@ -152,11 +156,14 @@ export class SnesAudio {
     this.take(frames, audioBuffer.getChannelData(0), audioBuffer.getChannelData(1));
     const node = ctx.createBufferSource();
     node.buffer = audioBuffer;
+    node.playbackRate.value = this.playbackRate;
     node.connect(ctx.destination);
+    this.sources.add(node);
+    node.onended=()=>{this.sources.delete(node);try{node.disconnect();}catch{}};
     if (!this.nextStart || this.nextStart < ctx.currentTime + 0.022) {
       this.nextStart = ctx.currentTime + START_LEAD_SECONDS;
     }
     node.start(this.nextStart);
-    this.nextStart += frames / ctx.sampleRate;
+    this.nextStart += frames / (ctx.sampleRate * this.playbackRate);
   }
 }
