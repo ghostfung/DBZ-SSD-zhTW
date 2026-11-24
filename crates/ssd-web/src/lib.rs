@@ -580,7 +580,7 @@ impl WebGame {
                         scale: 2, look: Look::Pixel,
                     }) {
                         if clean.rgba.len() == self.classic_zh_pixels.len() {
-                            self.classic_zh_pixels = clean.rgba;
+                            self.classic_zh_pixels.copy_from_slice(&clean.rgba);
                         }
                     }
                     // Only the Chinese glyphs get 2x rasterisation. Source
