@@ -505,3 +505,10 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
  .playing #game .speed-landscape-anchor{display:flex;position:absolute;bottom:calc(100% + 14px);left:50%;transform:translateX(-50%);width:max-content;z-index:6}
  .playing #game #speed-toggle{width:92px;min-height:36px;height:36px;font-size:13px}
 }
+
+/* v69: release notice, readable on phones and scrollable on small landscape screens. */
+#speed-update-title{font-size:1.25rem}
+#speed-update-description{font-size:.95rem;line-height:1.55}
+#speed-update-description ul{margin:8px 0 0;padding-left:1.4em}
+#speed-update-description li{margin:0 0 .55em}
+#speed-update-close{font-size:.95rem;min-height:44px}
