@@ -47,7 +47,7 @@ $('export').addEventListener('click',()=>{
     const link=document.createElement('a');
     link.href=objectUrl;link.download='dbz-ssd-all-slots.dbzbackup';
     document.body.append(link);link.click();link.remove();
-    $('result').textContent='已產生 '+backup.count+' 格存檔備份。請到「檔案」確認已保存 dbz-ssd-all-slots.dbzbackup，再前往新網站。';
+    $('result').textContent='已產生 '+backup.count+' 格存檔備份。請到「檔案」確認已保存 dbz-ssd-all-slots.dbzbackup，並妥善保留備份檔，等候維護完成公告。';
   }catch(error){
     $('result').textContent='備份未成功：'+(error?.message||error)+'。請勿刪除舊圖示。';
   }
