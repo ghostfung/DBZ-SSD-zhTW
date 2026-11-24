@@ -78,3 +78,41 @@ test('v64 checks each launcher entry and never reloads during gameplay',()=>{
  assert.ok(css.includes("justify-content:flex-start;\n align-items:center;min-height:0"));
  assert.ok(css.includes("position:static;align-self:flex-end;order:-2"));
 });
+
+test('EXP warning gates the first modifier opening until confirmation, persists per browser, and cancellation does not acknowledge it',()=>{
+ const app=read('web/app.mjs'),html=read('web/index.html');
+ assert.match(html,/比克（魔童）與那霸（立巴）交戰之前/);
+ assert.match(html,/不得超過 Lv\. 8/);
+ assert.match(html,/Lv\. 9 或以上/);
+ const source=app.slice(app.indexOf('function openCheatPanel(){'),app.indexOf("for(const control of document.querySelectorAll('[data-cheat]'))"));
+ function session(store){
+   const nodes=new Map(),handlers=new Map();
+   const $=id=>{
+     if(!nodes.has(id))nodes.set(id,{hidden:true,focus(){},addEventListener(type,fn){handlers.set(id,fn)}});
+     return nodes.get(id);
+   };
+   const localStorage={getItem:key=>store.get(key),setItem:(key,value)=>store.set(key,value)};
+   const env=new Function('$','localStorage','document','sound','cancelAnimationFrame','requestAnimationFrame','refreshCheatPanel',
+     "let game={},cheatPanelOpen=false,cheatNoticeAcknowledged=false,held=0,running=true,raf=1,lastTick=0,accumulator=0,speedNoticeOpen=false;const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';\n"+source+"\nreturn {openCheatPanel,closeCheatPanel};")($,localStorage,{hidden:false},{reset(){}},()=>{},()=>1,()=>{});
+   return {...env,$,handlers};
+ }
+ const store=new Map(),first=session(store);
+ first.openCheatPanel();
+ assert.equal(first.$('cheat-warning-panel').hidden,false);
+ assert.equal(first.$('cheats-panel').hidden,true);
+ first.handlers.get('cheat-warning-cancel')();
+ assert.equal(store.size,0);
+ assert.equal(first.$('cheat-warning-panel').hidden,true);
+ first.openCheatPanel();
+ first.handlers.get('cheat-warning-confirm')();
+ assert.equal(store.size,1);
+ assert.equal(first.$('cheat-warning-panel').hidden,true);
+ assert.equal(first.$('cheats-panel').hidden,false);
+ first.closeCheatPanel();
+ first.openCheatPanel();
+ assert.equal(first.$('cheat-warning-panel').hidden,true);
+ const next=session(store);
+ next.openCheatPanel();
+ assert.equal(next.$('cheat-warning-panel').hidden,true);
+ assert.equal(next.$('cheats-panel').hidden,false);
+});
