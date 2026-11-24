@@ -25,17 +25,20 @@ a.action[aria-disabled=true]{pointer-events:none;opacity:.5}
 #status,#result{display:block;min-height:25px;white-space:pre-wrap;font-size:14px}
 ol{padding-left:23px}
 li{margin:7px 0}
+.warning{border-color:#d9a247;background:#302719}.warning strong{color:#ffd68c}.warning p{margin-bottom:0}.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.slot{border:1px solid #344864;border-radius:8px;padding:9px;font-size:13px;min-width:0}.slot strong{display:block;font-size:14px}.slot span{display:block;color:#adc0d6;overflow-wrap:anywhere}.slot[data-state="valid"]{border-color:#368970}.slot[data-state="corrupt"]{border-color:#c47748}.slot[data-state="valid"] span{color:#9ce2c5}.slot[data-state="corrupt"] span{color:#ffbd91}
 </style>
 </head>
 <body>
 <main>
 <div class="eyebrow">七龍珠Z・超級賽亞傳說 HD</div>
-<h1>遊戲已搬到新網站</h1>
+<h1>遊戲網站遷移中</h1>
 <p>原本的 Vercel 網址將只提供<strong>進度備份及搬遷說明</strong>。已完整下載離線版的玩家仍可能繼續使用舊遊戲，不必急著刪除。</p>
+<div class="panel warning" role="note"><strong>請勿刪除主畫面上的舊遊戲程式！</strong><p>在新網站確認所有存檔均可正常讀取以前，請勿移除舊 PWA 或清除網站資料，以免存檔永久遺失。已安裝的離線遊戲仍可能繼續遊玩。</p></div>
 <div class="panel">
 <h2>第一步：備份舊進度</h2>
 <p>直接讀取這個舊網址在你手機內的 10 個存檔欄位。<strong>不需要啟動遊戲，也不會重新下載 18 MB 核心。</strong></p>
 <output id="status" role="status" aria-live="polite">正在檢查本機存檔…</output>
+<div id="slots" class="slots" aria-label="十格存檔狀態"></div>
 <button id="export" type="button" disabled>一鍵備份全部存檔</button>
 <output id="result" role="status" aria-live="polite"></output>
 <p class="notice">備份檔僅包含已儲存的遊戲進度，不包含 ROM、IPS、HD 美術包；尚未儲存的遊玩進度無法從這個頁面取得。</p>
@@ -43,8 +46,8 @@ li{margin:7px 0}
 <div class="panel">
 <h2>第二步：前往新網站</h2>
 <p>新網站可以重新加入 iPhone 主畫面。你需要自行重新匯入原本的 ROM、IPS、HD 素材包。</p>
-<a id="new-site" class="action" href="https://dbz.happy-kt.com/" target="_blank" rel="noopener noreferrer">開啟 Cloudflare 新版遊戲</a>
-<small>建議先在 iPhone「檔案」確認已保存 .dbzbackup，再開啟新站。</small>
+<a id="new-site" class="action" href="https://dbz-ssd-zhtw.pages.dev/" target="_blank" rel="noopener noreferrer">開啟 Cloudflare 新版遊戲</a>
+<small>建議先在 iPhone「檔案」確認已保存 .dbzbackup，再開啟新站。新玩家可直接前往新站。</small>
 </div>
 <div class="panel">
 <h2>第三步：還原後才刪除舊圖示</h2>
