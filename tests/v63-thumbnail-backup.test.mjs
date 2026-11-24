@@ -84,7 +84,8 @@ test('EXP warning gates the first modifier opening until confirmation, persists 
  assert.match(html,/比克（魔童）與那霸（立巴）交戰之前/);
  assert.match(html,/不得超過 Lv\. 8/);
  assert.match(html,/Lv\. 9 或以上/);
- const source=app.slice(app.indexOf('function openCheatPanel(){'),app.indexOf("for(const control of document.querySelectorAll('[data-cheat]'))"));
+ const start=app.indexOf('function openCheatPanel(){');
+ const source=app.slice(start,app.indexOf("for(const control of document.querySelectorAll('[data-cheat]'))",start));
  function session(store){
    const nodes=new Map(),handlers=new Map();
    const $=id=>{
@@ -93,7 +94,7 @@ test('EXP warning gates the first modifier opening until confirmation, persists 
    };
    const localStorage={getItem:key=>store.get(key),setItem:(key,value)=>store.set(key,value)};
    const env=new Function('$','localStorage','document','sound','cancelAnimationFrame','requestAnimationFrame','refreshCheatPanel',
-     "let game={},cheatPanelOpen=false,cheatNoticeAcknowledged=false,held=0,running=true,raf=1,lastTick=0,accumulator=0,speedNoticeOpen=false;const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';\n"+source+"\nreturn {openCheatPanel,closeCheatPanel};")($,localStorage,{hidden:false},{reset(){}},()=>{},()=>1,()=>{});
+     "let game={},cheatPanelOpen=false,cheatNoticeAcknowledged=false,held=0,running=true,raf=1,lastTick=0,accumulator=0,speedNoticeOpen=false;const requestFrame=()=>{};const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';\n"+source+"\nreturn {openCheatPanel,closeCheatPanel};")($,localStorage,{hidden:false},{reset(){}},()=>{},()=>1,()=>{});
    return {...env,$,handlers};
  }
  const store=new Map(),first=session(store);
