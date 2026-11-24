@@ -1,8 +1,8 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
-import {SnesAudio} from './audio.mjs?build=v56';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v64';
+import {SnesAudio} from './audio.mjs?build=v65';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v65';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -84,13 +84,13 @@ function updateSpeedButton(){
   button.dataset.speed=String(gameSpeed);
   button.setAttribute('aria-label','目前遊戲速度 '+gameSpeed+' 倍，點擊切換');
   button.title=gameSpeed===1?'遊戲原速，點擊切換至 2×':
-    '遊戲倍速 '+gameSpeed+'×（暫停音效），點擊切換';
+    '遊戲倍速 '+gameSpeed+'×（音效同步加速），點擊切換';
   button.setAttribute('aria-pressed',String(gameSpeed!==1));
 }
 $('speed-toggle').addEventListener('click',()=>{
   if(!game||speedNoticeOpen)return;
   gameSpeed=nextSpeed(gameSpeed);
-  sound.setFastMuted(gameSpeed!==1);
+  sound.setPlaybackRate(gameSpeed);
   lastTick=0;accumulator=0;
   // The button itself shows the selected speed. Do not show the old
   // full-width toast: on portrait iPhone it overlaps this compact control.
@@ -584,7 +584,7 @@ $('start').addEventListener('click', async () => {
     updateRenderModeButton();
     button.textContent=originalLabel;
     held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
-    gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();syncSpeedPlacement();
+    gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();syncSpeedPlacement();
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
     hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
     averageTickMs=0;
@@ -1054,7 +1054,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setFastMuted(false);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();document.dispatchEvent(new Event('dbz-return-home'));};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
