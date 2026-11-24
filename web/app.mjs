@@ -1,8 +1,8 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
-import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
+import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v62';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v63';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -1095,7 +1095,7 @@ window.addEventListener('pageshow',()=>{
 // v54: all ten slots are stored privately in IndexedDB. ROM, IPS, HD images
 // and save data are never sent to any server. The .sav format stays unchanged.
 let slotMode=null,slotSelection=null,slotBusy=false,backupOpen=false;
-let pendingImportBytes=null,currentSlotRecords=new Map(),slotThumbUrls=[];
+let currentSlotRecords=new Map(),slotPickerGeneration=0;
 
 function pauseForProgressMenu(){
   held=0;
@@ -1109,12 +1109,12 @@ function resumeFromProgressMenu(){
   }
 }
 function clearSlotThumbUrls(){
-  for(const url of slotThumbUrls)URL.revokeObjectURL(url);
-  slotThumbUrls=[];
+  // Invalidate pending asynchronous preview reads when the picker closes.
+  slotPickerGeneration++;
+  $('save-slots-list').replaceChildren();
 }
 function slotButtonLabel(){
   if(slotMode==='load')return '讀取 Slot '+String(slotSelection??'--').padStart(2,'0');
-  if(slotMode==='import')return '匯入至 Slot '+String(slotSelection??'--').padStart(2,'0');
   return '儲存至 Slot '+String(slotSelection??'--').padStart(2,'0');
 }
 function slotAvailable(slot){
@@ -1129,6 +1129,7 @@ function updateSlotChoice(){
 }
 async function refreshSlotPicker(){
   clearSlotThumbUrls();currentSlotRecords=new Map();
+  const generation=slotPickerGeneration;
   const list=$('save-slots-list');list.replaceChildren();
   $('save-slots-feedback').textContent='正在讀取本機存檔…';
   $('save-slots-confirm').disabled=true;
@@ -1138,7 +1139,7 @@ async function refreshSlotPicker(){
     $('save-slots-feedback').textContent='本機存檔無法使用：'+(error?.message||error);
     return;
   }
-  if(!slotMode)return;
+  if(!slotMode||generation!==slotPickerGeneration)return;
   for(const record of records)currentSlotRecords.set(record.slot,record);
   for(let slot=1;slot<=SLOT_COUNT;slot++){
     const record=currentSlotRecords.get(slot);
@@ -1151,8 +1152,18 @@ async function refreshSlotPicker(){
     const preview=record?.thumbnail instanceof Blob&&record.thumbnail.size
       ?document.createElement('img'):document.createElement('span');
     if(preview.tagName==='IMG'){
-      const url=URL.createObjectURL(record.thumbnail);slotThumbUrls.push(url);
-      preview.src=url;preview.alt='存檔 '+slot+' 的遊戲畫面';preview.className='save-slot-thumb';
+      preview.alt='存檔 '+slot+' 的遊戲畫面';preview.className='save-slot-thumb';
+      const unavailable=()=>{
+        if(generation!==slotPickerGeneration)return;
+        const fallback=document.createElement('span');
+        fallback.className='save-slot-thumb save-slot-empty';
+        fallback.textContent='無法預覽';preview.replaceWith(fallback);
+      };
+      preview.addEventListener('error',unavailable,{once:true});
+      void thumbnailDataUrl(record.thumbnail).then(data=>{
+        if(generation!==slotPickerGeneration)return;
+        if(data)preview.src=data;else unavailable();
+      }).catch(unavailable);
     }else{
       preview.className='save-slot-thumb save-slot-empty';
       preview.textContent=record?'無法預覽':'空白';
@@ -1174,18 +1185,16 @@ async function refreshSlotPicker(){
   }
   $('save-slots-feedback').textContent=slotMode==='load'
     ?'請選擇要讀取的進度；不同 ROM／IPS 的欄位不能讀取。'
-    :slotMode==='import'?'請選擇要接收 .sav 備份的欄位。'
-      :'請選擇儲存欄位。已有進度的欄位會要求確認覆蓋。';
+    :'請選擇儲存欄位。已有進度的欄位會要求確認覆蓋。';
   updateSlotChoice();
 }
 async function openSlotPicker(mode){
-  if(!game||slotMode||(!['save','load','import'].includes(mode)))return;
-  if(mode==='import'&&!pendingImportBytes)return;
+  if(!game||slotMode||(!['save','load'].includes(mode)))return;
   if(backupOpen){backupOpen=false;$('backup-panel').hidden=true;}
   pauseForProgressMenu();
   slotMode=mode;slotSelection=null;slotBusy=false;
   $('save-slots-title').textContent=
-    mode==='save'?'儲存遊戲':mode==='load'?'讀取遊戲':'匯入進度';
+    mode==='save'?'儲存遊戲':'讀取遊戲';
   $('save-slots-hint').textContent='10 個本機進度欄位';
   $('save-slots-panel').hidden=false;
   $('save-slots-close').focus({preventScroll:true});
@@ -1193,7 +1202,7 @@ async function openSlotPicker(mode){
 }
 function closeSlotPicker(){
   if(!slotMode||slotBusy)return;
-  slotMode=null;slotSelection=null;pendingImportBytes=null;
+  slotMode=null;slotSelection=null;
   $('save-slots-panel').hidden=true;clearSlotThumbUrls();
   $('save').focus({preventScroll:true});
   resumeFromProgressMenu();
@@ -1302,28 +1311,6 @@ $('backup-bundle-import').addEventListener('change',async event=>{
   }
 });
 
-$('backup-export').addEventListener('click',()=>{
-  if(!game)return;
-  try{
-    const bytes=validStateBytes(game.save_state());
-    const url=URL.createObjectURL(new Blob([bytes],{type:'application/octet-stream'}));
-    const a=document.createElement('a');a.href=url;a.download='dbz-ssd-web.sav';
-    a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    $('backup-feedback').textContent='已建立目前進度的 .sav 備份檔。';
-  }catch(error){$('backup-feedback').textContent='備份失敗：'+(error?.message||error);}
-});
-$('state-file').addEventListener('change',async event=>{
-  const file=event.target.files?.[0];
-  if(!file||!game)return;
-  try{
-    if(!file.size||file.size>MAX_STATE_BYTES)throw Error('進度備份檔大小不正確');
-    pendingImportBytes=validStateBytes(new Uint8Array(await file.arrayBuffer()));
-    await openSlotPicker('import');
-  }catch(error){
-    pendingImportBytes=null;
-    $('backup-feedback').textContent='匯入失敗：'+(error?.message||error);
-  }finally{event.target.value='';}
-});
 $('save-slots-confirm').addEventListener('click',async()=>{
   const slot=slotSelection,mode=slotMode;
   if(!game||!mode||!slot||slotBusy||!slotAvailable(slot))return;
@@ -1338,17 +1325,6 @@ $('save-slots-confirm').addEventListener('click',async()=>{
       if(!record||record.romKey!==currentRomKey)throw Error('進度不存在或 ROM／IPS 不相容');
       await applyLoadedSave(new Uint8Array(await record.state.arrayBuffer()));
       slotBusy=false;closeSlotPicker();gameToast('已讀取 Slot '+String(slot).padStart(2,'0'));
-    }else if(mode==='import'){
-      if(!pendingImportBytes)throw Error('沒有已選取的 .sav 備份');
-      // Validate with the real emulator before writing. Then paint one emulated
-      // frame so the thumbnail describes the imported state, not the old game.
-      await applyLoadedSave(pendingImportBytes);
-      game.tick(0);drawFrame();
-      const thumb=await captureSaveThumbnail();
-      await writeSaveSlot(slot,validStateBytes(game.save_state()),{
-        romKey:currentRomKey,thumbnail:thumb
-      });
-      slotBusy=false;closeSlotPicker();gameToast('已匯入並儲存至 Slot '+String(slot).padStart(2,'0'));
     }else{
       const state=validStateBytes(game.save_state());
       const thumb=await captureSaveThumbnail();
