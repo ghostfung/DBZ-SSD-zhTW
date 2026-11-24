@@ -1,7 +1,7 @@
 // Offline shell installer / automatic launch release updater. No ROM, HD ZIP,
 // IPS or saved games are stored here: existing private OPFS/IndexedDB stays intact.
-export const OFFLINE_RELEASE='v66';
-export const OFFLINE_CACHE='dbz-ssd-offline-v66';
+export const OFFLINE_RELEASE='v67';
+export const OFFLINE_CACHE='dbz-ssd-offline-v67';
 export const OFFLINE_CONTROL='dbz-ssd-offline-control-v1';
 export const OFFLINE_WASM_SIZE=18573572;
 export const OFFLINE_INTERVAL_MS=24*60*60*1000;
