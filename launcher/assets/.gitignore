@@ -1,4 +1,0 @@
-# Everything here is copied in before a build (see README.md); only the README is in git.
-*
-!.gitignore
-!README.md

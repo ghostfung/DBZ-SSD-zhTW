@@ -1,9 +1,0 @@
-[alias]
-xtask = "run --package xtask --"
-
-# MSVC: the exe's debug directory names its PDB by file name only, not by the folder it was built in.
-# (The folders of the sources are kept out of the binaries by tools/no-local-paths.ps1 / .sh: they differ from one
-# machine to another, which a file of this repository cannot name. That script sets CARGO_ENCODED_RUSTFLAGS, which
-# replaces these flags, so it passes this one too.)
-[target.'cfg(all(windows, target_env = "msvc"))']
-rustflags = ["-Clink-arg=/PDBALTPATH:%_PDB%"]

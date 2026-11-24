@@ -1,3 +1,0 @@
-# Use with --state-in fusion_2990 (secret-piccolo-dende-fusion frame 2990, before str2:0x0EE): no key, so the
-# choice after the page (融合 / 不融合) waits with its cursor up (the replay picks it at once). Frames are absolute.
-3400 -

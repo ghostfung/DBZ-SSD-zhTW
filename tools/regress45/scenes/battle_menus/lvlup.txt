@@ -1,7 +1,0 @@
-@prefix battle 6700
-# builtin battle up to 6700 (the fight is won around 6800), then A every 16 frames for 1600 frames.
-# run with --wram 4699:7E0B0F=FFFF00 (Goku EXP 65535) and 4699:7E0B2F=FFFF00 (Piccolo) so the XP award levels them up
-repeat 100
-4 a
-12 -
-end

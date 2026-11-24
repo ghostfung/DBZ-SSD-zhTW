@@ -1,284 +1,60 @@
 <!doctype html>
 <html lang="zh-Hant-TW">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"/>
-  <meta name="theme-color" content="#10121a"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <title>七龍珠Z 超賽亞傳說 · HD 繁體中文版</title>
-  <link rel="manifest" href="manifest.webmanifest"/>
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"/>
-  <link rel="icon" type="image/png" href="apple-touch-icon.png"/>
-  <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
-  <meta name="mobile-web-app-capable" content="yes"/>
-  <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v61"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c1325">
+<title>七龍珠 HD｜存檔備份及新網站</title>
+<style>
+:root{color-scheme:dark;font:16px/1.7 system-ui,-apple-system,"PingFang TC",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#203956,#0b1221 72%);color:#f3f6fb;min-height:100dvh;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
+main{max-width:580px;margin:0 auto;padding:28px 4px 40px}
+.eyebrow{color:#99b9dd;font-size:13px;letter-spacing:.12em;font-weight:700}
+h1{font-size:clamp(26px,6vw,37px);line-height:1.25;margin:10px 0 14px}
+p{margin:10px 0;color:#c9d4e4}
+.panel{border:1px solid #3a506b;border-radius:16px;background:#142039;padding:19px;margin:18px 0}
+h2{font-size:19px;margin:0 0 8px}
+small{color:#b1c5d8}
+strong{color:#fff}
+button,a.action{display:block;width:100%;border:0;border-radius:12px;padding:13px 15px;margin:12px 0;background:#438af4;color:#fff;font-size:16px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
+button:disabled{opacity:.6;cursor:not-allowed}
+a.action{background:#20745d}
+a.action[aria-disabled=true]{pointer-events:none;opacity:.5}
+.notice{background:#253b52;padding:10px 13px;border-radius:9px;font-size:14px}
+#status,#result{display:block;min-height:25px;white-space:pre-wrap;font-size:14px}
+ol{padding-left:23px}
+li{margin:7px 0}
+</style>
 </head>
 <body>
-  <main>
-    <h1>七龍珠Z 超賽亞傳說 <small>HD 繁體中文版</small></h1>
-    <p class="notice">將此網頁透過 Safari「分享 → 加入主畫面」，即可像 App 一樣使用。遊戲檔案只在本機儲存與運行。</p>
-    <section id="setup">
-      <div id="offline-status" class="offline-status" role="status" aria-live="polite">
-        <span id="offline-status-message">正在檢查離線程式…</span>
-        <button id="offline-retry" type="button" hidden>重試離線安裝</button>
-        <button id="offline-check" type="button" hidden>檢查更新</button>
-        <button id="offline-update-apply" type="button" hidden>重新啟動更新</button>
-      </div>
-      <div id="launch-cover" class="launch-cover">
-        <img id="title-cover" src="./dbz-title.webp" width="886" height="782"
-          alt="七龍珠Z 超賽亞傳說遊戲標題畫面" decoding="async"/>
-        <button id="start" type="button" disabled>啟動遊戲</button>
-      </div>
-      <button id="setup-edit" type="button" hidden>管理遊戲檔案</button>
-      <div id="setup-files">
-      <details id="game-files-details" open>
-        <summary>遊戲 ROM／IPS（首次匯入後保存在本機）</summary>
-        <div class="setup-file-fields">
-      <label>選擇自己的 SNES ROM（.sfc／.smc）<input id="rom" type="file" accept=".sfc,.smc,.bin,application/octet-stream"/></label>
-      <label>日文 Rev 1 需要 IPS（.ips）<input id="ips" type="file" accept=".ips,application/octet-stream"/></label>
-          <button type="button" id="clear-game-files">清除已保存的 ROM／IPS</button>
-        </div>
-      </details>
-      <p id="local-files-status" class="hd-import-note">首次使用請選 ROM，日文 Rev 1 ROM 另需選 IPS。</p>
-      <div class="hd-import-panel">
-        <strong>HD 美術包（可選用）</strong>
-        <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
-          <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
-        </label>
-        <p class="hd-import-note">約 462 MiB。驗證成功後自動嘗試保存到這台 iPhone，下次開啟可自動重新驗證。若 iOS 拒絕保存，仍可在本次遊玩，但下次需要重新選取原始 ZIP。</p>
-        <div class="hd-import-buttons">
-          <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
-          <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
-        </div>
-        <p id="hd-session-status" class="hd-import-note" aria-live="polite">尚未啟用本次分頁的 HD 素材讀取。</p>
-        <div id="hd-asset-browser" hidden>
-          <label>HD 素材名稱搜尋（不需解壓整包）
-            <input id="hd-asset-search" type="search" placeholder="例如 bg/、battle/、goku" autocomplete="off"/>
-          </label>
-          <select id="hd-asset-list" size="4" aria-label="從本機 ZIP 尋找 HD 圖片"></select>
-          <button id="hd-preview-selected" type="button" disabled>預覽選取的 HD 圖片</button>
-          <p id="hd-asset-info" class="hd-import-note"></p>
-        </div>
-        <div id="hd-bg-catalog" class="hd-catalog" hidden>
-          <strong>官方背景場景索引</strong>
-          <p id="hd-bg-count" class="hd-import-note">正在讀取 bg/index.json...</p>
-          <label>背景索引（每項包含遊戲圖層鍵值）
-            <select id="hd-bg-list" size="5" aria-label="官方 HD 背景圖層索引"></select>
-          </label>
-          <p id="hd-bg-details" class="hd-import-note"></p>
-          <button id="hd-bg-preview" type="button" disabled>預覽這個索引對應的 HD 背景</button>
-          <p class="hd-import-note">此處只顯示官方素材索引。遊戲啟動並開啟 HD 2x 後，會由 Rust PPU 核對 VRAM 與圖層設定；只有相符背景才會嘗試套用。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>Mode 7 飛行與旋轉場景 HD</strong>
-          <p id="hd-mode7-count" class="hd-import-note">匯入後讀取 mode7/index.json，需 VRAM 平面與調色盤完全驗證。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>卡牌／UI 字形 HD（cards）</strong>
-          <p id="hd-card-count" class="hd-import-note">匯入後讀取 cards/index.json，以 ROM 2bpp 圖塊精確核對 base／roles 美術。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>探索地圖 HD（maps）</strong>
-          <p id="hd-map-count" class="hd-import-note">匯入後讀取 maps/index.json，以 ROM 指標與 PPU BG2 雙重檢查。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>地圖 NPC／場景物件（class3）、戰鬥特效（class2）</strong>
-          <p id="hd-special-count" class="hd-import-note">匯入驗證後將讀取 class3、class2 索引；只使用原作者的精確 source_key。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>人物頭像 HD（class1）</strong>
-          <p id="hd-portrait-count" class="hd-import-note">匯入後將讀取 class1/index.json，與玩家 ROM 的原始圖塊進行核對。</p>
-        </div>
-        <div class="hd-catalog">
-          <strong>戰鬥人物 HD 精靈（第一階段）</strong>
-          <p id="hd-fighter-count" class="hd-import-note">匯入後將讀取 class2/index.json。僅精確匹配的戰鬥人物會替換原始精靈像素；招式特效、人物輪廓擴大及場景物件仍待整合。</p>
-        </div>
-        <details class="hd-storage-experimental">
-          <summary>HD 素材本機保存管理（自動保存）</summary>
-          <p class="hd-import-note">驗證成功後將會自動分段保存。若失敗仍可直接使用本次已驗證的 ZIP；Safari 不能永久記住「檔案」App 的檔案路徑。請保留原檔備份。</p>
-          <div class="hd-import-buttons">
-            <button id="hd-cache" type="button" disabled>重新嘗試保存 ZIP</button>
-            <button id="hd-remove" type="button">清除 HD 本機快取</button>
-          </div>
-        </details>
-        <progress id="hd-progress" max="100" value="0" hidden></progress>
-        <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
-        <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note">ROM、IPS 及 HD 美術包只在 iPhone 本機使用，不會上傳。</p>
-        <p class="hd-import-note"><a href="./credits.html" target="_blank" rel="noopener noreferrer">開源與譯文授權資料</a></p>
-      </div>
-      </div>
-      <output id="status" aria-live="polite">等待載入。</output>
-    </section>
-    <section id="game" hidden>
-      <div class="screen"><canvas id="screen" width="256" height="224"></canvas></div>
-      <div class="stats" hidden><span id="frames">0 幀</span><span id="fps"></span></div>
-      <p id="build-status" class="hd-import-note" aria-live="polite">頁面 dbz-hd-tw-pwa-v53；WASM 啟動時核對</p>
-      <div class="controls">
-        <div class="dpad">
-          <span id="speed-landscape-anchor" class="speed-landscape-anchor" aria-label="遊戲倍速按鈕位置"></span>
-          <button data-bit="4" class="up" aria-label="上">▲</button>
-          <button data-bit="6" class="left" aria-label="左">◀</button>
-          <button data-bit="7" class="right" aria-label="右">▶</button>
-          <button data-bit="5" class="down" aria-label="下">▼</button>
-        </div>
-        <div class="actions">
-          <button data-bit="9" class="sfc-x" aria-label="X，藍色">X</button>
-          <button data-bit="1" class="sfc-y" aria-label="Y，綠色">Y</button>
-          <button data-bit="8" class="sfc-a" aria-label="A，紅色">A</button>
-          <button data-bit="0" class="sfc-b" aria-label="B，黃色">B</button>
-        </div>
-      </div>
-      <div class="playbar">
-        <button data-bit="2" class="playbar-key">Select</button>
-        <span class="start-speed-stack">
-          <span id="speed-portrait-anchor" class="speed-portrait-anchor">
-            <button id="speed-toggle" type="button" aria-label="遊戲速度 1 倍，點按切換" title="遊戲倍速：1×／2×／3×">速度 1×</button>
-          </span>
-          <button data-bit="3" class="playbar-key">Start</button>
-        </span>
-        <button id="hd-toggle" type="button" title="點擊切換 HD 2x／Classic 繁中 1x／Classic 英文">原版</button>
-        <button id="locale-toggle" type="button">台灣繁中</button>
-        <button id="save" type="button" aria-haspopup="dialog" aria-controls="save-slots-panel">儲存遊戲</button>
-        <button id="load" type="button" aria-haspopup="dialog" aria-controls="save-slots-panel">讀取遊戲</button>
-        <button id="sound" type="button" hidden>恢復聲音</button>
-        <button id="cheat-open" type="button" aria-haspopup="dialog" aria-controls="cheats-panel">遊戲修改</button>
-        <button id="backup-open" type="button" aria-haspopup="dialog" aria-controls="backup-panel">備份紀錄</button>
-        <output id="play-toast" role="status" aria-live="polite" hidden></output>
-      </div>
-      <div class="utility" hidden>
-        <button id="translation-debug" type="button" title="匯出文字診斷">匯出文字診斷</button>
-        <button id="stop">停止</button>
-      </div>
-      <p id="sound-status" class="audio-status" aria-live="polite">啟動時嘗試開啟聲音；如無聲請按「啟用聲音」。</p>
-      <div id="translation-card" class="translation-card" hidden>
-        <div class="translation-heading"><strong>無法內嵌時的繁中字幕</strong><span id="translation-key"></span></div>
-        <div id="translation-text" class="translation-text" lang="zh-Hant-TW"></div>
-      </div>
-      <p id="translation-count" class="translation-count" aria-live="polite"></p>
-      <details id="game-diagnostics" class="game-diagnostics" hidden>
-        <summary>HD 設定與效能分析（點擊展開）</summary>
-      <p id="frame-perf" class="hd-import-note" aria-live="off">卡頓監測：正在收集影格耗時…</p>
-      <p id="hd-phase-perf" class="hd-import-note" aria-live="off">HD 分段耗時：正在採樣…</p>
-      <div class="preview-bar">
-        <label class="check-option"><input id="inframe" type="checkbox" checked/> Classic 模式顯示繁中字幕（HD 2x 直接顯示中文）</label>
-        <!-- Release player uses the HD switch in .playbar above. -->
-        <span id="hd-info" aria-live="polite">Classic 原版畫面</span>
-        <p id="hd-live-info" class="hd-import-note" aria-live="polite">尚未啟用即時 HD 背景匹配。</p>
-        <label class="check-option"><input id="fighter-hd-toggle" type="checkbox" checked/> 人物 HD（實驗）— 可在同一場戰鬥切換比較</label>
-        <p id="hd-fighter-info" class="hd-import-note" aria-live="polite">人物 HD 尚未載入。</p>
-        <label class="check-option"><input id="portrait-hd-toggle" type="checkbox" checked/> 人物頭像 HD（class1 實驗）</label>
-        <p id="hd-portrait-info" class="hd-import-note" aria-live="polite">頭像 HD 尚未載入。</p>
-        <label class="check-option"><input id="special-hd-toggle" type="checkbox" checked/> 地圖人物／戰鬥特效 HD（實驗）</label>
-        <p id="hd-special-info" class="hd-import-note" aria-live="polite">物件／特效 HD 尚未載入。</p>
-        <label class="check-option"><input id="map-hd-toggle" type="checkbox" checked/> 探索地圖 HD（ROM／BG2 校驗）</label>
-        <p id="hd-map-info" class="hd-import-note" aria-live="polite">地圖 HD 尚未載入。</p>
-        <label class="check-option"><input id="card-hd-toggle" type="checkbox" checked/> 卡牌／UI HD（實驗）</label>
-        <p id="hd-card-info" class="hd-import-note" aria-live="polite">卡牌 HD 尚未載入。</p>
-        <label class="check-option"><input id="mode7-hd-toggle" type="checkbox" checked/> Mode 7 飛行 HD（實驗）</label>
-        <p id="hd-mode7-info" class="hd-import-note" aria-live="polite">Mode 7 HD 尚未載入。</p>
-        <div class="hd-catalog">
-          <strong>HD 覆蓋率盤點（不影響遊戲操作）</strong>
-          <p class="hd-import-note">只讀取官方 ZIP 的小型索引及檔案目錄，不解壓圖片、不讀取 ROM 或存檔；畫面匹配另附目前單幀快照。</p>
-          <button id="hd-coverage-build" type="button" disabled>分析本機 HD 素材覆蓋</button>
-          <button id="hd-coverage-export" type="button" disabled>下載盤點 JSON</button>
-          <pre id="hd-coverage-summary" class="hd-import-note" style="white-space:pre-wrap;overflow-wrap:anywhere">尚未驗證本機 HD 素材包。</pre>
-        </div>
-      </div>
-      </details>
-    </section>
-   </main>
-  <!-- A local-only save-state picker. The slot list never uploads user data. -->
-  <section id="save-slots-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="save-slots-title" hidden>
-    <div class="cheats-sheet save-slots-sheet">
-      <header class="cheats-heading">
-        <div><h2 id="save-slots-title">儲存遊戲</h2><p id="save-slots-hint">10 個本機進度欄位</p></div>
-        <button id="save-slots-close" type="button">返回遊戲</button>
-      </header>
-      <p class="cheats-note">進度只儲存在這部裝置的 PWA。清除網站資料、移除 PWA 或裝置損壞可能令資料遺失，請定期使用「備份紀錄」匯出 .sav。</p>
-      <div id="save-slots-list" class="save-slots-list" role="group" aria-label="存檔欄位"></div>
-      <output id="save-slots-feedback" class="save-slots-feedback" role="status" aria-live="polite"></output>
-      <div class="save-slots-actions">
-        <button id="save-slots-cancel" type="button">取消</button>
-        <button id="save-slots-confirm" type="button" disabled>儲存至所選欄位</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="backup-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="backup-title" hidden>
-    <div class="cheats-sheet backup-sheet">
-      <header class="cheats-heading">
-        <div><h2 id="backup-title">備份紀錄</h2><p>原有 .sav 匯入／匯出功能</p></div>
-        <button id="backup-close" type="button">返回遊戲</button>
-      </header>
-      <p class="cheats-note">匯入會先選擇 10 個存檔欄位之一，並將該進度載入遊戲；匯出則備份目前遊戲進度。備份檔可轉移至其他裝置。</p>
-      <div class="backup-actions">
-        <label class="upload backup-file-label" for="state-file">匯入進度（.sav）<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
-        <button id="backup-export" type="button">匯出進度（.sav）</button>
-      </div>
-      <output id="backup-feedback" role="status" aria-live="polite"></output>
-    </div>
-  </section>
-
-  <section id="speed-update-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="speed-update-title" aria-describedby="speed-update-description" hidden>
-    <div class="cheats-sheet speed-update-sheet">
-      <header class="cheats-heading">
-        <div><h2 id="speed-update-title">本次遊戲更新</h2><p>更新內容 · 只顯示一次</p></div>
-      </header>
-      <p id="speed-update-description" class="cheats-note">
-        <span class="update-line">💾 新增 10 格存檔、讀取及備份功能。</span>
-        <span class="update-line">⚡ HD 美術包快速啟動，不再每次完整驗證。</span>
-        <span class="update-line">⏩ 新增一鍵倍速：1× → 2× → 3×。</span>
-        <small class="update-footnote">倍速期間暫停音效，切回 1× 即恢復。</small>
-      </p>
-      <div class="cheats-actions">
-        <button id="speed-update-close" type="button">我知道了，開始遊戲</button>
-      </div>
-    </div>
-  </section>
-
-  <section id="cheats-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="cheats-title" hidden>
-    <div class="cheats-sheet">
-      <header class="cheats-heading">
-        <div><h2 id="cheats-title">遊戲修改</h2><p>第一階段 · 遊戲進行中適用</p></div>
-        <button type="button" id="cheat-close" aria-label="關閉遊戲修改">完成</button>
-      </header>
-      <p class="cheats-note">設定會自動儲存在本機，退出再啟動或匯入進度後會恢復。若存檔位於戰鬥中，將等到安全階段再套用；戰鬥中不可調整，特定劇情戰鬥會自動暫停作弊。</p>
-      <div class="cheats-grid">
-        <label>攻擊傷害倍率
-          <select data-cheat="damage"><option value="0">0.5x</option><option value="1" selected>1x（原版）</option><option value="2">2x</option><option value="3">3x</option><option value="4">5x</option><option value="5">10x</option></select>
-        </label>
-        <label>防禦減傷倍率
-          <select data-cheat="defence"><option value="0">0.5x</option><option value="1" selected>1x（原版）</option><option value="2">2x</option><option value="3">3x</option><option value="4">5x</option><option value="5">10x</option></select>
-        </label>
-        <label>經驗值 EXP
-          <select data-cheat="exp"><option value="0" selected>1x（原版）</option><option value="1">2x</option><option value="2">3x</option><option value="3">5x</option><option value="4">10x</option></select>
-        </label>
-        <label>全隊 Z 卡牌
-          <select data-cheat="z_cards"><option value="off" selected>關閉</option><option value="attack">攻擊 Z</option><option value="defence">防禦 Z</option><option value="both">攻防皆 Z</option></select>
-        </label>
-        <label>獲得金錢倍率
-          <select data-cheat="gain"><option value="0" selected>1x（原版）</option><option value="1">2x</option><option value="2">3x</option><option value="3">5x</option><option value="4">10x</option></select>
-        </label>
-        <label>隨機遇敵頻率
-          <select data-cheat="encounters"><option value="0">0.25x</option><option value="1">0.5x</option><option value="2" selected>1x（原版）</option><option value="3">2x</option><option value="4">4x</option></select>
-        </label>
-        <label class="cheats-check"><input type="checkbox" data-cheat="max_zeni"/> 金錢維持最大值（999）</label>
-        <label class="cheats-check"><input type="checkbox" data-cheat="no_random"/> 關閉隨機遇敵（劇情戰鬥保留）</label>
-      </div>
-      <output id="cheat-feedback" role="status" aria-live="polite">所有遊戲修改預設關閉。</output>
-      <div class="cheats-actions">
-        <button type="button" id="cheat-reset">全部重設</button>
-        <button type="button" id="cheat-done">返回遊戲</button>
-      </div>
-    </div>
-  </section>
-
-
-  <script type="module" src="app.mjs?build=v53&ui=v65"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v60"></script>
+<main>
+<div class="eyebrow">七龍珠Z・超級賽亞傳說 HD</div>
+<h1>遊戲已搬到新網站</h1>
+<p>原本的 Vercel 網址將只提供<strong>進度備份及搬遷說明</strong>。已完整下載離線版的玩家仍可能繼續使用舊遊戲，不必急著刪除。</p>
+<div class="panel">
+<h2>第一步：備份舊進度</h2>
+<p>直接讀取這個舊網址在你手機內的 10 個存檔欄位。<strong>不需要啟動遊戲，也不會重新下載 18 MB 核心。</strong></p>
+<output id="status" role="status" aria-live="polite">正在檢查本機存檔…</output>
+<button id="export" type="button" disabled>一鍵備份全部存檔</button>
+<output id="result" role="status" aria-live="polite"></output>
+<p class="notice">備份檔僅包含已儲存的遊戲進度，不包含 ROM、IPS、HD 美術包；尚未儲存的遊玩進度無法從這個頁面取得。</p>
+</div>
+<div class="panel">
+<h2>第二步：前往新網站</h2>
+<p>新網站可以重新加入 iPhone 主畫面。你需要自行重新匯入原本的 ROM、IPS、HD 素材包。</p>
+<a id="new-site" class="action" href="https://dbz.happy-kt.com/" target="_blank" rel="noopener noreferrer">開啟 Cloudflare 新版遊戲</a>
+<small>建議先在 iPhone「檔案」確認已保存 .dbzbackup，再開啟新站。</small>
+</div>
+<div class="panel">
+<h2>第三步：還原後才刪除舊圖示</h2>
+<ol><li>在新網站加入主畫面並啟動遊戲。</li>
+<li>在「備份紀錄」選擇「還原舊網站的全部存檔」。</li>
+<li>進入「讀取遊戲」確認進度正常。</li>
+<li><strong>完成驗證後</strong>，才從主畫面移除舊版圖示。</li></ol>
+</div>
+<p><small>所有存檔都只在手機本機處理；本頁不會上傳任何遊戲資料。</small></p>
+</main>
+<script type="module" src="./migration.mjs"></script>
 </body>
 </html>

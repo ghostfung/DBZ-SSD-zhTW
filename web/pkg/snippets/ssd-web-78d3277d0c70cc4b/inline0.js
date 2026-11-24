@@ -1,1 +1,0 @@
-export function ssd_profile_now() { return performance.now(); }

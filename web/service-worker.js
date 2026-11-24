@@ -1,47 +1,35 @@
-// Cache-first, version-neutral offline runtime. Cache pointers move only after
-// complete, validated updates and a player-approved restart. Never read ROMs,
-// save states, IPS or HD ZIP. Direct WASM loading avoids iOS streaming hangs.
-const CONTROL='dbz-ssd-offline-control-v1';
-const DEFAULT='dbz-ssd-offline-v60';
-self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
-self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
-async function activeCache(){
-  try{
-    const control=await caches.open(CONTROL);
-    const response=await control.match(
-      new URL('./__dbz-offline-active__',self.registration.scope).href);
-    if(!response)return DEFAULT;
-    const entry=await response.json();
-    if(typeof entry.version==='string'&&/^v[1-9][0-9]*(?:[.][0-9]+){0,2}$/.test(entry.version))
-      return 'dbz-ssd-offline-'+entry.version;
-  }catch{}
-  return DEFAULT;
-}
+// Transitional worker for old Vercel origin. NO game core, ROM, HD packs
+// or old offline caches are requested or deleted.
+const CACHE='dbz-ssd-migration-only-v1';
+const FILES=['./index.html','./migration.mjs','./migration-bundle.mjs','./save-slots.mjs'];
+self.addEventListener('install',event=>{
+  event.waitUntil((async()=>{
+    const c=await caches.open(CACHE);
+    await c.addAll(FILES.map(f=>new URL(f,self.registration.scope).href));
+    await self.skipWaiting();
+  })());
+});
+self.addEventListener('activate',event=>{
+  // Preserve old dbz-ssd-offline-v60 cache and ALL IndexedDB/OPFS user data.
+  // Existing in-memory games can continue until their next navigation.
+  event.waitUntil(self.clients.claim());
+});
 self.addEventListener('fetch',event=>{
   const req=event.request;
   if(req.method!=='GET')return;
   const url=new URL(req.url);
   if(url.origin!==self.location.origin)return;
-  // WASM never travels through respondWith() (WebKit previously failed).
-  // Metadata must bypass every offline cache to detect new releases.
-  if(url.pathname.endsWith('/pkg/ssd_web_bg.wasm')||
-     url.pathname.endsWith('/service-worker.js')||
-     url.pathname.endsWith('/offline-release.json'))return;
-  // Installer uses reload to request fresh assets, not old cache entries.
-  // Navigations retain offline fallback even on user-initiated reload.
-  if((req.cache==='reload'||req.cache==='no-store')&&req.mode!=='navigate')return;
+  const scope=new URL(self.registration.scope);
+  if(!url.pathname.startsWith(scope.pathname))return;
+  const route=url.pathname.slice(scope.pathname.length);
+  const isShell=req.mode==='navigate'||route===''||route==='index.html';
+  const allowed=FILES.slice(1).map(f=>f.slice(2));
+  if(!isShell&&!allowed.includes(route))return;
   event.respondWith((async()=>{
-    const cache=await caches.open(await activeCache());
-    const result=await cache.match(req,{ignoreSearch:true});
-    if(result)return result;
-    try{return await fetch(req);}
-    catch(error){
-      if(req.mode==='navigate'){
-        const fallback=await cache.match(
-          new URL('./index.html',self.registration.scope).href,{ignoreSearch:true});
-        if(fallback)return fallback;
-      }
-      throw error;
-    }
+    const cache=await caches.open(CACHE);
+    const file=isShell?'./index.html':'./'+route;
+    const response=await cache.match(new URL(file,self.registration.scope).href);
+    if(response)return response;
+    return fetch(new URL(file,self.registration.scope).href);
   })());
 });
