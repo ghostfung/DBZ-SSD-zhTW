@@ -28,6 +28,7 @@ jobs:
           node-version: '22'
       - name: Check Rust bridge and renderer
         run: |
+          cargo test -p ssd-hd --lib browser_intro_underlay_hides_only_translated_text_planes
           cargo test -p ssd-web --lib
           cargo check -p ssd-web --target wasm32-unknown-unknown
       - name: Build WASM
@@ -74,3 +75,17 @@ jobs:
             git commit -m "build(v66): compiled intro renderer and verified offline manifest [skip ci]"
             git push origin "HEAD:$GITHUB_REF_NAME"
           }
+      - name: Release validated v66 to Cloudflare Pages
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = cloudflare-v66-intro-fix
+          git fetch --no-tags origin cloudflare-v66-intro-fix
+          test "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)"
+          git fetch --no-tags origin cloudflare-pages-v62
+          expected="5c421868840fad04ae8cf1f49b8e627a3497fe83"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$expected" ]; then
+            echo "Production moved; do not overwrite it."
+            exit 1
+          fi
+          git merge-base --is-ancestor "$expected" HEAD
+          git push origin HEAD:cloudflare-pages-v62
