@@ -3,8 +3,8 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v68';
-import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v69';
+import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v69';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
 import {LiveHdArt} from './hd-live.mjs';
@@ -105,7 +105,6 @@ updateSpeedButton();
 function showSpeedUpdateNoticeOnce(){
   if(speedNoticeShownInSession)return false;
   try{if(localStorage.getItem(SPEED_NOTICE_KEY)==='1')return false;}catch{}
-  speedNoticeShownInSession=true;
   speedNoticeOpen=true;resetControls();
   $('speed-update-panel').hidden=false;
   $('speed-update-close').focus({preventScroll:true});
@@ -113,6 +112,7 @@ function showSpeedUpdateNoticeOnce(){
 }
 $('speed-update-close').addEventListener('click',()=>{
   if(!speedNoticeOpen)return;
+  speedNoticeShownInSession=true;
   try{localStorage.setItem(SPEED_NOTICE_KEY,'1');}catch{}
   speedNoticeOpen=false;
   $('speed-update-panel').hidden=true;
