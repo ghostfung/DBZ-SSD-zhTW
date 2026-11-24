@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v68"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v69"/>
 </head>
 <body>
   <main>
@@ -227,14 +227,18 @@
   <section id="speed-update-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="speed-update-title" aria-describedby="speed-update-description" hidden>
     <div class="cheats-sheet speed-update-sheet">
       <header class="cheats-heading">
-        <div><h2 id="speed-update-title">本次遊戲更新</h2><p>更新內容 · 只顯示一次</p></div>
+        <div><h2 id="speed-update-title">🎮 遊戲更新完成</h2><p>2026/11/24｜v69</p></div>
       </header>
-      <p id="speed-update-description" class="cheats-note">
-        <span class="update-line">💾 新增 10 格存檔、讀取及備份功能。</span>
-        <span class="update-line">⚡ HD 美術包快速啟動，不再每次完整驗證。</span>
-        <span class="update-line">⏩ 新增一鍵倍速：1× → 2× → 3×。</span>
-        <small class="update-footnote">音效會隨遊戲速度同步加快，切回 1× 即恢復原速。</small>
-      </p>
+      <div id="speed-update-description" class="cheats-note">
+        <strong>本次更新內容</strong>
+        <ul>
+          <li>已遷移至新的伺服器。</li>
+          <li>修正 2×、3× 倍速遊玩時沒有聲音的問題。</li>
+          <li>修正開場介紹中英文文字重疊問題。</li>
+          <li>優化 iPad 橫向模式，方向鍵及 ABXY 按鈕分別配置於畫面左右兩側。</li>
+          <li>新增 ABXY 按鈕長按連發功能。</li>
+        </ul>
+      </div>
       <div class="cheats-actions">
         <button id="speed-update-close" type="button">我知道了，開始遊戲</button>
       </div>
@@ -296,8 +300,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v66&ui=v68"></script>
+  <script type="module" src="app.mjs?build=v66&ui=v69"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v68"></script>
+  <script type="module" src="offline-installer.mjs?offline=v69"></script>
 </body>
 </html>
