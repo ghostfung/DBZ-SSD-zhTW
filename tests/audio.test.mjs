@@ -22,7 +22,8 @@ class FakeAudioContext {
     return { getChannelData: n => data[n] };
   }
   createBufferSource() {
-    return { connect() {}, start: at => { this.started.push(at); } };
+    const node={playbackRate:{value:1},connect(){},disconnect(){},stop(){this.stopped=true},start:at=>{this.started.push(at);}};
+    (this.nodes??=[]).push(node);return node;
   }
 }
 
@@ -115,4 +116,21 @@ test('manual audio recovery stays available after visibilitychange even when con
   assert.match(app,/await sound\.reconnectFromGesture\(\)/);
   assert.match(app,/offerManualSoundRecovery\?'重新連接聲音':'恢復聲音'/);
   assert.match(app,/if\(game\)game\.set_audio_rate\(rate\)/);
+});
+
+test('1x, 2x and 3x PCM play without mute; old sources are stopped on rate changes',async()=>{
+  const audio=new SnesAudio(FakeAudioContext);
+  await audio.enable();
+  const ctx=audio.context;
+  for(const rate of [1,2,3,1]){
+    audio.setPlaybackRate(rate);
+    audio.enqueue(new Float32Array(8192).fill(.1));
+    const [first,second]=ctx.nodes.slice(-2);
+    assert.equal(first.playbackRate.value,rate);
+    assert.equal(second.playbackRate.value,rate);
+    assert.ok(Math.abs((ctx.started.at(-1)-ctx.started.at(-2))-2048/(48000*rate))<1e-9);
+    assert.equal(audio.context,ctx);
+    assert.equal(audio.enabled,true);
+    assert.ok(ctx.nodes.slice(0,-2).every(node=>node.stopped));
+  }
 });
