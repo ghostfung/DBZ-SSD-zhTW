@@ -1,7 +1,7 @@
-// Offline shell installer / low-request daily release updater. No ROM, HD ZIP,
+// Offline shell installer / automatic launch release updater. No ROM, HD ZIP,
 // IPS or saved games are stored here: existing private OPFS/IndexedDB stays intact.
-export const OFFLINE_RELEASE='v63.1';
-export const OFFLINE_CACHE='dbz-ssd-offline-v63.1';
+export const OFFLINE_RELEASE='v64';
+export const OFFLINE_CACHE='dbz-ssd-offline-v64';
 export const OFFLINE_CONTROL='dbz-ssd-offline-control-v1';
 export const OFFLINE_WASM_SIZE=18559329;
 export const OFFLINE_INTERVAL_MS=24*60*60*1000;
@@ -208,8 +208,24 @@ function showStatus(message,{retry=false,apply=false,check=false}={}){
   }
 }
 let running=null;
+function safeToUpdate(){
+  return !document.body.classList.contains('playing')&&!document.getElementById('setup')?.classList.contains('launching');
+}
+async function applyAutomatically(version){
+  if(!safeToUpdate()){
+    showStatus('新版 '+version+' 已下載，儲存進度後返回首頁即可更新',{apply:true,check:true});
+    document.dispatchEvent(new CustomEvent('dbz-offline-update-ready',{detail:{version}}));
+    return false;
+  }
+  showStatus('正在套用新版 '+version+'…');
+  await activatePendingUpdate();
+  window.location.reload();
+  return true;
+}
 export async function prepareOffline(){
   if(running)return running;
+  if(!safeToUpdate())return;
+  document.body.classList.add('offline-preparing');
   running=(async()=>{
     if(!('serviceWorker' in navigator)||!globalThis.caches){
       showStatus('此瀏覽器不支援完整離線安裝');return;
@@ -219,7 +235,7 @@ export async function prepareOffline(){
       const installed=await navigator.serviceWorker.getRegistration(root.href);
       if(!installed?.active?.scriptURL.includes('/service-worker.js')){
         if(!navigator.onLine)throw Error('初次安裝請先連上網絡');
-        await navigator.serviceWorker.register('./service-worker.js?offline=v63.1',
+        await navigator.serviceWorker.register('./service-worker.js?offline=v64',
           {scope:'./',updateViaCache:'none'});
       }
       await navigator.serviceWorker.ready;
@@ -243,23 +259,19 @@ export async function prepareOffline(){
       if(pending){
         const ready=await inspectOfflineCache({release:pending});
         if(ready.ready){
-          showStatus('新版 '+pending.version+' 已完整下載，儲存進度後重新啟動即可更新',
-            {apply:true,check:true});
+          await applyAutomatically(pending.version);
           return;
         }
       }
-      showStatus('離線版已安裝 ✓ 可斷網遊玩',{check:true});
+      showStatus('正在檢查程式更新…');
       const check=await checkReleaseOnceDaily({
-        online:()=>navigator.onLine,
+        force:true,online:()=>navigator.onLine,
         onProgress:(done,total,file)=>showStatus(
           '新版本下載中 '+Math.round(done/total*100)+'%（'+done+'/'+total+'）'+
           (file.endsWith('.wasm')?' · 核心':''))
       });
       if(check.ready){
-        showStatus('新版 '+check.version+' 已下載，儲存進度後按「重新啟動更新」',
-          {apply:true,check:true});
-        document.dispatchEvent(new CustomEvent('dbz-offline-update-ready',
-          {detail:{version:check.version}}));
+        await applyAutomatically(check.version);
       }else if(check.error){
         showStatus('離線可正常遊玩；暫時無法檢查更新',{check:true});
       }else{
@@ -270,25 +282,14 @@ export async function prepareOffline(){
         {retry:true});
     }
   })();
-  try{return await running;}finally{running=null;}
+  try{return await running;}finally{running=null;document.body.classList.remove('offline-preparing');}
 }
 if(typeof document!=='undefined'){
   document.getElementById('offline-retry')?.addEventListener('click',
     ()=>{void prepareOffline();});
-  document.getElementById('offline-check')?.addEventListener('click',async()=>{
-    showStatus('正在檢查新版…');
-    const result=await checkReleaseOnceDaily({
-      force:true,online:()=>navigator.onLine,
-      onProgress:(done,total)=>showStatus(
-        '新版本下載中 '+Math.round(done/total*100)+'%（'+done+'/'+total+'）')
-    });
-    if(result.ready)showStatus('新版 '+result.version+' 已下載，按「重新啟動更新」',
-      {apply:true,check:true});
-    else if(result.error)showStatus('無法檢查更新；離線版仍可遊玩',{check:true});
-    else showStatus('目前已是最新版本，可繼續離線遊玩',{check:true});
-  });
+  document.getElementById('offline-check')?.addEventListener('click',()=>{void prepareOffline();});
   document.getElementById('offline-update-apply')?.addEventListener('click',async()=>{
-    if(document.body.classList.contains('playing')){
+    if(!safeToUpdate()||running){
       showStatus('請先儲存遊戲並返回首頁，再重新啟動更新',{apply:true,check:true});
       return;
     }
@@ -300,5 +301,10 @@ if(typeof document!=='undefined'){
       showStatus('更新未切換：'+(error?.message||error),{retry:true,check:true});
     }
   });
+  // A foreground return checks again only at the launcher, never mid-game.
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&safeToUpdate())void prepareOffline();
+  });
+  document.addEventListener('dbz-return-home',()=>{void prepareOffline();});
   void prepareOffline();
 }
