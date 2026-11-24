@@ -31,7 +31,7 @@ test('backup menu only exposes complete archive operations and valid DOM IDs',()
  assert.ok(app.includes('thumbnailDataUrl(record.thumbnail)'));
  assert.ok(!app.includes('createObjectURL(record.thumbnail)'));
  const release=JSON.parse(read('web/offline-release.json'));
- assert.equal(release.version,'v63.1');
+ assert.equal(release.version,'v64');
  assert.equal(release.wasmSize,18559329);
 });
 
@@ -65,4 +65,16 @@ test('service worker sanitizes previously redirected cached HTML without deletin
   assert.match(await response.text(),/cached game/);
  }
  assert.ok(requests.some(([name,url])=>name==='dbz-ssd-offline-v63'&&url===scope+'index.html'));
+});
+
+test('v64 checks each launcher entry and never reloads during gameplay',()=>{
+ const installer=read('web/offline-installer.mjs'),app=read('web/app.mjs'),css=read('web/style.css');
+ assert.match(installer,/force:true,online:/);
+ assert.ok(installer.includes("await applyAutomatically(check.version)"));
+ assert.ok(installer.includes("classList.contains('playing')"));
+ assert.ok(installer.includes("classList.contains('launching')"));
+ assert.ok(installer.includes("await activatePendingUpdate();\n  window.location.reload();"));
+ assert.ok(app.includes("if(document.body.classList.contains('offline-preparing'))return;"));
+ assert.ok(css.includes("justify-content:flex-start;\n align-items:center;min-height:0"));
+ assert.ok(css.includes("position:static;align-self:flex-end;order:-2"));
 });
