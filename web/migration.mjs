@@ -19,21 +19,30 @@ function renderSlots(all,failed=false){
 }
 async function scan(){
   if(scanning)return;
-  scanning=true; backup=null; $('export').disabled=true;
+  scanning=true; backup=null; $('export').disabled=true; $('export').hidden=true;
+  $('backup-panel').hidden=true; $('restore-step').hidden=true; $('no-save-note').hidden=true;
   try{
     const all=await listSaveSlots();
     const valid=all.filter(x=>!x.corrupt);
     const bad=all.length-valid.length;
+    $('scan-note').hidden=true;
+    if(!all.length){
+      $('no-save-note').hidden=false;
+      return;
+    }
+    $('backup-panel').hidden=false;
     renderSlots(all);
     $('status').textContent='找到 '+valid.length+'／10 格有效存檔'+(bad?'；另有 '+bad+' 格資料損壞':'');
     $('result').textContent=bad?'損壞的欄位無法備份，請保留舊 PWA 資料。':'';
     if(valid.length){
       backup=createMigrationBundle(valid);
+      $('export').hidden=false;
       $('export').disabled=false;
-    }else if(!bad){
-      $('result').textContent='如原本使用主畫面 PWA 遊玩，請從原本的主畫面圖示開啟本頁，而非另開 Safari；兩者的本機資料可能不同。';
+      $('restore-step').hidden=false;
     }
   }catch(error){
+    $('scan-note').hidden=true;
+    $('backup-panel').hidden=false;
     renderSlots([],true);
     $('status').textContent='讀取或打包舊版存檔失敗：'+(error?.message||error);
     $('result').textContent='請勿刪除舊版程式或清除網站資料。';
@@ -47,7 +56,7 @@ $('export').addEventListener('click',()=>{
     const link=document.createElement('a');
     link.href=objectUrl;link.download='dbz-ssd-all-slots.dbzbackup';
     document.body.append(link);link.click();link.remove();
-    $('result').textContent='已產生 '+backup.count+' 格存檔備份。請到「檔案」確認已保存 dbz-ssd-all-slots.dbzbackup，並妥善保留備份檔，等候維護完成公告。';
+    $('result').textContent='已產生 '+backup.count+' 格存檔備份。請到「檔案」確認已保存 dbz-ssd-all-slots.dbzbackup，再依下方說明前往新網站還原。';
   }catch(error){
     $('result').textContent='備份未成功：'+(error?.message||error)+'。請勿刪除舊圖示。';
   }
