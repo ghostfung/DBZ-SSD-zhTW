@@ -488,6 +488,37 @@ impl Renderer {
         }
     }
 
+    /// The intro uses BG1 and BG2 exclusively for its scrolling ROM text.
+    /// Only hide a layer when the original translator confirms every line on
+    /// that layer has a translation. Keep the untouched log for text positions.
+    fn quiet_intro_log(&self, log: &FrameLog) -> Option<FrameLog> {
+        let quiet = self.native_translation.as_ref()?.quiet_layers();
+        if !quiet.iter().any(|&hide| hide) { return None; }
+        let mut underlay = log.clone();
+        for entry in &mut underlay.entries {
+            for (bg, hide) in quiet.iter().enumerate() {
+                if *hide { entry.regs.main_bg[bg] = false; }
+            }
+        }
+        Some(underlay)
+    }
+
+    /// Browser translation is a final compositing pass, unlike the desktop
+    /// renderer. Build the intro underlay first, without the two English text
+    /// planes, using a separate renderer to preserve the captured glyph cells
+    /// and source frame. Live HD artwork uses the clean layer ownership.
+    pub fn render_intro_underlay(&mut self, log: &FrameLog, options: HdOptions) -> Option<HdFrame> {
+        let underlay = self.quiet_intro_log(log)?;
+        let mut renderer = Renderer::new();
+        renderer.set_layer_tracking(self.track_layers);
+        let picture = renderer.render_hd(&underlay, options).ok()?;
+        if self.track_layers {
+            self.layer_ids = renderer.layer_ids;
+            self.oam_ids = renderer.oam_ids;
+        }
+        Some(picture)
+    }
+
     /// Confirm that a page's ROM-derived English is actually visible on the
     /// current PPU frame. Do not infer the text window from background colour.
     /// This is used ONLY when the frame-start page is not visible.
@@ -681,7 +712,9 @@ impl Renderer {
         // never replace the portrait evidence from the original PPU picture.
         let portrait_tracking=std::mem::replace(&mut self.track_portrait_pixels,false);
         self.obj_pixels=self.before_obj_pixels;
-        let under=self.render_log(log,None,false).ok();
+        // Do not reintroduce intro English when replacing Goku's OAM pose.
+        let quiet_log=self.quiet_intro_log(log);
+        let under=self.render_log(quiet_log.as_ref().unwrap_or(log),None,false).ok();
         let under_layers=std::mem::take(&mut self.layer_ids);
         // Rendering the under-picture must be invisible to the next regular
         // PPU frame and to the native translation's original text capture.
