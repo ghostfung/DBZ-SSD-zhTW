@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0c1325">
-<title>七龍珠 HD｜系統維護及存檔備份</title>
+<title>七龍珠 HD｜新網站及存檔搬遷</title>
 <style>
 :root{color-scheme:dark;font:16px/1.7 system-ui,-apple-system,"PingFang TC",sans-serif}
 *{box-sizing:border-box}
@@ -22,24 +22,38 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .notice{background:#253b52;padding:10px 13px;border-radius:9px;font-size:14px}
 #status,#result{display:block;min-height:25px;white-space:pre-wrap;font-size:14px}
 .warning{border-color:#d9a247;background:#302719}.warning strong{color:#ffd68c}.warning p{margin-bottom:0}.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.slot{border:1px solid #344864;border-radius:8px;padding:9px;font-size:13px;min-width:0}.slot strong{display:block;font-size:14px}.slot span{display:block;color:#adc0d6;overflow-wrap:anywhere}.slot[data-state="valid"]{border-color:#368970}.slot[data-state="corrupt"]{border-color:#c47748}.slot[data-state="valid"] span{color:#9ce2c5}.slot[data-state="corrupt"] span{color:#ffbd91}
+[hidden]{display:none!important}.action{display:block;background:#20745d;border:1px solid #479e82;border-radius:12px;padding:14px;color:white;text-align:center;text-decoration:none;font-weight:700;margin:12px 0}.address{display:block;color:#a8d6ff;overflow-wrap:anywhere;text-align:center;font-size:14px}ol{padding-left:22px;margin:10px 0;color:#c9d4e4}li{margin:7px 0}#scan-note{font-size:14px}
 </style>
 </head>
 <body>
 <main>
 <div class="eyebrow">七龍珠Z・超級賽亞傳說 HD</div>
-<h1>系統維護更新中</h1>
-<p>遊戲目前正在進行系統維護及更新，暫停線上遊戲服務。請耐心等候後續公告。維護期間仍可備份已儲存的遊戲進度。</p>
-<div class="panel warning" role="note"><strong>請勿刪除主畫面上的舊遊戲程式！</strong><p>請勿移除主畫面上的遊戲程式、清除瀏覽器網站資料或重置本機儲存空間，以免存檔永久遺失。已完整下載的離線版仍可能繼續遊玩。</p></div>
-<div class="panel">
-<h2>備份全部遊戲進度</h2>
-<p>直接讀取這個舊網址在你手機內的 10 個存檔欄位。<strong>不需要啟動遊戲，也不會重新下載 18 MB 核心。</strong></p>
-<output id="status" role="status" aria-live="polite">正在檢查本機存檔…</output>
+<h1>遊戲已搬遷至新網站！</h1>
+<p>七龍珠 HD 已正式搬遷，請使用新的遊戲網址。舊網站只提供搬遷及本機存檔備份，不再提供遊戲下載。</p>
+<p id="scan-note" role="status" aria-live="polite">正在檢查本機存檔…</p>
+<div id="backup-panel" class="panel" hidden>
+<h2>先備份舊遊戲進度</h2>
+<div class="panel warning" role="note"><strong>請勿刪除主畫面上的舊遊戲程式！</strong><p>請先保存備份檔，並在新程式確認存檔可正常讀取，再移除舊圖示。請勿清除網站資料。</p></div>
+<output id="status" role="status" aria-live="polite"></output>
 <div id="slots" class="slots" aria-label="十格存檔狀態"></div>
-<button id="export" type="button" disabled>一鍵備份全部存檔</button>
+<button id="export" type="button" disabled hidden>一鍵備份全部存檔（.dbzbackup）</button>
 <output id="result" role="status" aria-live="polite"></output>
-<p class="notice">備份檔僅包含已儲存的遊戲進度，不包含 ROM、IPS、HD 美術包；尚未儲存的遊玩進度無法從這個頁面取得。</p>
+<p class="notice">備份包含已儲存的遊戲進度及可用的預覽圖，不包含 ROM、IPS、HD 美術包。尚未儲存的進度無法從本頁取得。</p>
 </div>
-<p><small>所有存檔都只在手機本機處理；本頁不會上傳任何遊戲資料。</small></p>
+<div class="panel">
+<h2>前往新版遊戲</h2>
+<a id="new-site" class="action" href="https://dbz-hd-tw.happy-kt.com/" target="_blank" rel="noopener noreferrer">開啟新網站</a>
+<span class="address">https://dbz-hd-tw.happy-kt.com/</span>
+<ol>
+<li>使用 Safari 開啟新網址（若不是 Safari，請複製網址到 Safari 開啟）。</li>
+<li>點選「分享」→「加入主畫面」，再從新圖示開啟遊戲。</li>
+<li>重新匯入原本的 ROM／IPS 及 HD 美術包，啟動遊戲。</li>
+<li id="restore-step" hidden>在新程式的「備份紀錄」選擇「還原全部存檔（.dbzbackup）」，匯入剛才的備份檔，再透過「讀取遊戲」確認進度正常，即可繼續遊玩。</li>
+</ol>
+<p id="no-save-note" class="notice" hidden>目前在這個瀏覽環境沒有找到存檔。若曾使用舊主畫面圖示遊玩，請先從原圖示開啟本頁確認存檔；Safari 與舊 PWA 的本機資料可能不同。不要直接刪除舊圖示。</p>
+</div>
+<noscript><p class="notice">請啟用 JavaScript 才能檢查及備份本機存檔。請勿刪除舊遊戲程式。</p></noscript>
+<p><small>所有存檔僅在本機處理，不會上傳任何遊戲資料。</small></p>
 </main>
 <script type="module" src="./migration.mjs"></script>
 </body>
