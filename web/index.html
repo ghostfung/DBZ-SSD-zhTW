@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0c1325">
-<title>七龍珠 HD｜存檔備份及新網站</title>
+<title>七龍珠 HD｜系統維護及存檔備份</title>
 <style>
 :root{color-scheme:dark;font:16px/1.7 system-ui,-apple-system,"PingFang TC",sans-serif}
 *{box-sizing:border-box}
@@ -17,44 +17,27 @@ p{margin:10px 0;color:#c9d4e4}
 h2{font-size:19px;margin:0 0 8px}
 small{color:#b1c5d8}
 strong{color:#fff}
-button,a.action{display:block;width:100%;border:0;border-radius:12px;padding:13px 15px;margin:12px 0;background:#438af4;color:#fff;font-size:16px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
+button{display:block;width:100%;border:0;border-radius:12px;padding:13px 15px;margin:12px 0;background:#438af4;color:#fff;font-size:16px;font-weight:700;text-align:center;text-decoration:none;cursor:pointer}
 button:disabled{opacity:.6;cursor:not-allowed}
-a.action{background:#20745d}
-a.action[aria-disabled=true]{pointer-events:none;opacity:.5}
 .notice{background:#253b52;padding:10px 13px;border-radius:9px;font-size:14px}
 #status,#result{display:block;min-height:25px;white-space:pre-wrap;font-size:14px}
-ol{padding-left:23px}
-li{margin:7px 0}
 .warning{border-color:#d9a247;background:#302719}.warning strong{color:#ffd68c}.warning p{margin-bottom:0}.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.slot{border:1px solid #344864;border-radius:8px;padding:9px;font-size:13px;min-width:0}.slot strong{display:block;font-size:14px}.slot span{display:block;color:#adc0d6;overflow-wrap:anywhere}.slot[data-state="valid"]{border-color:#368970}.slot[data-state="corrupt"]{border-color:#c47748}.slot[data-state="valid"] span{color:#9ce2c5}.slot[data-state="corrupt"] span{color:#ffbd91}
 </style>
 </head>
 <body>
 <main>
 <div class="eyebrow">七龍珠Z・超級賽亞傳說 HD</div>
-<h1>遊戲網站遷移中</h1>
-<p>原本的 Vercel 網址將只提供<strong>進度備份及搬遷說明</strong>。已完整下載離線版的玩家仍可能繼續使用舊遊戲，不必急著刪除。</p>
-<div class="panel warning" role="note"><strong>請勿刪除主畫面上的舊遊戲程式！</strong><p>在新網站確認所有存檔均可正常讀取以前，請勿移除舊 PWA 或清除網站資料，以免存檔永久遺失。已安裝的離線遊戲仍可能繼續遊玩。</p></div>
+<h1>系統維護更新中</h1>
+<p>遊戲目前正在進行系統維護及更新，暫停線上遊戲服務。請耐心等候後續公告。維護期間仍可備份已儲存的遊戲進度。</p>
+<div class="panel warning" role="note"><strong>請勿刪除主畫面上的舊遊戲程式！</strong><p>請勿移除主畫面上的遊戲程式、清除瀏覽器網站資料或重置本機儲存空間，以免存檔永久遺失。已完整下載的離線版仍可能繼續遊玩。</p></div>
 <div class="panel">
-<h2>第一步：備份舊進度</h2>
+<h2>備份全部遊戲進度</h2>
 <p>直接讀取這個舊網址在你手機內的 10 個存檔欄位。<strong>不需要啟動遊戲，也不會重新下載 18 MB 核心。</strong></p>
 <output id="status" role="status" aria-live="polite">正在檢查本機存檔…</output>
 <div id="slots" class="slots" aria-label="十格存檔狀態"></div>
 <button id="export" type="button" disabled>一鍵備份全部存檔</button>
 <output id="result" role="status" aria-live="polite"></output>
 <p class="notice">備份檔僅包含已儲存的遊戲進度，不包含 ROM、IPS、HD 美術包；尚未儲存的遊玩進度無法從這個頁面取得。</p>
-</div>
-<div class="panel">
-<h2>第二步：前往新網站</h2>
-<p>新網站可以重新加入 iPhone 主畫面。你需要自行重新匯入原本的 ROM、IPS、HD 素材包。</p>
-<a id="new-site" class="action" href="https://dbz-ssd-zhtw.pages.dev/" target="_blank" rel="noopener noreferrer">開啟 Cloudflare 新版遊戲</a>
-<small>建議先在 iPhone「檔案」確認已保存 .dbzbackup，再開啟新站。新玩家可直接前往新站。</small>
-</div>
-<div class="panel">
-<h2>第三步：還原後才刪除舊圖示</h2>
-<ol><li>在新網站加入主畫面並啟動遊戲。</li>
-<li>在「備份紀錄」選擇「還原舊網站的全部存檔」。</li>
-<li>進入「讀取遊戲」確認進度正常。</li>
-<li><strong>完成驗證後</strong>，才從主畫面移除舊版圖示。</li></ol>
 </div>
 <p><small>所有存檔都只在手機本機處理；本頁不會上傳任何遊戲資料。</small></p>
 </main>
