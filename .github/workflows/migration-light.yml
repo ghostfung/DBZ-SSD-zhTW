@@ -1,0 +1,21 @@
+name: Legacy migration light-only checks
+on:
+  push:
+    branches: [vercel-migration-bridge-v1]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check light bridge syntax
+        run: |
+          node --check web/migration.mjs
+          node --check web/migration-bundle.mjs
+          node --check web/save-slots.mjs
+          node --check web/service-worker.js
+      - name: Verify no WASM and archived ten-slot data
+        run: node --test tests/migration-light.test.mjs
