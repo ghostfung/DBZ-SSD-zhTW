@@ -468,3 +468,12 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 #setup.launch-ready #offline-status{order:-1;margin:0 auto 4px;width:100%;max-width:450px}
 .offline-preparing #start{opacity:.5;pointer-events:none}
 @media (orientation:landscape) and (max-height:550px){body:not(.playing) #setup{grid-column:1/-1;width:100%}body:not(.playing) #setup.launch-ready .launch-cover img{width:auto;max-width:100%;max-height:55dvh}}
+
+/* v67: more legible first-use EXP warning, scoped to this dialog only. */
+#cheat-warning-title{font-size:1.25rem}
+#cheat-warning-panel .cheats-heading p{font-size:.85rem}
+#cheat-warning-description{font-size:.95rem;line-height:1.55}
+#cheat-warning-description strong{color:#f2d38a}
+#cheat-warning-description p{margin:0 0 .8em}
+#cheat-warning-panel .cheats-actions{flex-wrap:wrap}
+#cheat-warning-panel .cheats-actions button{font-size:.88rem;min-height:44px}
