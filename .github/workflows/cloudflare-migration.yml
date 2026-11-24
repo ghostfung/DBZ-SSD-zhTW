@@ -1,0 +1,21 @@
+name: Cloudflare static PWA migration checks
+on:
+  push:
+    branches: [cloudflare-pages-v62]
+  workflow_dispatch:
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify new and legacy JavaScript syntax
+        run: |
+          node --check web/migration-bundle.mjs
+          node --check web/app.mjs
+          node --check web/offline-installer.mjs
+          node --check web/service-worker.js
+      - name: Run ten-slot archive and Cloudflare manifest tests
+        run: node --test tests/cloudflare-migration.test.mjs
