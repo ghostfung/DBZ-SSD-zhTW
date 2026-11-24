@@ -25,8 +25,8 @@ import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const BUILD_ID='dbz-hd-tw-pwa-v66';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, running = false, raf = 0;
-const joypad=new JoypadInput();
-function resetControls(){joypad.reset();for(const btn of document.querySelectorAll('button[data-bit].pressed'))btn.classList.remove('pressed');}
+const joypad=new JoypadInput(),pointerSets=[];
+function resetControls(){joypad.reset();for(const pointers of pointerSets)pointers.clear();for(const btn of document.querySelectorAll('button[data-bit].pressed'))btn.classList.remove('pressed');}
 let cheatPanelOpen = false, cheatNoticeAcknowledged=false;
 const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';
 let gameSpeed=1,speedNoticeOpen=false,speedNoticeShownInSession=false;
@@ -1060,6 +1060,7 @@ window.addEventListener('keyup',e=>{
 });
 for(const btn of document.querySelectorAll('button[data-bit]')){
   const bit=+btn.dataset.bit, repeat=[0,1,8,9].includes(bit), active=new Set();
+  pointerSets.push(active);
   btn.addEventListener('pointerdown',e=>{
     if(!game||!running||e.button!==0)return;
     e.preventDefault();active.add(e.pointerId);
@@ -1079,7 +1080,6 @@ for(const btn of document.querySelectorAll('button[data-bit]')){
   // If a browser cannot capture a pointer, also release it at window level.
   window.addEventListener('pointerup',release);
   window.addEventListener('pointercancel',release);
-  window.addEventListener('blur',()=>active.clear());
 }
 window.addEventListener('blur',resetControls);
 window.addEventListener('pagehide',resetControls);
