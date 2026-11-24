@@ -477,3 +477,31 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 #cheat-warning-description p{margin:0 0 .8em}
 #cheat-warning-panel .cheats-actions{flex-wrap:wrap}
 #cheat-warning-panel .cheats-actions button{font-size:.88rem;min-height:44px}
+
+/* v68: large landscape viewports (iPad and Android tablets). Keep phone
+   landscape and portrait unchanged; place thumb controls in separate columns. */
+.playing #game button[data-bit]{touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+@media (orientation:landscape) and (min-height:651px){
+ .playing #game{
+   grid-template-areas:"dpad screen actions" "bar bar bar";
+   grid-template-columns:clamp(124px,19vw,244px) minmax(0,1fr) clamp(124px,19vw,244px);
+   grid-template-rows:minmax(0,1fr) auto;
+   align-content:stretch;gap:clamp(6px,1vw,14px);
+   padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+ }
+ .playing #game .controls{display:contents}
+ .playing #game .screen{grid-area:screen;place-self:stretch;width:100%;height:100%;min-height:0;max-height:none;aspect-ratio:auto}
+ .playing #game .dpad,.playing #game .actions{
+   place-self:center;display:grid;grid-template-columns:repeat(3,clamp(36px,5.4vw,70px));
+   grid-template-rows:repeat(3,clamp(36px,5.4vw,70px));gap:4px;
+   margin:0;transform:none
+ }
+ .playing #game .dpad{grid-area:dpad}
+ .playing #game .actions{grid-area:actions}
+ .playing #game .controls button{font-size:clamp(14px,2vw,23px)}
+ .playing #game .playbar{grid-area:bar;position:relative;inset:auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:min(100%,940px);max-width:100%;margin:0 auto;padding:0;gap:7px}
+ .playing #game .playbar button{font-size:clamp(12px,1.5vw,16px);min-height:42px}
+ .playing #game .speed-portrait-anchor{display:none}
+ .playing #game .speed-landscape-anchor{display:flex;position:absolute;bottom:calc(100% + 14px);left:50%;transform:translateX(-50%);width:max-content;z-index:6}
+ .playing #game #speed-toggle{width:92px;min-height:36px;height:36px;font-size:13px}
+}
