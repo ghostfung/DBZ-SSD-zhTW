@@ -1,8 +1,9 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
+import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v67';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v68';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -23,7 +24,9 @@ import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const BUILD_ID='dbz-hd-tw-pwa-v66';
 const $ = id => document.getElementById(id);
-let moduleReady = null, game = null, held = 0, running = false, raf = 0;
+let moduleReady = null, game = null, running = false, raf = 0;
+const joypad=new JoypadInput();
+function resetControls(){joypad.reset();for(const btn of document.querySelectorAll('button[data-bit].pressed'))btn.classList.remove('pressed');}
 let cheatPanelOpen = false, cheatNoticeAcknowledged=false;
 const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';
 let gameSpeed=1,speedNoticeOpen=false,speedNoticeShownInSession=false;
@@ -71,7 +74,7 @@ const STEP = 1000/60.0988;
 
 // Exactly one speed button: portrait above Start, landscape above D-pad.
 // Move its existing DOM node on orientation change, never clone handlers.
-const landscapeSpeedPlacement=window.matchMedia('(orientation:landscape) and (max-height:650px)');
+const landscapeSpeedPlacement=window.matchMedia('(orientation:landscape)');
 function syncSpeedPlacement(){
   const anchor=$(landscapeSpeedPlacement.matches?'speed-landscape-anchor':'speed-portrait-anchor');
   if(anchor&&$('speed-toggle').parentElement!==anchor)anchor.appendChild($('speed-toggle'));
@@ -103,7 +106,7 @@ function showSpeedUpdateNoticeOnce(){
   if(speedNoticeShownInSession)return false;
   try{if(localStorage.getItem(SPEED_NOTICE_KEY)==='1')return false;}catch{}
   speedNoticeShownInSession=true;
-  speedNoticeOpen=true;held=0;
+  speedNoticeOpen=true;resetControls();
   $('speed-update-panel').hidden=false;
   $('speed-update-close').focus({preventScroll:true});
   return true;
@@ -299,7 +302,7 @@ function refreshCheatPanel(message='') {
 function openCheatPanel(){
   if(!game||cheatPanelOpen)return;
   cheatPanelOpen=true;
-  held=0;
+  resetControls();
   if(running){running=false;cancelAnimationFrame(raf);}
   sound.reset();
   if(!cheatNoticeAcknowledged){
@@ -604,7 +607,7 @@ $('start').addEventListener('click', async () => {
     document.body.classList.add('playing');
     updateRenderModeButton();
     button.textContent=originalLabel;
-    held = 0; running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
+    resetControls(); running = true; lastTick = 0; accumulator = 0; countWindow = 0; countFrames = 0;
     gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();syncSpeedPlacement();
     frameMetrics.reset();perfHistory=[];transientHoldBudget.reset();
     hdSceneTrace.reset();lastPresentedFrame=null;lastPresentation=null;
@@ -841,6 +844,7 @@ function requestFrame(now) {
     let n = 0;
     const simulationStart=performance.now();
     while(n<plan.ticks){
+      const held=joypad.sample();
       game.tick(held);countFrames++;n++;
     }
     const simulationMs=performance.now()-simulationStart;
@@ -1048,18 +1052,37 @@ window.addEventListener('keydown',e=>{
     if(e.code==='Escape'){e.preventDefault();closeCheatPanel();}
     return;
   }
-  if(keyToBit[e.code]!==undefined){held|=1<<keyToBit[e.code];e.preventDefault();}
+  if(!game||!running)return;
+  if(keyToBit[e.code]!==undefined){joypad.press(keyToBit[e.code],'key:'+e.code);e.preventDefault();}
 });
 window.addEventListener('keyup',e=>{
-  if(cheatPanelOpen)return;
-  if(keyToBit[e.code]!==undefined){held&=~(1<<keyToBit[e.code]);e.preventDefault();}
+  if(keyToBit[e.code]!==undefined){joypad.release(keyToBit[e.code],'key:'+e.code);if(game&&running)e.preventDefault();}
 });
-for(const btn of document.querySelectorAll('button[data-bit]')) {
-  const bit=+btn.dataset.bit, active=new Set();
-  btn.addEventListener('pointerdown',e=>{e.preventDefault();active.add(e.pointerId);held|=1<<bit;btn.classList.add('pressed');btn.setPointerCapture(e.pointerId);});
-  const release=e=>{active.delete(e.pointerId);if(!active.size){held&=~(1<<bit);btn.classList.remove('pressed');}};
-  btn.addEventListener('pointerup',release);btn.addEventListener('pointercancel',release);btn.addEventListener('lostpointercapture',release);
+for(const btn of document.querySelectorAll('button[data-bit]')){
+  const bit=+btn.dataset.bit, repeat=[0,1,8,9].includes(bit), active=new Set();
+  btn.addEventListener('pointerdown',e=>{
+    if(!game||!running||e.button!==0)return;
+    e.preventDefault();active.add(e.pointerId);
+    joypad.press(bit,'pointer:'+e.pointerId,repeat);
+    btn.classList.add('pressed');
+    try{btn.setPointerCapture(e.pointerId);}catch{}
+  });
+  const release=e=>{
+    active.delete(e.pointerId);
+    joypad.release(bit,'pointer:'+e.pointerId,e.type!=='pointerup');
+    if(!active.size)btn.classList.remove('pressed');
+  };
+  btn.addEventListener('pointerup',release);
+  btn.addEventListener('pointercancel',release);
+  btn.addEventListener('lostpointercapture',release);
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
+  // If a browser cannot capture a pointer, also release it at window level.
+  window.addEventListener('pointerup',release);
+  window.addEventListener('pointercancel',release);
+  window.addEventListener('blur',()=>active.clear());
 }
+window.addEventListener('blur',resetControls);
+window.addEventListener('pagehide',resetControls);
 $('sound').addEventListener('click', async () => {
   // Begin AudioContext recreation BEFORE awaiting anything: Safari requires
   // a real tap for the new output graph, even if the old context says running.
@@ -1076,7 +1099,7 @@ $('sound').addEventListener('click', async () => {
   }
 });
 const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheat-warning-panel').hidden=true;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
-lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();document.dispatchEvent(new Event('dbz-return-home'));};
+lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;resetControls();translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();document.dispatchEvent(new Event('dbz-return-home'));};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
   if (!game) return;
@@ -1096,7 +1119,7 @@ $('translation-debug').addEventListener('click',()=>{
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden&&game){
     if(running){running=false;cancelAnimationFrame(raf);}
-    held=0;sound.reset();
+    resetControls();sound.reset();
     offerManualSoundRecovery=Boolean(sound.enabled);
   }else if(!document.hidden&&game){
     if(!running&&!cheatPanelOpen&&!speedNoticeOpen){
@@ -1120,7 +1143,7 @@ let slotMode=null,slotSelection=null,slotBusy=false,backupOpen=false;
 let currentSlotRecords=new Map(),slotPickerGeneration=0;
 
 function pauseForProgressMenu(){
-  held=0;
+  resetControls();
   if(running){running=false;cancelAnimationFrame(raf);}
   sound.reset();
 }
