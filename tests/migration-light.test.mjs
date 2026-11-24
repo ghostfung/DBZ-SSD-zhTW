@@ -16,8 +16,14 @@ test('legacy migration contains no game core and does not download WASM',()=>{
  ].sort());
  const page=read('web/index.html'),worker=read('web/service-worker.js');
  assert.ok(page.includes('一鍵備份全部存檔'));
- assert.ok(page.includes('dbz.happy-kt.com'));
+ assert.ok(page.includes('dbz-ssd-zhtw.pages.dev'));
  assert.ok(!page.includes('app.mjs'));
+ assert.ok(page.includes('id="slots"'));
+ assert.ok(page.includes('請勿刪除主畫面'));
+ const ui=read('web/migration.mjs');
+ assert.ok(ui.includes('i<=SLOT_COUNT'));
+ assert.ok(ui.includes('createMigrationBundle(valid)'));
+ assert.ok(!ui.includes('fetch('));
  assert.ok(!worker.includes('ssd_web_bg.wasm'));
  assert.ok(worker.includes('dbz-ssd-migration-only-v1'));
  assert.ok(!worker.includes('caches.delete'));
