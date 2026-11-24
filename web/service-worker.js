@@ -1,6 +1,6 @@
 // Transitional worker for old Vercel origin. NO game core, ROM, HD packs
 // or old offline caches are requested or deleted.
-const CACHE='dbz-ssd-maintenance-backup-v2';
+const CACHE='dbz-ssd-migration-final-v3';
 const FILES=['./index.html','./migration.mjs','./migration-bundle.mjs','./save-slots.mjs'];
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
@@ -18,6 +18,7 @@ self.addEventListener('fetch',event=>{
   const req=event.request;
   if(req.method!=='GET')return;
   const url=new URL(req.url);
+  if(url.protocol!=='https:'&&url.protocol!=='http:')return;
   if(url.origin!==self.location.origin)return;
   const scope=new URL(self.registration.scope);
   if(!url.pathname.startsWith(scope.pathname))return;
