@@ -94,7 +94,7 @@ test('EXP warning gates the first modifier opening until confirmation, persists 
    };
    const localStorage={getItem:key=>store.get(key),setItem:(key,value)=>store.set(key,value)};
    const env=new Function('$','localStorage','document','sound','cancelAnimationFrame','requestAnimationFrame','refreshCheatPanel',
-     "let game={},cheatPanelOpen=false,cheatNoticeAcknowledged=false,held=0,running=true,raf=1,lastTick=0,accumulator=0,speedNoticeOpen=false;const requestFrame=()=>{};const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';\n"+source+"\nreturn {openCheatPanel,closeCheatPanel};")($,localStorage,{hidden:false},{reset(){}},()=>{},()=>1,()=>{});
+     "let game={},cheatPanelOpen=false,cheatNoticeAcknowledged=false,held=0,running=true,raf=1,lastTick=0,accumulator=0,speedNoticeOpen=false;const requestFrame=()=>{};const resetControls=()=>{};const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';\n"+source+"\nreturn {openCheatPanel,closeCheatPanel};")($,localStorage,{hidden:false},{reset(){}},()=>{},()=>1,()=>{});
    return {...env,$,handlers};
  }
  const store=new Map(),first=session(store);
