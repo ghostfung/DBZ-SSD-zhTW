@@ -1,7 +1,7 @@
 // Offline shell installer / low-request daily release updater. No ROM, HD ZIP,
 // IPS or saved games are stored here: existing private OPFS/IndexedDB stays intact.
-export const OFFLINE_RELEASE='v63';
-export const OFFLINE_CACHE='dbz-ssd-offline-v63';
+export const OFFLINE_RELEASE='v63.1';
+export const OFFLINE_CACHE='dbz-ssd-offline-v63.1';
 export const OFFLINE_CONTROL='dbz-ssd-offline-control-v1';
 export const OFFLINE_WASM_SIZE=18559329;
 export const OFFLINE_INTERVAL_MS=24*60*60*1000;
@@ -116,7 +116,20 @@ export async function installOfflineFiles({
     await Promise.all(expected.files.slice(i,i+3).map(async file=>{
       const url=asset(file,root);
       if(!await cache.match(url,{ignoreSearch:true})){
-        await cache.add(new Request(url,{cache:'reload',credentials:'same-origin'}));
+        if(file==='index.html'){
+          // Fetch the canonical Pages root; store under index.html for compatibility.
+          const canonical=rootFor(root).href;
+          await cache.add(new Request(canonical,{cache:'reload',credentials:'same-origin'}));
+          const shell=await cache.match(canonical);
+          if(!shell?.ok)throw Error('首頁下載失敗');
+          const headers=new Headers(shell.headers);
+          headers.delete('content-encoding');headers.delete('content-length');
+          await cache.put(url,new Response(await shell.arrayBuffer(),{
+            status:shell.status,statusText:shell.statusText,headers
+          }));
+        }else{
+          await cache.add(new Request(url,{cache:'reload',credentials:'same-origin'}));
+        }
       }
       onProgress(++done,expected.files.length,file);
     }));
@@ -206,7 +219,7 @@ export async function prepareOffline(){
       const installed=await navigator.serviceWorker.getRegistration(root.href);
       if(!installed?.active?.scriptURL.includes('/service-worker.js')){
         if(!navigator.onLine)throw Error('初次安裝請先連上網絡');
-        await navigator.serviceWorker.register('./service-worker.js?offline=v63',
+        await navigator.serviceWorker.register('./service-worker.js?offline=v63.1',
           {scope:'./',updateViaCache:'none'});
       }
       await navigator.serviceWorker.ready;
