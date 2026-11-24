@@ -49,25 +49,21 @@ test('HD-heavy devices cap work instead of generating an unlimited catchup burst
   assert.ok(stale.remainingMs<=STEP*3);
   assert.throws(()=>speedFramePlan({rate:1.5,gapMs:16,accumulatorMs:0}),/不支援/);
 });
-test('fast audio is silent, and restoring 1x preserves enabled AudioContext',()=>{
-  const fake=new SnesAudio(null);
-  const seen=[];
+test('fast audio remains enabled at each speed',()=>{
+  const fake=new SnesAudio(null),seen=[];
   fake.context={state:'running',currentTime:0};
   fake.enabled=true;
   fake.schedule=frames=>{
-    seen.push('scheduled');
+    seen.push(fake.playbackRate);
     fake.take(frames,new Float32Array(frames),new Float32Array(frames));
   };
-  fake.setFastMuted(true);
-  fake.enqueue(new Float32Array(4096));
-  assert.equal(fake.pendingFrames,0);
-  assert.deepEqual(seen,[]);
-  assert.equal(fake.enabled,true);
-  fake.setFastMuted(false);
-  fake.enqueue(new Float32Array(4096));
-  assert.deepEqual(seen,['scheduled']);
-  assert.equal(fake.enabled,true);
-  assert.equal(fake.fastMuted,false);
+  for(const rate of [1,2,3,1]){
+    fake.setPlaybackRate(rate);
+    fake.enqueue(new Float32Array(4096));
+    assert.equal(fake.pendingFrames,0);
+    assert.equal(fake.enabled,true);
+  }
+  assert.deepEqual(seen,[1,2,3,1]);
 });
 test('one physical button, portrait and landscape anchors, one-time release modal',()=>{
   const html=src('web/index.html'),css=src('web/style.css'),app=src('web/app.mjs');
@@ -85,7 +81,7 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.match(css,/\.playing #game \.speed-portrait-anchor/);
   assert.match(css,/\.playing #game \.speed-landscape-anchor/);
   assert.match(app,/const plan=speedFramePlan\(/);
-  assert.match(app,/sound\.setFastMuted\(gameSpeed!==1\)/);
+  assert.match(app,/sound\.setPlaybackRate\(gameSpeed\)/);
   assert.match(app,/localStorage\.getItem\(SPEED_NOTICE_KEY\)/);
   assert.match(app,/localStorage\.setItem\(SPEED_NOTICE_KEY,'1'\)/);
   assert.match(app,/if\(showSpeedUpdateNoticeOnce\(\)\)running=false/);
@@ -95,7 +91,7 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.match(css,/speed-toggle\[data-speed="3"\]/);
   assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-update-2026-11-22-v56b-seen');
   assert.match(html,/app\.mjs\?build=v53&ui=v65/);
-  assert.match(html,/style\.css\?build=v50&ui=v61/);
+  assert.match(html,/style\.css\?build=v50&ui=v64/);
   for(const bit of [0,1,2,3,4,5,6,7,8,9])
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
 });
