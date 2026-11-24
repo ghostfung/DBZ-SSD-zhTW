@@ -77,8 +77,9 @@ export async function readMigrationBundle(blob){
     checks(end<=blob.size,'備份檔不完整，無法匯入');
     const state=blob.slice(cursor,cursor+s.stateSize,'application/octet-stream');
     cursor+=s.stateSize;
+    // Copy the bytes into an independent Blob before IndexedDB persistence (iOS).
     const thumbnail=s.thumbnailSize
-      ?blob.slice(cursor,cursor+s.thumbnailSize,s.thumbnailType||'image/webp'):null;
+      ?new Blob([await blob.slice(cursor,cursor+s.thumbnailSize).arrayBuffer()],{type:s.thumbnailType||'image/webp'}):null;
     cursor+=s.thumbnailSize;
     records.push({slot:s.slot,savedAt:s.savedAt,romKey:s.romKey,state,thumbnail});
   }
