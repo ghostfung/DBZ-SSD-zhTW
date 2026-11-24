@@ -197,7 +197,7 @@
         <div><h2 id="save-slots-title">儲存遊戲</h2><p id="save-slots-hint">10 個本機進度欄位</p></div>
         <button id="save-slots-close" type="button">返回遊戲</button>
       </header>
-      <p class="cheats-note">進度只儲存在這部裝置的 PWA。清除網站資料、移除 PWA 或裝置損壞可能令資料遺失，請定期使用「備份紀錄」匯出 .sav。</p>
+      <p class="cheats-note">進度只儲存在這部裝置的 PWA。清除網站資料、移除 PWA 或裝置損壞可能令資料遺失，請定期使用「備份紀錄」備份全部存檔。</p>
       <div id="save-slots-list" class="save-slots-list" role="group" aria-label="存檔欄位"></div>
       <output id="save-slots-feedback" class="save-slots-feedback" role="status" aria-live="polite"></output>
       <div class="save-slots-actions">
@@ -210,15 +210,13 @@
   <section id="backup-panel" class="cheats-modal" role="dialog" aria-modal="true" aria-labelledby="backup-title" hidden>
     <div class="cheats-sheet backup-sheet">
       <header class="cheats-heading">
-        <div><h2 id="backup-title">備份紀錄</h2><p>原有 .sav 匯入／匯出功能</p></div>
+        <div><h2 id="backup-title">備份紀錄</h2><p>10 個本機存檔欄位的完整備份</p></div>
         <button id="backup-close" type="button">返回遊戲</button>
       </header>
-      <p class="cheats-note">從 Vercel 舊站搬家：匯入相同的 ROM／IPS 後啟動遊戲，再用「還原舊網站的全部存檔」，最後「讀取遊戲」確認。HD 美術包需另外重新匯入。資料不會上傳伺服器。</p>
+      <p class="cheats-note">備份或還原 10 個存檔欄位（含預覽圖）。還原時須使用相同的 ROM／IPS；完成後請從「讀取遊戲」確認。備份檔不含 ROM、IPS 或 HD 美術包，資料不會上傳伺服器。</p>
       <div class="backup-actions">
-        <label class="upload backup-file-label" for="state-file">匯入進度（.sav）<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
-        <button id="backup-export" type="button">匯出目前進度（.sav）</button>
         <button id="backup-bundle-export" type="button">一鍵備份全部存檔（.dbzbackup）</button>
-        <label class="upload backup-file-label" for="backup-bundle-import">還原舊網站的全部存檔
+        <label class="upload backup-file-label" for="backup-bundle-import">還原全部存檔（.dbzbackup）
           <input id="backup-bundle-import" type="file" accept=".dbzbackup,application/octet-stream"/>
         </label>
       </div>
@@ -281,8 +279,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v53&ui=v67"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v68"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v62"></script>
+  <script type="module" src="offline-installer.mjs?offline=v63"></script>
 </body>
 </html>
