@@ -1,7 +1,7 @@
 //! Browser bridge for the local SNES Classic core: picture, controller, save states, PCM and dialogue keys.
 //! HD art and the original Rust Traditional Chinese renderer share a single final picture.
 use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
-use ssd_catalogue::engine::{on_screen, screen_names, story_pages_near, OnScreen};
+use ssd_catalogue::engine::{on_screen, screen_names, story_pages_near, OnScreen, INTRO_TABLE};
 use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
 use ssd_hd::translate::{ChineseFace, Overlay as TextOverlay};
@@ -200,7 +200,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v53".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v66".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -268,7 +268,7 @@ impl WebGame {
                     self.machine.frame_count() as u32);
                 self.native_page_hint = Some(page.page);
             }
-            selected = ended.filter(|page| self.translation.as_ref()
+            selected = ended.filter(|page| page.table == INTRO_TABLE || self.translation.as_ref()
                 .is_some_and(|table| table.text(&page.key).is_some()));
             self.native_late_page = selected.is_some();
         }
@@ -285,12 +285,17 @@ impl WebGame {
         self.hd_portrait_pixels = 0;
         if self.hd_enabled {
             if let Some(log) = self.machine.frame_log() {
+                // The intro's separate text planes must be disabled before live art.
+                self.hd_renderer.set_translation_screen(selected.clone());
                 let rendered=self.hd_renderer.render_hd(log, HdOptions {
                     scale: 2, look: Look::Crisp
                 });
                 self.hd_profile.mark(hd_profile::PPU,profile_on,&mut profile_clock);
                 match rendered {
-                    Ok(picture) => {
+                    Ok(mut picture) => {
+                        if let Some(clean) = self.hd_renderer.render_intro_underlay(log, HdOptions {
+                            scale: 2, look: Look::Crisp,
+                        }) { picture = clean; }
                         self.hd_width = picture.width;
                         self.hd_height = picture.height;
                         self.hd_pixels.clear();
@@ -424,7 +429,7 @@ impl WebGame {
                         let mut best_score = direct.unwrap_or(0);
                         let mut best_translation = None;
                         let mut best_untranslated = None;
-                        if direct.is_none() {
+                        if direct.is_none() && !selected.as_ref().is_some_and(|page| page.table == INTRO_TABLE) {
                             let now = self.machine.frame_count() as u32;
                             let reference = selected.as_ref().or_else(|| {
                                 self.recent_pages.last().map(|(_, page)| page)
@@ -554,7 +559,7 @@ impl WebGame {
                     let mut best = selected.as_ref()
                         .and_then(|page| self.hd_renderer.visible_translation_score(page))
                         .unwrap_or(0);
-                    if best == 0 {
+                    if best == 0 && !selected.as_ref().is_some_and(|page| page.table == INTRO_TABLE) {
                         for (seen, page) in self.recent_pages.iter().rev() {
                             if (self.machine.frame_count() as u32).saturating_sub(*seen) > 18 {
                                 break;
@@ -571,6 +576,13 @@ impl WebGame {
                     self.native_visible_score = best;
                     self.native_page_key = selected.as_ref().map(|page| page.key.clone());
                     self.hd_renderer.set_translation_screen(selected);
+                    if let Some(clean) = self.hd_renderer.render_intro_underlay(log, HdOptions {
+                        scale: 2, look: Look::Pixel,
+                    }) {
+                        if clean.rgba.len() == self.classic_zh_pixels.len() {
+                            self.classic_zh_pixels = clean.rgba;
+                        }
+                    }
                     // Only the Chinese glyphs get 2x rasterisation. Source
                     // art remains the original, without HD sprite/background.
                     self.native_painted = self.hd_renderer.paint_classic_translation(
