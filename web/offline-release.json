@@ -1,6 +1,6 @@
 {
   "format": "dbz-offline-release-v1",
-  "version": "v67",
+  "version": "v68",
   "wasmSize": 18573572,
   "files": [
     "app.mjs",
@@ -38,6 +38,7 @@
     "hd-storage.mjs",
     "hd-variant-index.mjs",
     "index.html",
+    "joypad-input.mjs",
     "local-game-files.mjs",
     "manifest.webmanifest",
     "migration-bundle.mjs",
