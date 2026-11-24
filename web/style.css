@@ -158,14 +158,13 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 .launch-cover{display:grid;justify-items:center;gap:10px;width:100%;text-align:center}
 .launch-cover img{display:block;width:min(100%,450px);height:auto;object-fit:contain;border-radius:5px}
 .launch-cover #start{width:min(100%,450px);min-height:50px;font-size:1.06rem}
-#setup.launch-ready{display:flex;flex-direction:column;justify-content:center;
- align-items:center;min-height:100dvh;padding:20px 10px;gap:8px}
+#setup.launch-ready{display:flex;flex-direction:column;justify-content:flex-start;
+ align-items:center;min-height:0;padding:12px 10px;gap:8px}
 #setup.launch-ready #setup-files{display:none!important}
 #setup.launch-ready > #status{display:none}
 #setup.launch-ready.launching > #status,
 #setup.launch-ready.launch-failed > #status{display:block;max-width:450px}
-#setup.launch-ready #setup-edit{position:absolute;right:max(12px,env(safe-area-inset-right));
- top:max(12px,env(safe-area-inset-top));padding:6px 10px;
+#setup.launch-ready #setup-edit{position:static;align-self:flex-end;order:-2;padding:6px 10px;
  background:#161d2b;font-size:.7rem;opacity:.8}
 #setup:not(.launch-ready) .launch-cover{display:contents}
 #setup:not(.launch-ready) .launch-cover img{max-width:min(66vw,250px);justify-self:center}
@@ -464,3 +463,8 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 /* v60: update controls remain within setup, never over the SNES controls. */
 #offline-update-apply{background:#387151;border-color:#83b99a}
 #offline-check{background:#25465d;border-color:#617f92}
+
+/* v64: compact launcher, safe automatic update gate. */
+#setup.launch-ready #offline-status{order:-1;margin:0 auto 4px;width:100%;max-width:450px}
+.offline-preparing #start{opacity:.5;pointer-events:none}
+@media (orientation:landscape) and (max-height:550px){body:not(.playing) #setup{grid-column:1/-1;width:100%}body:not(.playing) #setup.launch-ready .launch-cover img{width:auto;max-width:100%;max-height:55dvh}}
