@@ -31,6 +31,38 @@ test('backup menu only exposes complete archive operations and valid DOM IDs',()
  assert.ok(app.includes('thumbnailDataUrl(record.thumbnail)'));
  assert.ok(!app.includes('createObjectURL(record.thumbnail)'));
  const release=JSON.parse(read('web/offline-release.json'));
- assert.equal(release.version,'v63');
+ assert.equal(release.version,'v63.1');
  assert.equal(release.wasmSize,18559329);
+});
+
+test('Pages manifest starts at canonical root and preserves the PWA identity',()=>{
+ const manifest=JSON.parse(read('web/manifest.webmanifest'));
+ assert.equal(manifest.start_url,'./');
+ assert.equal(manifest.id,'./');
+ assert.equal(manifest.scope,'./');
+});
+test('service worker sanitizes previously redirected cached HTML without deleting data',async()=>{
+ const vm=await import('node:vm');
+ const events={};
+ const oldResponse=new Response('<!doctype html><title>cached game</title>',{headers:{'Content-Type':'text/html','Content-Encoding':'gzip','Content-Length':'123'}});
+ Object.defineProperty(oldResponse,'redirected',{value:true});
+ const requests=[];
+ const scope='https://example.test/';
+ const ctx={URL,Response,Headers,fetch:async()=>{throw Error('offline');},
+  self:{registration:{scope},location:{origin:'https://example.test'},addEventListener:(k,v)=>events[k]=v},
+  caches:{open:async name=>({match:async req=>{
+   requests.push([name,typeof req==='string'?req:req.url]);
+   return name==='dbz-ssd-offline-control-v1'?new Response(JSON.stringify({version:'v63'})):oldResponse.clone();
+  }})}};
+ vm.runInNewContext(read('web/service-worker.js'),ctx);
+ for(const url of [scope,scope+'index.html']){
+  let reply;
+  events.fetch({request:{method:'GET',url,mode:'navigate'},respondWith:p=>reply=p});
+  const response=await reply;
+  assert.equal(response.redirected,false);
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('content-encoding'),null);
+  assert.match(await response.text(),/cached game/);
+ }
+ assert.ok(requests.some(([name,url])=>name==='dbz-ssd-offline-v63'&&url===scope+'index.html'));
 });
