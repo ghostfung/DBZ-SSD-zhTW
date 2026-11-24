@@ -2,7 +2,7 @@ import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v65';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v66';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -21,7 +21,7 @@ import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v53';
+const BUILD_ID='dbz-hd-tw-pwa-v66';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
 let cheatPanelOpen = false;
@@ -454,12 +454,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v53');
+    const mod = await import('./pkg/ssd_web.js?build=v66');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v53',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v66',import.meta.url);
     // Read verified, previously installed WASM bytes directly from
     // CacheStorage, never via an intercepting Service Worker Response.
     // Without an offline copy retain the exact v58 direct-network loader.
