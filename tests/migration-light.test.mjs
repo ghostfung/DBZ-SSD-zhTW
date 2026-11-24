@@ -16,8 +16,10 @@ test('legacy migration contains no game core and does not download WASM',()=>{
  ].sort());
  const page=read('web/index.html'),worker=read('web/service-worker.js');
  assert.ok(page.includes('一鍵備份全部存檔'));
- assert.ok(page.includes('系統維護更新中'));
- assert.ok(!/https?:|新網站|新站|Cloudflare|id="new-site"/i.test(page));
+ assert.ok(page.includes('遊戲已搬遷至新網站！'));
+ assert.ok(page.includes('href="https://dbz-hd-tw.happy-kt.com/"'));
+ assert.ok(page.includes('id="backup-panel" class="panel" hidden'));
+ assert.ok(page.includes('加入主畫面'));
  assert.ok(!page.includes('app.mjs'));
  assert.ok(page.includes('id="slots"'));
  assert.ok(page.includes('請勿刪除主畫面'));
@@ -25,9 +27,11 @@ test('legacy migration contains no game core and does not download WASM',()=>{
  assert.ok(ui.includes('i<=SLOT_COUNT'));
  assert.ok(ui.includes('createMigrationBundle(valid)'));
  assert.ok(!ui.includes('fetch('));
- assert.ok(!/https?:|新網站|新站|Cloudflare/i.test(ui));
+ assert.ok(ui.includes('if(!all.length)'));
+ assert.ok(ui.includes("$('backup-panel').hidden=false"));
+ assert.ok(ui.includes("$('export').hidden=false"));
  assert.ok(!worker.includes('ssd_web_bg.wasm'));
- assert.ok(worker.includes('dbz-ssd-maintenance-backup-v2'));
+ assert.ok(worker.includes('dbz-ssd-migration-final-v3'));
  assert.ok(!worker.includes('caches.delete'));
  assert.ok(!worker.includes('indexedDB.deleteDatabase'));
 });
@@ -39,7 +43,7 @@ test('portable complete save bundle is readable without a game emulator',async()
  assert.equal(decoded[2].romKey,'deadbeef:10203040');
 });
 test('migration worker intercepts navigations only and leaves existing game assets alone',async()=>{
- const listeners={},CACHE='dbz-ssd-maintenance-backup-v2',requested=[];
+ const listeners={},CACHE='dbz-ssd-migration-final-v3',requested=[];
  const contents=new Map([
   ['https://old.example/index.html',new Response('<p>moved</p>')],
   ['https://old.example/migration.mjs',new Response('export const moved=true')],
