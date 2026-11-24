@@ -2,7 +2,7 @@
   Cache-Control: no-cache, max-age=0, must-revalidate
 /offline-release.json
   Cache-Control: no-store, max-age=0
-/pkg/*.wasm
+/pkg/ssd_web_bg.wasm
   Content-Type: application/wasm
 /*
   X-Content-Type-Options: nosniff
