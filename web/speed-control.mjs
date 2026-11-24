@@ -1,7 +1,7 @@
 // Front-end playback-rate selection; independent from SNES save-state contents.
 // Keep the native 60.0988 Hz simulation step and the existing HD frame budget.
 export const SPEED_LEVELS=Object.freeze([1,2,3]);
-export const SPEED_NOTICE_KEY='dbz-ssd-update-2026-11-22-v56b-seen';
+export const SPEED_NOTICE_KEY='dbz-ssd-update-2026-11-24-v69-seen';
 
 export function nextSpeed(current){
   const index=SPEED_LEVELS.indexOf(current);
