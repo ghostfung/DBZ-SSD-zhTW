@@ -24,7 +24,8 @@ import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
 const BUILD_ID='dbz-hd-tw-pwa-v66';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, held = 0, running = false, raf = 0;
-let cheatPanelOpen = false;
+let cheatPanelOpen = false, cheatNoticeAcknowledged=false;
+const CHEAT_NOTICE_KEY='dbz-ssd-cheat-exp-level8-warning-v1';
 let gameSpeed=1,speedNoticeOpen=false,speedNoticeShownInSession=false;
 let pendingCheatRestore = false;
 let lastTick = 0, accumulator = 0, countWindow = 0, countFrames = 0;
@@ -301,6 +302,18 @@ function openCheatPanel(){
   held=0;
   if(running){running=false;cancelAnimationFrame(raf);}
   sound.reset();
+  if(!cheatNoticeAcknowledged){
+    try{cheatNoticeAcknowledged=localStorage.getItem(CHEAT_NOTICE_KEY)==='1';}catch{}
+  }
+  if(!cheatNoticeAcknowledged){
+    $('cheat-warning-panel').hidden=false;
+    $('cheat-warning-confirm').focus({preventScroll:true});
+    return;
+  }
+  revealCheatControls();
+}
+function revealCheatControls(){
+  $('cheat-warning-panel').hidden=true;
   $('cheats-panel').hidden=false;
   refreshCheatPanel();
   $('cheat-close').focus({preventScroll:true});
@@ -308,6 +321,7 @@ function openCheatPanel(){
 function closeCheatPanel(){
   if(!cheatPanelOpen)return;
   cheatPanelOpen=false;
+  $('cheat-warning-panel').hidden=true;
   $('cheats-panel').hidden=true;
   if(game&&!document.hidden&&!running&&!speedNoticeOpen){
     running=true;lastTick=0;accumulator=0;
@@ -315,6 +329,13 @@ function closeCheatPanel(){
   }
   $('cheat-open').focus({preventScroll:true});
 }
+$('cheat-warning-confirm').addEventListener('click',()=>{
+  if(!cheatPanelOpen||$('cheat-warning-panel').hidden)return;
+  cheatNoticeAcknowledged=true;
+  try{localStorage.setItem(CHEAT_NOTICE_KEY,'1');}catch{}
+  revealCheatControls();
+});
+$('cheat-warning-cancel').addEventListener('click',closeCheatPanel);
 $('cheat-open').addEventListener('click',openCheatPanel);
 $('cheat-close').addEventListener('click',closeCheatPanel);
 $('cheat-done').addEventListener('click',closeCheatPanel);
@@ -1054,7 +1075,7 @@ $('sound').addEventListener('click', async () => {
     button.disabled=false;
   }
 });
-const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
+const stop=()=>{speedNoticeOpen=false;$('speed-update-panel').hidden=true;gameSpeed=1;sound.setPlaybackRate(1);updateSpeedButton();pendingCheatRestore=false;cheatPanelOpen=false;$('cheat-warning-panel').hidden=true;$('cheats-panel').hidden=true;offerManualSoundRecovery=false;hdSceneTrace.reset();perfHistory=[];transientHoldBudget.reset();
 lastPresentedFrame=null;lastPresentation=null;translationDiag=[];lastDiagSignature='';storyFrameGate.reset();hdFrameGate.reset();portraitFrameGate.reset();fighterFrameGate.reset();specialFrameGate.reset();mapFrameGate.reset();cardFrameGate.reset();mode7FrameGate.reset();liveHd.detach();liveFighters.detach();livePortraits.detach();liveSpecials.detach();liveMaps.detach();liveCards.detach();liveMode7.detach();running=false;cancelAnimationFrame(raf);sound.reset();sound.mute().catch(console.warn);game=null;held=0;translationKey='';currentDialogue=null;embedded=false;$('translation-card').hidden=true;$('game').hidden=true;$('setup').hidden=false;document.body.classList.remove('playing');$('start').disabled=false;refreshLaunchCover();document.dispatchEvent(new Event('dbz-return-home'));};
 $('stop').addEventListener('click',stop);
 $('translation-debug').addEventListener('click',()=>{
