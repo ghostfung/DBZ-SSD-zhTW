@@ -1,7 +1,7 @@
 {
   "format": "dbz-offline-release-v1",
   "version": "v66",
-  "wasmSize": 18559329,
+  "wasmSize": 18573572,
   "files": [
     "app.mjs",
     "apple-touch-icon.png",
