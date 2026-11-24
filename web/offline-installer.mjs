@@ -183,13 +183,21 @@ export async function checkReleaseOnceDaily({
   const time=now();
   if(!force&&typeof last==='number'&&time>=last&&time-last<OFFLINE_INTERVAL_MS)
     return {checked:false,reason:'interval'};
-  // Record before request, including failures, to cap automatic CDN checks.
+  // Retain the last-check record for legacy callers; the launcher forces one check per entry.
   await writeControl(LAST_CHECK,time,{storage,root});
   let response;
   try{
-    response=await fetcher(asset('offline-release.json',root),{cache:'no-store'});
-    if(!response.ok)throw Error('HTTP '+response.status);
-    const remote=normalized(await response.json());
+    // A stalled metadata request must not prevent offline gameplay indefinitely.
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    const timeout=controller?setTimeout(()=>controller.abort(),8000):null;
+    let remote;
+    try{
+      response=await fetcher(asset('offline-release.json',root),{
+        cache:'no-store',...(controller?{signal:controller.signal}:{})
+      });
+      if(!response.ok)throw Error('HTTP '+response.status);
+      remote=normalized(await response.json());
+    }finally{if(timeout!==null)clearTimeout(timeout);}
     const active=await getActiveRelease({storage,root});
     if(!newerVersion(remote.version,active.version))
       return {checked:true,newer:false,version:active.version};
@@ -288,19 +296,7 @@ if(typeof document!=='undefined'){
   document.getElementById('offline-retry')?.addEventListener('click',
     ()=>{void prepareOffline();});
   document.getElementById('offline-check')?.addEventListener('click',()=>{void prepareOffline();});
-  document.getElementById('offline-update-apply')?.addEventListener('click',async()=>{
-    if(!safeToUpdate()||running){
-      showStatus('請先儲存遊戲並返回首頁，再重新啟動更新',{apply:true,check:true});
-      return;
-    }
-    try{
-      showStatus('正在確認完整更新…');
-      await activatePendingUpdate();
-      window.location.reload();
-    }catch(error){
-      showStatus('更新未切換：'+(error?.message||error),{retry:true,check:true});
-    }
-  });
+  document.getElementById('offline-update-apply')?.addEventListener('click',()=>{void prepareOffline();});
   // A foreground return checks again only at the launcher, never mid-game.
   document.addEventListener('visibilitychange',()=>{
     if(!document.hidden&&safeToUpdate())void prepareOffline();
