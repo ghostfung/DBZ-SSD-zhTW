@@ -1,0 +1,76 @@
+name: Compile isolated v66 intro core
+on:
+  push:
+    branches: [cloudflare-v66-intro-fix]
+    paths:
+      - 'crates/ssd-hd/**'
+      - 'crates/ssd-web/**'
+      - 'web/**'
+      - 'tests/**'
+      - '.github/workflows/cloudflare-intro-v66.yml'
+concurrency:
+  group: cloudflare-v66-intro
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.99"
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check Rust bridge and renderer
+        run: |
+          cargo test -p ssd-web --lib
+          cargo check -p ssd-web --target wasm32-unknown-unknown
+      - name: Build WASM
+        run: |
+          cargo install wasm-pack --locked
+          wasm-pack build crates/ssd-web --target web --out-dir ../../web/pkg --release
+      - name: Reconcile generated runtime and offline manifest
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const releasePath='web/offline-release.json',installerPath='web/offline-installer.mjs';
+          const release=JSON.parse(fs.readFileSync(releasePath,'utf8'));
+          if(release.version!=='v66')throw Error('unexpected release');
+          release.wasmSize=fs.statSync('web/pkg/ssd_web_bg.wasm').size;
+          const glue=fs.readFileSync('web/pkg/ssd_web.js','utf8');
+          const snippets=[...glue.matchAll(/from ["']\.\/(snippets\/[^"']+)["']/g)].map(m=>'pkg/'+m[1]);
+          for(const s of snippets)if(!fs.existsSync('web/'+s))throw Error('missing '+s);
+          release.files=release.files.filter(f=>!f.startsWith('pkg/snippets/'));
+          const at=release.files.indexOf('pkg/ssd_web.js');
+          release.files.splice(at,0,...new Set(snippets));
+          fs.writeFileSync(releasePath,JSON.stringify(release,null,2)+'\n');
+          let installer=fs.readFileSync(installerPath,'utf8');
+          installer=installer.replace(/OFFLINE_WASM_SIZE=\d+;/,'OFFLINE_WASM_SIZE='+release.wasmSize+';')
+            .replace(/OFFLINE_FILES=Object\.freeze\(\[[^\n]*\]\);/,'OFFLINE_FILES=Object.freeze('+JSON.stringify(release.files)+');');
+          fs.writeFileSync(installerPath,installer);
+          NODE
+      - name: Targeted regression tests
+        run: |
+          node --check web/app.mjs
+          node --check web/audio.mjs
+          node --check web/offline-installer.mjs
+          node --check web/service-worker.js
+          node --test tests/audio.test.mjs tests/speed-control.test.mjs tests/native-translation-pipeline.test.mjs tests/cloudflare-migration.test.mjs tests/v63-thumbnail-backup.test.mjs
+      - name: Publish only compiled and tested package to isolated branch
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = cloudflare-v66-intro-fix
+          git fetch --no-tags origin "$GITHUB_REF_NAME"
+          test "$GITHUB_SHA" = "$(git rev-parse FETCH_HEAD)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f web/pkg web/offline-release.json web/offline-installer.mjs
+          git diff --cached --quiet || {
+            git commit -m "build(v66): compiled intro renderer and verified offline manifest [skip ci]"
+            git push origin "HEAD:$GITHUB_REF_NAME"
+          }
