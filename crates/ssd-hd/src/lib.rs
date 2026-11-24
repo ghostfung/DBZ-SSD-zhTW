@@ -1088,6 +1088,41 @@ mod tests {
     }
 
     #[test]
+    fn browser_intro_underlay_hides_only_translated_text_planes() {
+        use ssd_catalogue::engine::{OnScreen, INTRO_TABLE};
+        use ssd_catalogue::translation::Translation;
+        let screen = OnScreen {
+            table: INTRO_TABLE, string: 512 - 101, page: 0,
+            key: "intro".to_owned(), state: 2, stopped: false,
+            line: 0, cell: 0, base: 512 - 41, portrait: false,
+            lines: vec![32; 32], english: Vec::new(), progress: 1.0,
+            names: [None, None, None], numbers: Default::default(),
+        };
+        let mut rows=String::from("key\tzh\n");
+        for line in 0..32 { rows.push_str(&format!("intro:{line}\tA\n")); }
+        let table=Arc::new(Translation::parse(&rows).unwrap());
+        let face=Arc::new(translate::ChineseFace::new(font::SHARE_TECH_MONO.to_vec()).unwrap());
+        let mut renderer=Renderer::new();
+        renderer.set_native_translation(Some(Arc::new(translate::Overlay::new(table,face))));
+        renderer.set_layer_tracking(true);
+        let mut regs=mode_1();
+        regs.main_bg=[true,true,true,false];
+        let source=log(regs,SpriteLine::default());
+        let options=HdOptions{scale:2,look:Look::Crisp};
+        assert!(renderer.render_intro_underlay(&source,options).is_none());
+        renderer.set_translation_screen(Some(screen));
+        let clean=renderer.quiet_intro_log(&source).unwrap();
+        assert!(clean.entries.iter().all(|entry|entry.regs.main_bg==[false,false,true,false]));
+        assert!(source.entries.iter().all(|entry|entry.regs.main_bg==[true,true,true,false]));
+        let expected=Renderer::new().render_hd(&clean,options).unwrap();
+        let actual=renderer.render_intro_underlay(&source,options).unwrap();
+        assert_eq!(actual.rgba,expected.rgba);
+        assert_eq!((actual.width,actual.height),(512,448));
+        renderer.set_translation_screen(None);
+        assert!(renderer.render_intro_underlay(&source,options).is_none());
+    }
+
+    #[test]
     fn fighter_underpass_restores_ppu_ownership_and_future_render_state() {
         let log=log(mode_1(),SpriteLine::default());
         let mut renderer=Renderer::new();
