@@ -2,7 +2,7 @@
 // complete, validated updates and a player-approved restart. Never read ROMs,
 // save states, IPS or HD ZIP. Direct WASM loading avoids iOS streaming hangs.
 const CONTROL='dbz-ssd-offline-control-v1';
-const DEFAULT='dbz-ssd-offline-v60';
+const DEFAULT='dbz-ssd-offline-v62';
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 async function activeCache(){

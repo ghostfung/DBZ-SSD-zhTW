@@ -1,7 +1,8 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {SLOT_COUNT,MAX_STATE_BYTES,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes} from './save-slots.mjs';
+import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v56';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v60';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v62';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v56b';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -1260,6 +1261,47 @@ $('backup-open').addEventListener('click',openBackupPanel);
 $('backup-close').addEventListener('click',closeBackupPanel);
 $('save-slots-close').addEventListener('click',closeSlotPicker);
 $('save-slots-cancel').addEventListener('click',closeSlotPicker);
+// Local-only migration archive. The pre-existing .sav options remain usable.
+$('backup-bundle-export').addEventListener('click',async()=>{
+  const output=$('backup-feedback');
+  try{
+    const slots=(await listSaveSlots()).filter(record=>!record.corrupt);
+    if(!slots.length)throw Error('尚未有已儲存的欄位，請先儲存遊戲');
+    const {blob,count}=createMigrationBundle(slots);
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='dbz-ssd-all-slots.dbzbackup';link.click();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+    output.textContent='已下載 '+count+' 格存檔；請妥善保存備份檔。';
+  }catch(error){output.textContent='完整備份失敗：'+(error?.message||error);}
+});
+$('backup-bundle-import').addEventListener('change',async event=>{
+  const file=event.target.files?.[0],output=$('backup-feedback');
+  event.target.value='';
+  if(!file||!game)return;
+  try{
+    const records=await readMigrationBundle(file);
+    if(records.some(record=>record.romKey!==currentRomKey))
+      throw Error('備份 ROM／IPS 與目前遊戲不一致，請先匯入原本的 ROM／IPS');
+    const existing=await listSaveSlots();
+    const used=new Set(existing.filter(r=>!r.corrupt).map(r=>r.slot));
+    const overwrite=records.filter(r=>used.has(r.slot)).map(r=>r.slot);
+    if(overwrite.length&&!window.confirm(
+      '將覆蓋本機 Slot '+overwrite.join('、')+'，確定還原備份嗎？'))return;
+    let count=0;
+    for(const record of records){
+      const bytes=validStateBytes(new Uint8Array(await record.state.arrayBuffer()));
+      await writeSaveSlot(record.slot,bytes,{
+        romKey:currentRomKey,savedAt:record.savedAt,thumbnail:record.thumbnail
+      });
+      output.textContent='正在還原 '+(++count)+'/'+records.length+' 格…';
+    }
+    output.textContent='已還原 '+count+' 格存檔。請返回遊戲並點「讀取遊戲」核對。';
+  }catch(error){
+    output.textContent='完整備份匯入失敗：'+(error?.message||error)+
+      '。如果已部分匯入，可用原備份檔再試。';
+  }
+});
+
 $('backup-export').addEventListener('click',()=>{
   if(!game)return;
   try{

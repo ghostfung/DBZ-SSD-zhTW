@@ -213,10 +213,14 @@
         <div><h2 id="backup-title">備份紀錄</h2><p>原有 .sav 匯入／匯出功能</p></div>
         <button id="backup-close" type="button">返回遊戲</button>
       </header>
-      <p class="cheats-note">匯入會先選擇 10 個存檔欄位之一，並將該進度載入遊戲；匯出則備份目前遊戲進度。備份檔可轉移至其他裝置。</p>
+      <p class="cheats-note">從 Vercel 舊站搬家：匯入相同的 ROM／IPS 後啟動遊戲，再用「還原舊網站的全部存檔」，最後「讀取遊戲」確認。HD 美術包需另外重新匯入。資料不會上傳伺服器。</p>
       <div class="backup-actions">
         <label class="upload backup-file-label" for="state-file">匯入進度（.sav）<input id="state-file" type="file" accept=".sav,.bin,application/octet-stream"/></label>
-        <button id="backup-export" type="button">匯出進度（.sav）</button>
+        <button id="backup-export" type="button">匯出目前進度（.sav）</button>
+        <button id="backup-bundle-export" type="button">一鍵備份全部存檔（.dbzbackup）</button>
+        <label class="upload backup-file-label" for="backup-bundle-import">還原舊網站的全部存檔
+          <input id="backup-bundle-import" type="file" accept=".dbzbackup,application/octet-stream"/>
+        </label>
       </div>
       <output id="backup-feedback" role="status" aria-live="polite"></output>
     </div>
@@ -277,8 +281,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v53&ui=v65"></script>
+  <script type="module" src="app.mjs?build=v53&ui=v67"></script>
   <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v60"></script>
+  <script type="module" src="offline-installer.mjs?offline=v62"></script>
 </body>
 </html>

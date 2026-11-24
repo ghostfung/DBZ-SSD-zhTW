@@ -1,11 +1,11 @@
 // Offline shell installer / low-request daily release updater. No ROM, HD ZIP,
 // IPS or saved games are stored here: existing private OPFS/IndexedDB stays intact.
-export const OFFLINE_RELEASE='v60';
-export const OFFLINE_CACHE='dbz-ssd-offline-v60';
+export const OFFLINE_RELEASE='v62';
+export const OFFLINE_CACHE='dbz-ssd-offline-v62';
 export const OFFLINE_CONTROL='dbz-ssd-offline-control-v1';
 export const OFFLINE_WASM_SIZE=18559329;
 export const OFFLINE_INTERVAL_MS=24*60*60*1000;
-export const OFFLINE_FILES=Object.freeze(["app.mjs","apple-touch-icon.png","audio.mjs","cheat-preferences.mjs","chinese-overlay.mjs","dbz-title.webp","frame-metrics.mjs","hd-background-index.mjs","hd-card-index.mjs","hd-card-live.mjs","hd-coverage-audit.mjs","hd-coverage-runtime.mjs","hd-fighter-diagnostic.mjs","hd-fighter-index.mjs","hd-fighter-live.mjs","hd-frame-gate.mjs","hd-import-ui.mjs","hd-live.mjs","hd-local-assets.mjs","hd-map-index.mjs","hd-map-live.mjs","hd-map-prefetch.mjs","hd-mode7-index.mjs","hd-mode7-live.mjs","hd-pack.mjs","hd-phase-report.mjs","hd-portrait-gate.mjs","hd-portrait-index.mjs","hd-portrait-live.mjs","hd-presentation-budget.mjs","hd-special-index.mjs","hd-special-live.mjs","hd-storage.mjs","hd-variant-index.mjs","index.html","local-game-files.mjs","manifest.webmanifest","offline-installer.mjs","offline-release.json","pkg/snippets/ssd-web-78d3277d0c70cc4b/inline0.js","pkg/ssd_web.js","pwa-icon.svg","rom-check.mjs","save-slots.mjs","screen-text.mjs","sha256-stream.mjs","speed-control.mjs","story-frame-gate.mjs","style.css","transition-artifact-gate.mjs","zh-hk.tsv","zh-tw-page-alignments.tsv","zh-tw.tsv","pkg/ssd_web_bg.wasm"]);
+export const OFFLINE_FILES=Object.freeze(["app.mjs","apple-touch-icon.png","audio.mjs","cheat-preferences.mjs","chinese-overlay.mjs","dbz-title.webp","frame-metrics.mjs","hd-background-index.mjs","hd-card-index.mjs","hd-card-live.mjs","hd-coverage-audit.mjs","hd-coverage-runtime.mjs","hd-fighter-diagnostic.mjs","hd-fighter-index.mjs","hd-fighter-live.mjs","hd-frame-gate.mjs","hd-import-ui.mjs","hd-live.mjs","hd-local-assets.mjs","hd-map-index.mjs","hd-map-live.mjs","hd-map-prefetch.mjs","hd-mode7-index.mjs","hd-mode7-live.mjs","hd-pack.mjs","hd-phase-report.mjs","hd-portrait-gate.mjs","hd-portrait-index.mjs","hd-portrait-live.mjs","hd-presentation-budget.mjs","hd-special-index.mjs","hd-special-live.mjs","hd-storage.mjs","hd-variant-index.mjs","index.html","local-game-files.mjs","manifest.webmanifest","migration-bundle.mjs","offline-installer.mjs","offline-release.json","pkg/snippets/ssd-web-78d3277d0c70cc4b/inline0.js","pkg/ssd_web.js","pwa-icon.svg","rom-check.mjs","save-slots.mjs","screen-text.mjs","sha256-stream.mjs","speed-control.mjs","story-frame-gate.mjs","style.css","transition-artifact-gate.mjs","zh-hk.tsv","zh-tw-page-alignments.tsv","zh-tw.tsv","pkg/ssd_web_bg.wasm"]);
 const CURRENT=Object.freeze({version:OFFLINE_RELEASE,wasmSize:OFFLINE_WASM_SIZE,files:OFFLINE_FILES});
 const ACTIVE='__dbz-offline-active__';
 const PENDING='__dbz-offline-pending__';
@@ -206,7 +206,7 @@ export async function prepareOffline(){
       const installed=await navigator.serviceWorker.getRegistration(root.href);
       if(!installed?.active?.scriptURL.includes('/service-worker.js')){
         if(!navigator.onLine)throw Error('初次安裝請先連上網絡');
-        await navigator.serviceWorker.register('./service-worker.js?offline=v60',
+        await navigator.serviceWorker.register('./service-worker.js?offline=v62',
           {scope:'./',updateViaCache:'none'});
       }
       await navigator.serviceWorker.ready;

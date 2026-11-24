@@ -1,6 +1,6 @@
 {
   "format": "dbz-offline-release-v1",
-  "version": "v60",
+  "version": "v62",
   "wasmSize": 18559329,
   "files": [
     "app.mjs",
@@ -40,6 +40,7 @@
     "index.html",
     "local-game-files.mjs",
     "manifest.webmanifest",
+    "migration-bundle.mjs",
     "offline-installer.mjs",
     "offline-release.json",
     "pkg/snippets/ssd-web-78d3277d0c70cc4b/inline0.js",
