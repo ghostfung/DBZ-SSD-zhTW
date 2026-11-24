@@ -72,9 +72,9 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.match(html,/id="speed-landscape-anchor"/);
   assert.match(html,/id="speed-update-panel"/);
   assert.match(html,/id="speed-update-close"/);
-  assert.match(html,/新增 10 格存檔、讀取及備份功能/);
-  assert.match(html,/HD 美術包快速啟動，不再每次完整驗證/);
-  assert.match(html,/新增一鍵倍速：1× → 2× → 3×/);
+  assert.match(html,/已遷移至新的伺服器/);
+  assert.match(html,/修正開場介紹中英文文字重疊問題/);
+  assert.match(html,/新增 ABXY 按鈕長按連發功能/);
   assert.doesNotMatch(html,/1\.5×/);
   assert.match(app,/landscapeSpeedPlacement\.matches/);
   assert.match(app,/anchor\.appendChild\(\$\('speed-toggle'\)\)/);
@@ -89,9 +89,9 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.ok(switchHandler.includes('updateSpeedButton()'));
   assert.doesNotMatch(switchHandler,/gameToast\(/,'speed switching must not paint a toast across the speed button');
   assert.match(css,/speed-toggle\[data-speed="3"\]/);
-  assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-update-2026-11-22-v56b-seen');
-  assert.match(html,/app\.mjs\?build=v66&ui=v68/);
-  assert.match(html,/style\.css\?build=v50&ui=v68/);
+  assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-update-2026-11-24-v69-seen');
+  assert.match(html,/app\.mjs\?build=v66&ui=v69/);
+  assert.match(html,/style\.css\?build=v50&ui=v69/);
   for(const bit of [0,1,2,3,4,5,6,7,8,9])
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
 });
