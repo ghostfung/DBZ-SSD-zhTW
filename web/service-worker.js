@@ -2,7 +2,7 @@
 // complete, validated updates and a player-approved restart. Never read ROMs,
 // save states, IPS or HD ZIP. Direct WASM loading avoids iOS streaming hangs.
 const CONTROL='dbz-ssd-offline-control-v1';
-const DEFAULT='dbz-ssd-offline-v63';
+const DEFAULT='dbz-ssd-offline-v63.1';
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(self.clients.claim()));
 async function activeCache(){
@@ -33,16 +33,27 @@ self.addEventListener('fetch',event=>{
   if((req.cache==='reload'||req.cache==='no-store')&&req.mode!=='navigate')return;
   event.respondWith((async()=>{
     const cache=await caches.open(await activeCache());
-    const result=await cache.match(req,{ignoreSearch:true});
-    if(result)return result;
-    try{return await fetch(req);}
-    catch(error){
-      if(req.mode==='navigate'){
-        const fallback=await cache.match(
-          new URL('./index.html',self.registration.scope).href,{ignoreSearch:true});
-        if(fallback)return fallback;
-      }
-      throw error;
+    if(req.mode==='navigate'){
+      // Pages canonicalizes /index.html to /. Older offline caches contain a
+      // redirected Response which WebKit rejects for navigation. Rebuild only
+      // the HTML response, retaining the active version and all saved data.
+      const shell=new URL('./index.html',self.registration.scope).href;
+      const root=new URL('./',self.registration.scope).href;
+      const cached=await cache.match(shell,{ignoreSearch:true})||
+        await cache.match(root,{ignoreSearch:true});
+      if(cached)return navigationResponse(cached);
+      return navigationResponse(await fetch(root,{cache:'no-cache',credentials:'same-origin'}));
     }
+    const result=await cache.match(req,{ignoreSearch:true});
+    return result||fetch(req);
   })());
 });
+async function navigationResponse(response){
+  if(!response.ok)return response;
+  const headers=new Headers(response.headers);
+  // Fetch bodies are decoded; do not retain stale transport metadata.
+  headers.delete('content-encoding');headers.delete('content-length');
+  return new Response(await response.arrayBuffer(),{
+    status:response.status,statusText:response.statusText,headers
+  });
+}
