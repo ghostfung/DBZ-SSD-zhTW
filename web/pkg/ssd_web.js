@@ -775,6 +775,12 @@ export class WebGame {
         return ret[0] >>> 0;
     }
     /**
+     * @param {boolean} enabled
+     */
+    set_widescreen(enabled) {
+        wasm.webgame_set_widescreen(this.__wbg_ptr, enabled);
+    }
+    /**
      * @returns {string}
      */
     special_matches() {

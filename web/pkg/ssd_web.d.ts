@@ -158,6 +158,7 @@ export class WebGame {
      * character or a guessed screen rectangle.
      */
     set_special_index(json: string): number;
+    set_widescreen(enabled: boolean): void;
     special_matches(): string;
     special_probe(): string;
     /**
@@ -253,6 +254,7 @@ export interface InitOutput {
     readonly webgame_set_special_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
     readonly webgame_set_special_hd_enabled: (a: number, b: number) => void;
     readonly webgame_set_special_index: (a: number, b: number, c: number) => [number, number, number];
+    readonly webgame_set_widescreen: (a: number, b: number) => void;
     readonly webgame_special_matches: (a: number) => [number, number];
     readonly webgame_special_probe: (a: number) => [number, number];
     readonly webgame_story_translation_pending: (a: number) => number;

@@ -65,6 +65,7 @@ export const webgame_set_portrait_index: (a: number, b: number, c: number) => [n
 export const webgame_set_special_art: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number];
 export const webgame_set_special_hd_enabled: (a: number, b: number) => void;
 export const webgame_set_special_index: (a: number, b: number, c: number) => [number, number, number];
+export const webgame_set_widescreen: (a: number, b: number) => void;
 export const webgame_special_matches: (a: number) => [number, number];
 export const webgame_special_probe: (a: number) => [number, number];
 export const webgame_story_translation_pending: (a: number) => number;
