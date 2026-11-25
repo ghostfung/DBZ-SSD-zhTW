@@ -3,7 +3,7 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v73';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v74';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v69';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -53,7 +53,7 @@ function updateRenderModeButton(){
     '畫面模式：'+(hdEnabled?'HD 2x':classicZhEnabled?'Classic 繁體中文 1x':'Classic 英文原版')+'，點擊切換');
 }
 function updateLanguageButton(){
-  $('locale-toggle').textContent=language==='zh-hk'?'香港繁中':'台灣繁中';
+  $('locale-toggle').textContent=language==='zh-hk'?'香港粵語':'台灣繁中';
   $('locale-toggle').setAttribute('aria-label','文字版本：'+$('locale-toggle').textContent+'，點按切換');
 }
 async function getTranslation(code){
@@ -557,9 +557,9 @@ $('start').addEventListener('click', async () => {
     }
     $('build-status').textContent='頁面／WASM 一致：'+BUILD_ID;
     // Official TW/HK translations, both sourced from Ming Liu's tables.
-    await phase('正在載入'+(language==='zh-hk'?'香港':'台灣')+'繁體中文譯文…');
+    await phase('正在載入'+(language==='zh-hk'?'香港粵語':'台灣繁中')+'譯文…');
     const translatedRows=game.load_translation(await getTranslation(language));
-    $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆繁體中文譯文';
+    $('translation-count').textContent = '已載入 ' + translatedRows + ' 筆'+(language==='zh-hk'?'香港粵語':'台灣繁中')+'譯文';
     translationKey = '';
     currentDialogue = null;
     embedded = false;
