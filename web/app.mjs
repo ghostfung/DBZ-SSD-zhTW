@@ -3,7 +3,7 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v69';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v72';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v69';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -396,10 +396,12 @@ function refreshLaunchCover({edit=false}={}){
   // control still permits replacing locally stored ROM/IPS/HD files.
   const ready=Boolean(savedRom&&!$('rom').files?.length&&!edit);
   $('setup').classList.toggle('launch-ready',ready);
+  if(ready)$('setup').classList.remove('managing-files');
   $('setup-edit').hidden=!ready;
 }
 $('setup-edit').addEventListener('click',()=>{
   $('setup').classList.remove('launch-ready');
+  $('setup').classList.add('managing-files');
   $('setup-edit').hidden=true;
   $('game-files-details').open=true;
   $('setup-files').scrollIntoView?.({block:'start',behavior:'smooth'});
