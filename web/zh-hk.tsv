@@ -43,7 +43,7 @@ help:36	集齊七粒，\n就一定可以實現願望。	k0:36
 help:37	集齊七粒，\n就一定可以實現願望。	k0:37
 help:38	集齊七粒，\n就一定可以實現願望。	k0:38
 help:39	集齊七粒，\n就一定可以實現願望。	k0:39
-help:40	呢個時候，天迪\n醫好咗一個Ｚ戰士。{auto}	k0:40
+help:40	呢個時候，天迪\n治療咗一個Ｚ戰士。{auto}	k0:40
 help:41	天迪好驚！{auto}	k0:41
 battle:0	{name:1}\n向{name:2}\n發動攻擊！{auto}	k1:0
 battle:1	{name:2}\n受到{num:1}點\n傷害！{auto}	k1:1
@@ -51,68 +51,68 @@ battle:2	{name:2}\n畀人打低咗！{auto}	k1:2
 battle:3	{name:2}\n冇受到傷害。{auto}	k1:3
 battle:4	{name:2}\n避開咗攻擊。{auto}	k1:4
 battle:5	{name:1}\n向{name:2}\n再次攻擊！{auto}	k1:5
-battle:6	{name:1}的\n衝擊波！{auto}	k1:6
+battle:6	{name:1}嘅\n衝擊波！{auto}	k1:6
 battle:7	{name:2}\n用氣勢\n抵消咗攻擊。{auto}	k1:7
-battle:8	{name:1}的\n能量波！{auto}	k1:8
-battle:9	{name:1}的\n連續能量波！{auto}	k1:9
-battle:10	{name:1}的\n太陽拳！{auto}	k1:10
+battle:8	{name:1}嘅\n能量波！{auto}	k1:8
+battle:9	{name:1}嘅\n連續能量波！{auto}	k1:9
+battle:10	{name:1}嘅\n太陽拳！{auto}	k1:10
 battle:11	{name:2}\n畀強光閃到眼！{auto}	k1:11
 battle:12	對{name:2}\n冇效果。{auto}	k1:12
-battle:13	{name:1}的\n龜波氣功！{auto}	k1:13
-battle:14	{name:1}的\n{num:1}倍界王拳！{auto}	k1:14
-battle:15	{name:1}的\n{num:1}倍界王拳\n龜波氣功！{auto}	k1:15
-battle:16	{name:1}的\n元氣彈！{auto}	k1:16
-battle:17	{name:1}的\n強力能量波！{auto}	k1:17
-battle:18	{name:1}的\n魔閃光！{auto}	k1:18
-battle:19	{name:1}的\n魔光炮！{auto}	k1:19
-battle:20	{name:1}的\n連續魔光炮！{auto}	k1:20
-battle:21	{name:1}的\n爆裂魔光炮！{auto}	k1:21
-battle:22	{name:1}的\n魔貫光殺炮！{auto}	k1:22
-battle:23	{name:1}的\n擴散能量波！{auto}	k1:23
-battle:24	{name:1}的\n氣圓斬！{auto}	k1:24
-battle:25	{name:1}的\n連續氣圓斬！{auto}	k1:25
-battle:26	{name:1}的\n氣功炮！{auto}	k1:26
-battle:27	{name:1}的\n四身拳！{auto}	k1:27
-battle:28	{name:1}的\n四身拳氣功炮！{auto}	k1:28
-battle:29	{name:1}的\n繰氣彈！{auto}	k1:29
-battle:30	{name:1}的\n特大繰氣彈！{auto}	k1:30
-battle:31	{name:1}的\n洞洞波！{auto}	k1:31
-battle:32	{name:1}的\n超能力！{auto}	k1:32
+battle:13	{name:1}嘅\n龜波氣功！{auto}	k1:13
+battle:14	{name:1}嘅\n{num:1}倍界王拳！{auto}	k1:14
+battle:15	{name:1}嘅\n{num:1}倍界王拳\n龜波氣功！{auto}	k1:15
+battle:16	{name:1}嘅\n元氣彈！{auto}	k1:16
+battle:17	{name:1}嘅\n強力能量波！{auto}	k1:17
+battle:18	{name:1}嘅\n魔閃光！{auto}	k1:18
+battle:19	{name:1}嘅\n魔光炮！{auto}	k1:19
+battle:20	{name:1}嘅\n連續魔光炮！{auto}	k1:20
+battle:21	{name:1}嘅\n爆裂魔光炮！{auto}	k1:21
+battle:22	{name:1}嘅\n魔貫光殺炮！{auto}	k1:22
+battle:23	{name:1}嘅\n擴散能量波！{auto}	k1:23
+battle:24	{name:1}嘅\n氣圓斬！{auto}	k1:24
+battle:25	{name:1}嘅\n連續氣圓斬！{auto}	k1:25
+battle:26	{name:1}嘅\n氣功炮！{auto}	k1:26
+battle:27	{name:1}嘅\n四身拳！{auto}	k1:27
+battle:28	{name:1}嘅\n四身拳氣功炮！{auto}	k1:28
+battle:29	{name:1}嘅\n繰氣彈！{auto}	k1:29
+battle:30	{name:1}嘅\n特大繰氣彈！{auto}	k1:30
+battle:31	{name:1}嘅\n洞洞波！{auto}	k1:31
+battle:32	{name:1}嘅\n超能力！{auto}	k1:32
 battle:33	{name:2}\n攻擊唔到喇。{auto}	k1:33
-battle:34	{name:1}的\n精神攻擊！{auto}	k1:34
-battle:35	{name:1}的\n爆發波！{auto}	k1:35
-battle:36	{name:1}的\n吉力克砲！{auto}	k1:36
-battle:37	{name:1}的\n能量球！{auto}	k1:37
+battle:34	{name:1}嘅\n精神攻擊！{auto}	k1:34
+battle:35	{name:1}嘅\n爆發波！{auto}	k1:35
+battle:36	{name:1}嘅\n吉力克砲！{auto}	k1:36
+battle:37	{name:1}嘅\n能量球！{auto}	k1:37
 battle:38	{name:1}\n竟然變身做\n巨猿！{auto}	k1:38
-battle:39	{name:1}的\n溶解液！{auto}	k1:39
-battle:40	{name:1}的\n捨身攻擊！{auto}	k1:40
+battle:39	{name:1}嘅\n溶解液！{auto}	k1:39
+battle:40	{name:1}嘅\n捨身攻擊！{auto}	k1:40
 battle:41	{name:1}\n自爆咗！{auto}	k1:41
-battle:42	{name:1}的\n能量彈！{auto}	k1:42
-battle:43	{name:1}的\n連續能量彈！{auto}	k1:43
-battle:44	{name:1}的\n雙重攻擊！{auto}	k1:44
-battle:45	{name:1}的\n能量砲！{auto}	k1:45
-battle:46	{name:1}的\n時間停頓！{auto}	k1:46
-battle:47	{name:1}的\n定身術！{auto}	k1:47
+battle:42	{name:1}嘅\n能量彈！{auto}	k1:42
+battle:43	{name:1}嘅\n連續能量彈！{auto}	k1:43
+battle:44	{name:1}嘅\n雙重攻擊！{auto}	k1:44
+battle:45	{name:1}嘅\n能量砲！{auto}	k1:45
+battle:46	{name:1}嘅\n時間停頓！{auto}	k1:46
+battle:47	{name:1}嘅\n定身術！{auto}	k1:47
 battle:48	{name:2}\n郁唔到喇。{auto}	k1:48
-battle:49	{name:1}的\n念動力！{auto}	k1:49
-battle:50	{name:1}的\n三重攻擊！{auto}	k1:50
-battle:51	{name:1}的\n破壞炮！{auto}	k1:51
-battle:52	{name:1}的\n超級格鬥攻擊！{auto}	k1:52
-battle:53	{name:1}的\n音速攻擊！{auto}	k1:53
-battle:54	賓達與捷斯的\n紫色彗星衝擊！{auto}	k1:54
-battle:55	{name:1}的\n殛光球！{auto}	k1:55
-battle:56	{name:1}的\n力量提升！{auto}	k1:56
-battle:57	{name:1}的\n轉換身體！{auto}	k1:57
+battle:49	{name:1}嘅\n念動力！{auto}	k1:49
+battle:50	{name:1}嘅\n三重攻擊！{auto}	k1:50
+battle:51	{name:1}嘅\n破壞炮！{auto}	k1:51
+battle:52	{name:1}嘅\n超級格鬥攻擊！{auto}	k1:52
+battle:53	{name:1}嘅\n音速攻擊！{auto}	k1:53
+battle:54	賓達同捷斯嘅\n紫色彗星衝擊！{auto}	k1:54
+battle:55	{name:1}嘅\n殛光球！{auto}	k1:55
+battle:56	{name:1}嘅\n力量提升！{auto}	k1:56
+battle:57	{name:1}嘅\n轉換身體！{auto}	k1:57
 battle:58	{name:1}\n同{name:2}\n交換咗身體。{auto}	k1:58
 battle:59	{name:3}\n仲追住唔放。{auto}	k1:59
-battle:60	{name:1}的\n強力能量彈！{auto}	k1:60
-battle:61	{name:1}的\n變身！{auto}	k1:61
+battle:60	{name:1}嘅\n強力能量彈！{auto}	k1:60
+battle:61	{name:1}嘅\n變身！{auto}	k1:61
 battle:62	菲利最後一次變身\n完成喇！{auto}	k1:62
 battle:63	{name:2}\n反彈咗攻擊。{auto}	k1:63
 battle:64	{name:2}\n變返原樣喇。{auto}	k1:64
 battle:65	菲利切割刃！{auto}	k1:65
 battle:66	悟飯一路喊住\n一路衝過嚟！{auto}	k1:66
-battle:67	悟空的\n捨身攻擊！{auto}	k1:67
+battle:67	悟空嘅\n捨身攻擊！{auto}	k1:67
 battle:68	悟空喺後面\n捉住咗拿迪斯！\n拿迪斯郁唔到！{auto}	k1:68
 battle:69	「放手，格古洛！\n你都咪旨意好過！」{auto}	k1:69
 battle:70	「嘿嘿……\n我就陪你\n一齊死啦……！」{auto}	k1:70
@@ -123,16 +123,16 @@ battle:74	拿迪斯同悟空\n一齊倒低咗！{auto}	k1:74
 battle:75	「唔……！\n可……可惡啊啊啊\n……！」{auto}	k1:75
 battle:76	「…嘿嘿……！」{auto}	k1:76
 battle:77	{name:1}\n變身做咗\n{name:2}{auto}	k1:77
-battle:78	{name:1}的\n發光彈！{auto}	k1:78
-battle:79	{name:1}的\n防護罩！{auto}	k1:79
+battle:78	{name:1}嘅\n發光彈！{auto}	k1:78
+battle:79	{name:1}嘅\n防護罩！{auto}	k1:79
 battle:80	{name:1}嘅\n防禦力提升咗！{auto}	k1:80
-battle:81	{name:1}的\n音速分離十字！{auto}	k1:81
-battle:82	{name:1}的\n真空波！{auto}	k1:82
+battle:81	{name:1}嘅\n音速分離十字！{auto}	k1:81
+battle:82	{name:1}嘅\n真空波！{auto}	k1:82
 battle:83	{name:2}嘅\nＫＩ減少咗\n{num:1}點。{auto}	k1:83
 battle:84	{name:1}喺\n{name:2}身上\n吸走{num:1}ＨＰ。{auto}	k1:84
 battle:85	{name:1}\n攻擊唔到喇。{auto}	k1:85
-battle:86	{name:1}的\n精神光束！{auto}	k1:86
-battle:87	{name:1}的\n反擊！{auto}	k1:87
+battle:86	{name:1}嘅\n精神光束！{auto}	k1:86
+battle:87	{name:1}嘅\n反擊！{auto}	k1:87
 battle:88	…………	k1:88 override
 battle:89	敵人出現咗！	k1:89
 battle:90	不過敵人好大意。\n而家仲走得甩！	k1:90
@@ -191,21 +191,21 @@ battle:138/p2	「唔係用咩龍珠\n復活咗咩？」	k1:138
 battle:139	「跟住到我喇。\n不如索性\n殺晒你哋？」	k1:139
 battle:140	「定係慢慢玩殘\n再殺呢？嘿嘿\n……嚟喇！」	k1:140
 battle:141	「爸爸，笛子魔童先生…\n笛子魔童先生\n佢死咗呀——！」	k1:141
-battle:142	「對唔住……\n我嚟遲咗嗎…。\n我唔會放過你哋！」	k1:142
+battle:142	「對唔住……\n我嚟遲咗呀…。\n我唔會放過你哋！」	k1:142
 battle:143	地下走咗啲怪物出嚟？\n「點呀！你哋同佢哋\n一對一打吓啦！」	k1:143
 battle:144	「居然輸畀廢物…\n就捉格古洛個\n細路陪葬啦！」{auto}	k1:144
 battle:145	「…我居然會保護\n個細路…真失敗……\n唔好死呀…」{auto}	k1:145
 battle:146	「比…笛子魔童先生\n——！」{auto}	k1:146
 battle:147	{portrait:18:80}「比…比達…係咩，\n呢班友係你嘅\n同伴吖？」	k1:147
 battle:148	{portrait:0F:00}「咪將我同垃圾\n相提並論。我會先\n收拾你。」	k1:148
-battle:149	{name:1}的\n氣上升咗！攻擊\n{name:2}{auto}	k1:149
+battle:149	{name:1}嘅\n氣上升咗！攻擊\n{name:2}{auto}	k1:149
 battle:150	{name:1}\n力量提升！攻擊\n{name:2}{auto}	k1:150
 battle:151	{name:1}\n單挑全員！攻擊\n{name:2}{auto}	k1:151
-battle:152	{name:1}的\n德拉丘光束！{auto}	k1:152
-battle:153	{name:1}的\n氣不斷上升！{auto}	k1:153
-battle:154	{name:1}的\n力量再次提升，\n攻擊全員！{auto}	k1:154
+battle:152	{name:1}嘅\n德拉丘光束！{auto}	k1:152
+battle:153	{name:1}嘅\n氣不斷上升！{auto}	k1:153
+battle:154	{name:1}嘅\n力量再次提升，\n攻擊全員！{auto}	k1:154
 battle:155	{name:1}\n力量急速提升，\n攻擊全員！{auto}	k1:155
-battle:156	{name:1}的\n氣上升到了\n驚人嘅地步！{auto}	k1:156
+battle:156	{name:1}嘅\n氣提升到\n驚人嘅地步！{auto}	k1:156
 battle:157	{name:1}\n火力全開，\n攻擊全員！{auto}	k1:157
 battle:158	「大家變得好勁。\n波波已經\n比唔上大家喇。」	k1:158
 battle:159	「……嗯。……不過\n波波，我條命\n得返一年喇…。」	k1:159
@@ -232,7 +232,7 @@ battle:179	同界王大人\n進行實戰特訓！	k1:179
 battle:180	同界王大人\n進行實戰特訓！	k1:180
 battle:181	笛子魔童死咗嘅同時，\n天神都死咗！	k1:181
 battle:182	悟空收集緊\n元氣！{auto}	k1:182
-battle:183	悟空的\n超元氣彈！！{auto}	k1:183
+battle:183	悟空嘅\n超元氣彈！！{auto}	k1:183
 battle:184	「嘿嘿嘿……居然\n又同你呢條混帳\n交手……！」	k1:184
 battle:185	「拿…拿迪斯，\n立巴？\n搞乜鬼呀？」	k1:185
 battle:186	「笛子魔童，\n我哋一口氣\n收拾晒佢哋啦！」	k1:186
@@ -284,7 +284,7 @@ battle:231	{name:1}\n走佬喇！{auto}	k1:231
 battle:232	比達唔想打。{auto}	k1:232
 battle:233	比達攞\n{name:2}\n嚟做擋箭牌！{auto}	k1:233
 battle:234	比達搶先出手！{auto}	k1:234
-battle:235	{name:1}的\n追蹤氣圓斬！{auto}	k1:235
+battle:235	{name:1}嘅\n追蹤氣圓斬！{auto}	k1:235
 battle:236	不過敵人好驚，\n走咗佬。{auto}	k1:236
 battle:237	「咪旨意走！」\n比達追擊敵人。{auto}	k1:237
 battle:238	悟飯因為驚，\n參加唔到攻擊。{auto}	k1:238
@@ -305,7 +305,7 @@ battle:249	{portrait:36:80}「嘿嘿嘿嘿……\n要小心啲喎。」	k1:249
 battle:249/p2	{portrait:36:80}「變成咁之後，\n我可唔會好似之前\n咁溫柔㗎喇…！」	k1:249
 battle:250	「嘿嘿嘿……聽講\n打低咗杜利安，\n仲以為係邊個…」	k1:250
 battle:251	「咪又係班細路！\n居然輸畀呢班友，\n真係丟晒我哋架！」	k1:251 override
-battle:252	「邊個？哦，原來係\n那美克人。咁就\n啱啱好。」	k1:252
+battle:252	「邊個？哦，原來係\n娜美星人。咁就\n啱啱好。」	k1:252
 battle:253	「前面過唔到，\n正煩緊。嚟幫\n我哋帶路啦。」	k1:253
 battle:254	「等我話畀菲利大人知\n前面有啲咩。\n…阻住晒，去死啦！」	k1:254
 battle:255	{portrait:09:00}「比…\n笛子魔童先生！」	k1:255
@@ -321,7 +321,7 @@ battle:260/p2	「嗰條友見到天迪\n幫我哋治療喇！」	k1:260
 battle:261	{portrait:00:00}「對唔住，嚟遲咗。」	k1:261
 battle:261/p2	{portrait:00:00}「多得你哋，\n我啲傷都好返喇。」	k1:261
 battle:262	{portrait:00:00}「你就係菲利呀…」\n{portrait:00:00}「比我想像中\n仲似個細路喎…」	k1:262 merge override
-battle:263	殺咗那美克人…\n今次佢哋唔會再\n幫我哋喇…。	k1:263
+battle:263	殺咗娜美星人…\n今次佢哋唔會再\n幫我哋喇…。	k1:263
 battle:264	搵龍珠嘅行動都\n到此為止喇…。	k1:264
 battle:265	「大家……\n真係捱得住……\n悟飯，冇事吖嘛？」	k1:265
 battle:266	「哼，而家先多一隻\n臭蟲，又可以\n點呀！！」	k1:266
@@ -627,10 +627,10 @@ str2:0x091	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要
 str2:0x092	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:146
 str2:0x093	{portrait:18}「哎呀……仲以為\n係咩呢，你哋居然\n特登將我哋收集緊嘅\n龍珠送嚟喎……！」	k2:147
 str2:0x094	{portrait:18}「哎呀……仲以為\n係咩呢，你哋居然\n特登將我哋收集緊嘅\n龍珠送嚟喎……！」	k2:148
-str2:0x095	{portrait:09}「有、有人喺度嗎…」	k2:149
+str2:0x095	{portrait:09}「有、有人喺度呀…」	k2:149
 str2:0x095/p2	{portrait:54}「拜、拜託你，唔好殺我！」	k2:149
 str2:0x095/p3	{portrait:09}「冇事㗎，唔使擔心。」	k2:149
-str2:0x096	{portrait:09}「有、有人喺度嗎…」	k2:150
+str2:0x096	{portrait:09}「有、有人喺度呀…」	k2:150
 str2:0x096/p2	{portrait:54}「拜、拜託你，唔好殺我！」	k2:150
 str2:0x096/p3	{portrait:09}「冇事㗎，唔使擔心。」	k2:150
 str2:0x097	{portrait:09}「你係娜美星人吖？\n　你叫咩名呀？」	k2:151
@@ -725,7 +725,7 @@ str2:0x0C0	{portrait:09}「爸爸，\n快啲好返呀…」	k2:192
 str2:0x0C0/p2	{portrait:00}「呢樣嘢真係舒服呀…」	k2:192
 str2:0x0C1	{portrait:6F}「歡迎……首先，我想\n答謝你哋救咗\n我啲細路……\n多謝你，地球人……」	k2:193
 str2:0x0C1/p2	{portrait:09}「嗰、嗰個，大長老……」\n悟飯講出事情經過……	k2:193
-str2:0x0C2	{portrait:6F}「咩、咩話……地球上\n都有龍珠……？\n以前有娜美星人嗎？」	k2:194
+str2:0x0C2	{portrait:6F}「咩、咩話……地球上\n都有龍珠……？\n以前有娜美星人呀？」	k2:194
 str2:0x0C2/p2	{portrait:6F}「……唔好意思，\n地球人……\n請畀我探查\n你嘅過去…」	k2:194
 str2:0x0C3	{portrait:6F}「原來係咁……\n我明白喇。你哋嘅\n願望同勇氣都好出色。\n呢粒龍珠就送畀\n你哋啦……」	k2:195
 str2:0x0C4	{portrait:00}「要快啲搵到大家…\n點會咁㗎…周圍都係\n有好強嘅氣嘅人…」	k2:196
@@ -734,7 +734,7 @@ str2:0x0C5	{portrait:00}「大家，呢班友\n我一個人收拾，\n你哋退�
 str2:0x0C5/p2	{portrait:31}「傑紐特戰隊居然畀人\n玩到咁…好彩\n菲利大人唔喺度…」	k2:197
 str2:0x0C6	{portrait:09}「爸爸仲要幾耐\n先好返呢…喺嗰之前\n要先搵到龍珠…」	k2:198
 str2:0x0C7	{portrait:09}「收埋喺邊度呢？」	k2:199
-str2:0x0C7/p2	{portrait:80}「就喺呢度附近…\n係呢個方向嗎…\n等我呀，笛子魔童先生！」	k2:199
+str2:0x0C7/p2	{portrait:80}「就喺呢度附近…\n係呢個方向呀…\n等我呀，笛子魔童先生！」	k2:199
 str2:0x0C8	{portrait:31}「無論你係邊個，\n絕對唔會放過你——！\n見識我嘅真本事啦！\n{name:1}！聽住，\n唔准多管閒事！」	k2:200
 str2:0x0C9	{portrait:0A}「出嚟啦！神龍！\n　　實現我嘅願望啦！」	k2:201
 str2:0x0C9/p2	{portrait:0A}「………？？？」	k2:201
@@ -913,7 +913,7 @@ str2:0x138	{portrait:92}「地、地球嘅……？\n嗯，咁講嘅話\n的確�
 str2:0x138/p2	{portrait:92}「你哋趕緊路，對唔住，\n可唔可以聽我一個請求？」	k2:312
 str2:0x139	{portrait:92}「嗰班友好似用到\n奇怪嘅機器搵到\n我哋匿埋嘅地方。」	k2:313
 str2:0x139/p2	{portrait:92}「我記得叫探測器吖？\n有咗嗰個，應該就可以\n察覺佢哋嚟緊。」	k2:313
-str2:0x13A	{portrait:92}「所以想拜託你哋，\n如果可以，將綠色同\n紅色嘅探測器\n各攞一個過嚟……\n你哋肯幫手嗎？」	k2:314
+str2:0x13A	{portrait:92}「所以想拜託你哋，\n如果可以，將綠色同\n紅色嘅探測器\n各攞一個過嚟……\n你哋肯幫手呀？」	k2:314
 str2:0x13B	{portrait:09}「好嘅。喺呢度等我哋，\n我哋會快啲攞過嚟」	k2:315
 str2:0x13C	{portrait:92}「哦哦，係頭先嗰位……\n將嗰樣叫探測器嘅\n嘢帶嚟咗未呀？」	k2:316
 str2:0x13D	{portrait:09}「嗰個……仲未。」\n{portrait:92}長老：「係咁呀……咁就\n再麻煩你哋喇。」	k2:317 merge override
@@ -985,7 +985,7 @@ str3:0x06/p2	大叔「話有樣嘢一定要\n　　　　　交畀佢。」	k3:6
 str3:0x06/p3	大叔「佢好緊張咁話冇嗰樣嘢，\n　　　　　就打唔贏咩菜鴨……\n　　　　　唔係，係撒亞人呀。」	k3:6
 str3:0x07	唔知邊度突然傳嚟把聲！	k3:7
 str3:0x08	「讀出打開道路嘅\n　通關密語啦……」	k3:8
-str3:0x09	牆上有個窿……要睇吓嗎？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:9 override
+str3:0x09	牆上有個窿……要睇吓呀？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:9 override
 str3:0x0A	　………咩都冇。	k3:10
 str3:0x0B	嘩——係毒氣！\n　　受到{num:1}點傷害。	k3:11
 str3:0x0C	………咦？呢度有嘢？	k3:12
@@ -1011,22 +1011,22 @@ str3:0x1F	咁樣卡牌交換所嘅\n點數就增加{num:1}點。真好彩！	k3:
 str3:0x20	遠處傳嚟某樣巨大嘅嘢\n　　　　移動嘅聲……。	k3:32
 str3:0x21	遠處傳嚟某樣巨大嘅嘢\n　　　　移動嘅聲……。	k3:33
 str3:0x22	遠處傳嚟某樣巨大嘅嘢\n　　　　移動嘅聲……。	k3:34
-str3:0x23	呢度係特訓場。要特訓嗎？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:35 override
-str3:0x24	呢度係特訓場。要特訓嗎？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:36 override
-str3:0x25	呢度係特訓場。要特訓嗎？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:37 override
+str3:0x23	呢度係特訓場。要特訓呀？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:35 override
+str3:0x24	呢度係特訓場。要特訓呀？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:36 override
+str3:0x25	呢度係特訓場。要特訓呀？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:37 override
 str3:0x26	嘖，咩呀。快啲滾返去啦。	k3:38
 str3:0x27	揀邊個？　　　　戰鬥特訓\n　　　　　　　　氣勢特訓{auto}	k3:39 override
 str3:0x28	要邊個特訓呀？	k3:40
 str3:0x29	　{name:1}	k3:41
 str3:0x2A	不過，援助卡已經\n　　　　攞唔到更多張喇。	k3:42
-str3:0x2B	要用或者掉咗其他卡嗎？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:43 override
+str3:0x2B	要用或者掉咗其他卡呀？\n　　　　　　　　　　　　是\n　　　　　　　　　　　　否{auto}	k3:43 override
 str3:0x2C	放棄咗援助卡\n　　「{name:1}」。	k3:44
 str3:0x2D	用咗或者掉咗其他卡啦。	k3:45
 str3:0x2E	孫悟空終於倒低咗。但喺天神\n安排下展開新嘅特訓旅程！	k3:46 split
 str3:0x2E/p2	　　　……至於笛子魔童………。	k3:46 split
 str3:0x2F	呢個時候喺遙遠嘅宇宙………。	k3:47
 str3:0x30	　　畀笛子魔童帶走嘅悟飯………	k3:48
-str3:0x31	　　悟飯，你可以自己生存落去嗎？	k3:49
+str3:0x31	　　悟飯，你可以自己生存落去呀？	k3:49
 str3:0x32	　而其他Ｚ戰士，都喺\n　　天界接受天神指導特訓！	k3:50
 str3:0x33	　　就咁過咗幾個月………	k3:51
 str3:0x34	就咁，悟空好唔容易\n嚟到界王大人身邊。	k3:52 split
@@ -1049,7 +1049,7 @@ str3:0x3F/p2	究竟救唔救得返悟飯！？	k3:63 split
 str3:0x40	地球上最強嘅搭檔，\n孫悟空同笛子魔童！	k3:64 split
 str3:0x40/p2	兩個人將會挑戰兇惡嘅撒亞人！	k3:64 split
 str3:0x41	又過咗幾個月……\n孫悟空復活之日終於到喇！	k3:65
-str3:0x42	呀，唔好意思，我哋已經唔做喇。\n可唔可以去第二間呀？	k3:66
+str3:0x42	呀，唔好意思，我哋收咗舖喇。\n可唔可以去第二間呀？	k3:66
 str3:0x43	總共可以特訓十次。\n中途停低唔計入次數。	k3:67
 str3:0x44	總共可以特訓十次。\n中途停低唔計入次數。	k3:68
 str3:0x45	總共可以特訓十次。\n中途停低唔計入次數。	k3:69
@@ -1076,8 +1076,8 @@ str3:0x58	Ｚ戰士順利同天迪會合，\n問到召喚神龍嘅方法……�
 str3:0x59	「山嘅北面有架巨大太空船。\n係蹂躪娜美星嘅壞人嘅船……\n……娜美星玩完喇……可惡。」	k3:89
 str3:0x5A	深處有個窿，吸緊空氣。\n嘩！{name:1}嘅卡\n跌咗落去！	k3:90
 str3:0x5B	另一方面，復活嘅笛子魔童\n為了挑戰菲利，\n　　　　趕往Ｚ戰士們身邊……。	k3:91
-str3:0x5C	要救兩個人，只可以用援助卡喇！\n　　　要唔要用？　　　　是\n　　　　　　　　　　　　否{auto}	k3:92 override
-str3:0x5D	要救兩個人，只可以用援助卡喇！\n　　　要唔要用？　　　　是\n　　　　　　　　　　　　否{auto}	k3:93 override
+str3:0x5C	要救兩個人，只可以用援助卡！\n　　　要唔要用？　　　　是\n　　　　　　　　　　　　否{auto}	k3:92 override
+str3:0x5D	要救兩個人，只可以用援助卡！\n　　　要唔要用？　　　　是\n　　　　　　　　　　　　否{auto}	k3:93 override
 str3:0x5E	已經太遲喇………\n茲姆利同麥伊瑪\n咽埋最後一啖氣………。	k3:94
 str3:0x5F	「只有勇敢又正義嘅人，先可以\n喺呢度通過……。嚟啦，\n讀出通關密語做證明啦！」	k3:95
 str3:0x60	「好啦。為咗勇敢又正義嘅人，\n　我就幫你哋打開道路啦。」	k3:96
@@ -1197,17 +1197,17 @@ string:24	ＬＶ	names_strings:24
 string:26	使用	names_strings:26
 string:27	ＫＩ不足	names_strings:27
 string:30	咁樣得唔得？	names_strings:30
-string:31	要存檔嗎？	names_strings:31
+string:31	存唔存檔？	names_strings:31
 string:32	掉咗佢？	names_strings:32
 string:33	用唔到	names_strings:33
 string:34	再	names_strings:34 override
 string:35	對	names_strings:35 override
-string:36	繼續界王拳嗎？	names_strings:36
-string:37	發射元氣彈嗎？	names_strings:37
+string:36	繼唔繼續界王拳？	names_strings:36
+string:37	發唔發射元氣彈？	names_strings:37
 string:38	元氣	names_strings:38
 string:39	捨身	names_strings:39
 string:40	用邊個存檔？	names_strings:40
-string:41	要停止特訓嗎？	names_strings:41
+string:41	停唔停止特訓？	names_strings:41
 string:42	剩餘特訓次數	names_strings:42
 string:43	資料已損毀！	names_strings:43
 unit:0x00	悟空	names_units:0
@@ -1447,7 +1447,7 @@ block:0x49	咁樣得唔得？　　　是\n　　　　　　　　　　　否	
 block:0x4A	交談\n調查\n卡牌\n選單	menu_blocks:4A
 block:0x4B	特訓\n結束\n選單	menu_blocks:4B
 block:0x4C	是\n否	menu_blocks:4C
-block:0x4D	ＫＩ不足　要放棄\n元氣彈嗎？　　　　　是\n　　　　　　　　　　　　否	menu_blocks:4D
+block:0x4D	ＫＩ不足　要放棄\n元氣彈呀？　　　　　是\n　　　　　　　　　　　　否	menu_blocks:4D
 block:0x4E	戰鬥\n逃走\n選單	menu_blocks:4E
 block:0x4F	資料\n　　已損毀！	menu_blocks:4F
 ending:0	經過一場激戰，超戰士\n終於打低宇宙帝王菲利！	captions:0:1
@@ -1457,7 +1457,7 @@ ending:0/p4	喺遙遠宇宙嘅娜美星上\n同菲利一班人爭奪龍珠。	ca
 ending:0/p5	漫長又艱苦嘅冒險終於結束，返地球\n嘅時刻終於到喇！龍珠另一段\n新冒險，就咁記錄低喇………。	captions:0:6+7 override
 ending:1	「比、比達！」	captions:1:1
 ending:1/p2	擋喺超戰士面前嘅\n竟然係比達！佢想點！？	captions:1:2
-ending:1/p3	「嘿嘿嘿……菲利死咗。\n多得你哋打低佢，我得到\n終極嘅力量！」	captions:1:3
+ending:1/p3	「嘿嘿嘿……菲利死咗。\n多得打低咗佢，我得到\n終極嘅力量！」	captions:1:3
 ending:1/p4	「咩事呀？比達！」\n「統治宇宙嘅就係我，\n超級撒亞人比達！」	captions:1:4+5
 ending:1/p5	「呀！比、比達…！？」	captions:1:6
 ending:1/p6	「混帳！地球條數我嚟計！\n我先係宇宙新統治者！」	captions:1:7
@@ -1465,11 +1465,11 @@ ending:2	「再見喇，娜美星！」超戰士\n離開咗娜美星！佢哋祈
 ending:3	令宇宙陷入恐懼嘅菲利，\n超越菲利嘅超級撒亞人比達，\n再冇人可以令全宇宙恐懼喇！	captions:3:1
 ending:3/p2	和平就快嚟喇！	captions:3:2
 intro:0	好耐好耐之前…………	captions:intro_scroll:1
-intro:1	傳說集齊七粒龍珠就會	captions:intro_scroll:2
-intro:2	召喚神龍，實現願望嘅	captions:intro_scroll:3
-intro:3	神奇龍珠就喺呢個世上。	captions:intro_scroll:4
-intro:4	意外踏上尋找龍珠之旅	captions:intro_scroll:5
-intro:5	嘅神奇少年・	captions:intro_scroll:6
+intro:1	傳說世上有七粒龍珠，	captions:intro_scroll:2
+intro:2	集齊就可以召喚神龍，	captions:intro_scroll:3
+intro:3	實現任何願望。	captions:intro_scroll:4
+intro:4	意外踏上搵龍珠旅程嘅	captions:intro_scroll:5
+intro:5	神奇少年・	captions:intro_scroll:6
 intro:6	孫悟空，經過大冒險，	captions:intro_scroll:7
 intro:7	終於集齊晒所有龍珠，	captions:intro_scroll:8
 intro:8	但差啲畀人利用，結果	captions:intro_scroll:9
@@ -1477,9 +1477,9 @@ intro:9	許咗個無聊嘅願望。	captions:intro_scroll:10
 intro:10	神龍實現一次願望之後，	captions:intro_scroll:11
 intro:11	一年之內唔會再出現。	captions:intro_scroll:12
 intro:12	呢段時間，喺龜仙人	captions:intro_scroll:13
-intro:13	門下修業嘅悟空，再次	captions:intro_scroll:14
-intro:14	踏上尋找龍珠嘅旅程。	captions:intro_scroll:15
-intro:15	一直努力修業嘅悟空，	captions:intro_scroll:16
+intro:13	門下特訓嘅悟空，再次	captions:intro_scroll:14
+intro:14	踏上搵龍珠嘅旅程。	captions:intro_scroll:15
+intro:15	一直努力特訓嘅悟空，	captions:intro_scroll:16
 intro:16	三年後喺天下第一	captions:intro_scroll:17
 intro:17	武道會攞到亞軍。	captions:intro_scroll:18
 intro:18	不過，想稱霸世界嘅	captions:intro_scroll:19
@@ -1491,7 +1491,7 @@ intro:23	武道會。決賽交手嘅係	captions:intro_scroll:24
 intro:24	悟空同笛子魔童。	captions:intro_scroll:25
 intro:25	悟空打低笛子魔童，	captions:intro_scroll:26
 intro:26	如願首次奪得冠軍！	captions:intro_scroll:27
-intro:27	尋找龍珠嘅冒險入面，	captions:intro_scroll:28
+intro:27	喺搵龍珠嘅冒險入面，	captions:intro_scroll:28
 intro:28	悟空識咗好多同伴	captions:intro_scroll:29
 intro:29	同對手。	captions:intro_scroll:30
 intro:30	五年後……神秘戰士	captions:intro_scroll:31
