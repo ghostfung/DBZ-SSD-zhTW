@@ -54,11 +54,12 @@ function busyMode(value){
   $('hd-coverage-build').disabled=value||!library;
   $('hd-coverage-export').disabled=value||!auditReport;
 }
-function progress(phase,done,total){
-  const value=total?Math.round(done/total*100):0;
+function progress(phase,done,total,start=0,end=100){
+  const fraction=total>0?Math.max(0,Math.min(1,done/total)):0;
+  const value=Math.round(start+(end-start)*fraction);
   $('hd-progress').hidden=false;
   $('hd-progress').value=value;
-  status(`${phase}：${value}%（${(done/1048576).toFixed(0)} / ${(total/1048576).toFixed(0)} MiB）`);
+  status(`${phase} · ${value}%`);
 }
 function refreshAssetList(){
   const select=$('hd-asset-list');
@@ -369,7 +370,7 @@ $('hd-zip').addEventListener('change',()=>{
   const file=$('hd-zip').files?.[0];
   $('hd-verify').disabled=!file;
   $('hd-cache').disabled=true;
-  status(file?`已選擇 ${file.name}（${(file.size/1048576).toFixed(1)} MiB），請按「驗證 HD 美術包」。`:'尚未選擇 HD 美術包。');
+  status(file?'請按「驗證 HD 美術包」。':'尚未選擇 HD 美術包。');
 });
 $('hd-verify').addEventListener('click',async()=>{
   const file=$('hd-zip').files?.[0];
@@ -378,44 +379,31 @@ $('hd-verify').addEventListener('click',async()=>{
   verified=null;activeFile=null;sampleEntry=null;persisted=false;library?.clearCache();library=null;auditReport=null;clearPreview();
   $('hd-asset-browser').hidden=true;
   try {
-    status('正在檢查 ZIP 結構...');
+    progress('正在驗證美術包',0,1,0,70);
     // Import is deliberately strict: only the original signed GitHub asset digest is accepted.
-    const checked=await verifyOfficialPack(file,{onProgress:(n,total)=>progress('正在驗證 SHA-256',n,total)});
-    let extra='';
-    if(checked.manifest){
-      const index=await inspectZip(file);
-      const entry=index.entries.find(x=>x.name===checked.manifest);
-      if(entry?.unpacked<=256*1024){
-        try {
-          const raw=await extractZipEntry(file,entry,{maxBytes:256*1024});
-          const text=new TextDecoder().decode(raw);
-          const match=text.match(/^\s*format\s*=\s*(\d+)/m);
-          extra=match?`\n素材索引 format=${match[1]}`:'';
-        }catch(e){extra=`\n索引文字檢查未完成：${e.message}`;}
-      }
-    }
+    const checked=await verifyOfficialPack(file,{onProgress:(n,total)=>progress('正在驗證美術包',n,total,0,70)});
     verified=checked;activeFile=file;
     sampleEntry=previewEntry(checked);
     prepareLocalReader(file,checked);
     // Verification alone should now trigger one automatic OPFS save, with
     // no second user tap. The validated File remains usable if quota fails.
-    status(explanation(checked)+extra+'\n已驗證，正在自動保存到 iPhone 本機…');
+    progress('正在保存美術包',0,1,70,99);
     if(opfsAvailable()){
       try{
         await saveVerifiedHdPack(file,checked,{
-          onProgress:(done,total)=>progress('已驗證，正在自動保存 HD 美術包',done,total)
+          onProgress:(done,total)=>progress('正在保存美術包',done,total,70,99)
         });
         const restored=await readSavedHdPack();
         if(!restored)throw Error('寫入完成但未能重新讀取');
         persisted=true;
-        status(explanation(checked)+extra+'\n驗證及本機保存均成功。下次開啟 PWA 會快速檢查本機索引，不需要再掃描整份 ZIP，也不用重新選取 ZIP。');
+        status('美術包已匯入並保存 · 100%');
       }catch(error){
         persisted=false;
-        status(explanation(checked)+extra+'\nHD 美術包已通過驗證，可直接遊玩；但自動保存失敗：'+
-          (error?.message||String(error))+'。本次仍可使用所選的 ZIP，下次需重新選取。');
+        status('美術包已驗證，可遊玩；保存失敗，下次需重新選取。');
+        console.warn('HD 美術包保存失敗',error);
       }
     }else{
-      status(explanation(checked)+extra+'\nHD 已驗證，可直接遊玩；目前瀏覽器不支援持久化儲存，下次需重新選擇 ZIP。');
+      status('美術包已驗證，可遊玩；此瀏覽器不支援本機保存。');
     }
     $('hd-progress').value=100;
   } catch(e){
@@ -528,9 +516,9 @@ globalThis.hdRestorePromise=(async()=>{
       persisted=true;
       prepareLocalReader(cached.file,verified);
       busyMode(false);
-      status(method==='fast'
-        ?'HD 美術包已從 iPhone 本機恢復，快速檢查通過（分段及 ZIP 索引）。不需重新計算整份 SHA-256。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片，可以直接啟動。'
-        :'HD 美術包已重新通過完整 SHA-256 驗證。共 '+verified.imageCount.toLocaleString('en-US')+' 張圖片，可以直接啟動。');
+      $('hd-progress').hidden=false;
+      $('hd-progress').value=100;
+      status('美術包已準備完成 · 100%');
     } else {
       status('未找到此網站先前保存的 HD 素材包。請匯入並驗證 ZIP；驗證完成後會自動嘗試保存，成功時下次可免重選。');
     }
