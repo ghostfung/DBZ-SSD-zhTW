@@ -139,7 +139,7 @@ battle:90	不過敵人好大意。\n而家仲走得甩！	k1:90
 battle:91	探測器測出咗\n敵人嘅實力。{auto}	k1:91
 battle:92	探測器\n測唔到。{auto}	k1:92
 battle:93	{name:1}\n向{name:2}\n連環攻擊！{auto}	k1:93
-battle:94	{name:1}\n走咗！{auto}	k1:94
+battle:94	{name:1}\n走佬喇！{auto}	k1:94
 battle:95	{name:1}\n打低咗敵人！	k1:95
 battle:96	{name:1}\n等人\n打低咗敵人！	k1:96
 battle:97	得到{num:1}經驗值	k1:97
@@ -174,7 +174,7 @@ battle:124	{portrait:00:00}「快啲出手——！\n笛子魔童————！
 battle:125	{portrait:02:80}「格古洛，想我\n等幾耐？快啲，\n唔係就殺咗個細路！」	k1:125
 battle:126	{portrait:00:00}「咪玩啦！\n邊個想同你入伙！」	k1:126
 battle:127	「爸爸——！！！」	k1:127
-battle:128	「等你好耐喇，悟飯！\n爸爸返嚟喇！」	k1:128
+battle:128	「要你等咁耐，悟飯！\n爸爸返嚟喇！」	k1:128
 battle:129	{portrait:01:00}「孫悟空，撒亞人\n嚟咗，咪拖啦！」	k1:129
 battle:130	{portrait:00:00}「好，大家出發啦！」	k1:130
 battle:131	「格古洛……？\n真係復活咗喎。」	k1:131
@@ -568,241 +568,241 @@ str2:0x063	{portrait:83}「嘩——嘩——等埋我呀！\n　　唔好掉低
 str2:0x064	{portrait:01}「聽住，悟飯。你仲\n未識好好控制氣。」\n{portrait:01}「就由我親自鍛鍊你。\n喺同我戰鬥嗰陣，\n學識控制你嘅氣！」	k2:100 merge
 str2:0x065	{portrait:01}「聽住，悟飯。你仲\n未識好好控制氣。」\n{portrait:01}「就由我親自鍛鍊你。\n喺同我戰鬥嗰陣，\n學識控制你嘅氣！」	k2:101 merge
 str2:0x066	{portrait:01}「嚟啦，放馬過嚟。\n　試吓打低我啦，悟飯！」	k2:102
-str2:0x067	{portrait:01}「很好，做得唔錯，悟飯。\n你也算獨當一面咗！」	k2:103
-str2:0x067/p2	{portrait:09}「是！笛子魔童先生！」	k2:103
-str2:0x068	{portrait:01}「悟飯，撒亞人\n即刻就要嚟咗……。\n絕對不准死！」	k2:104
-str2:0x068/p2	{portrait:09}「是。………不過，\n笛子魔童先生其實\n係個好人呢。」	k2:104
+str2:0x067	{portrait:01}「好，做得唔錯，悟飯。\n你都可以獨當一面喇！」	k2:103
+str2:0x067/p2	{portrait:09}「係！笛子魔童先生！」	k2:103
+str2:0x068	{portrait:01}「悟飯，撒亞人\n就快嚟喇……。\n絕對唔准死！」	k2:104
+str2:0x068/p2	{portrait:09}「係。………不過，\n笛子魔童先生其實\n係個好人嚟㗎。」	k2:104
 str2:0x068/p3	{portrait:01}「……哼…。」	k2:104
-str2:0x069	{portrait:34}「悟空啊，就快到來的\n撒亞人，強得不尋常。\n老實講，嗰種強度\n比我還強㗎。」	k2:105 merge
-str2:0x069/p2	{portrait:34}「就算拚命修業，\n能唔可以贏也很難講㗎？\n要有相當嘅覺悟㗎？」\n{portrait:34}「不過，在呢度修業越久，\n復活就會越晚啦。」	k2:105 merge override
-str2:0x06A	{portrait:34}「都係太遲鈍啦。\n　　再去修業一次！」	k2:106
-str2:0x06B	{portrait:34}「嗯嗯。動作變得\n　相當敏捷了嘛。」	k2:107
-str2:0x06B/p2	{portrait:00}「那要指導我咗未？」	k2:107
-str2:0x06B/p3	{portrait:34}「好吧，來實戰修業！\n放馬過嚟吧，悟空！」	k2:107
-str2:0x06C	{portrait:34}「很好，不死心又來啦。\n放馬過嚟吧，\n{name:1}！」	k2:108
-str2:0x06D	{portrait:34}「很好，不死心又來啦。\n放馬過嚟吧，\n{name:1}！」	k2:109
-str2:0x06E	{portrait:34}「很好，不死心又來啦。\n放馬過嚟吧，\n{name:1}！」	k2:110
-str2:0x06F	{portrait:34}「悟空，如今你已經\n比我仲要強咗！」	k2:111
-str2:0x06F/p2	{portrait:00}「多虧了界王大人。」	k2:111
-str2:0x06F/p3	{portrait:34}「跟住，終於！\n我要傳授你犀利的\n必殺技『界王拳』\n和『元氣彈』！」	k2:111
-str2:0x070	{portrait:00}「咦咦！必殺技！\n好、好犀利！	k2:112 split
+str2:0x069	{portrait:34}「悟空呀，就快嚟到嘅\n撒亞人，勁到唔尋常。\n老實講，佢哋嘅力量\n比我仲勁㗎。」	k2:105 merge
+str2:0x069/p2	{portrait:34}「就算搏命特訓，\n贏唔贏到都難講㗎？\n你要有心理準備。」\n{portrait:34}「不過，喺呢度練得越耐，\n就會越遲復活喇。」	k2:105 merge override
+str2:0x06A	{portrait:34}「仲係太遲鈍喇。\n　　再去練多次！」	k2:106
+str2:0x06B	{portrait:34}「嗯嗯。動作變得\n　幾敏捷喎。」	k2:107
+str2:0x06B/p2	{portrait:00}「咁可以指導我未呀？」	k2:107
+str2:0x06B/p3	{portrait:34}「好啦，嚟實戰特訓！\n放馬過嚟啦，悟空！」	k2:107
+str2:0x06C	{portrait:34}「好，唔死心又嚟喇。\n放馬過嚟啦，\n{name:1}！」	k2:108
+str2:0x06D	{portrait:34}「好，唔死心又嚟喇。\n放馬過嚟啦，\n{name:1}！」	k2:109
+str2:0x06E	{portrait:34}「好，唔死心又嚟喇。\n放馬過嚟啦，\n{name:1}！」	k2:110
+str2:0x06F	{portrait:34}「悟空，你而家已經\n勁過我喇！」	k2:111
+str2:0x06F/p2	{portrait:00}「全靠界王大人！」	k2:111
+str2:0x06F/p3	{portrait:34}「跟住，終於到喇！\n我要教你兩招好勁嘅\n必殺技『界王拳』\n同『元氣彈』！」	k2:111
+str2:0x070	{portrait:00}「咦咦！必殺技！\n好、好勁呀！	k2:112 split
 str2:0x070/p2	快、快啲教我！」	k2:112 split
-str2:0x070/p3	{portrait:34}「在那之前，\n先來飲杯茶吧……。」	k2:112 split
-str2:0x071	{portrait:34}「……在娜美星上，\n悟飯佢哋好像陷入\n危機了……。」	k2:113
-str2:0x071/p2	{portrait:34}「你得在呢度盡可能\n提升力量才行㗎！\n首先是重力修業！」	k2:113
-str2:0x072	{portrait:34}「嗯，那就由我\n親自來指導你啦。\n　　　　　好，放馬過嚟！」	k2:114
-str2:0x073	{portrait:34}「好，你總算駕馭了\n呢種重力。\n……但對手是菲利，\n仲差得遠啊………。」	k2:115
-str2:0x074	{portrait:34}「所以，跟住嘅修業，\n就畀你來場實戰啦。」	k2:116
-str2:0x074/p2	{portrait:34}「向閻魔借呢班友\n可費了好大工夫……。\n覺悟好了啦？上啦！」	k2:116
-str2:0x075	{portrait:34}「嗯，做得好！\n不過，路還長得很！\n艱苦嘅修業仲未完㗎！\n做好覺悟㗎！！」	k2:117
-str2:0x076	{portrait:0F}「唔……沒、估唔到我\n竟然得撤退……。」	k2:118
-str2:0x077	{portrait:0F}「記住了，廢物們……。\n等我把這傷治好，\n下次一定要把你哋\n全部殺光……！」	k2:119
-str2:0x078	{portrait:0F}「你、你哋再也唔會\n有奇蹟了，嘿嘿嘿……\n別…唔好唔記得，混帳嘢！\n哈哈哈………。」	k2:120
-str2:0x079	{portrait:34}「呼……比達逃了呀。\n算了，光是趕走他\n就很了不起咗。」\n{portrait:34}「……不過，宇宙嘅邪惡\n根源仲未全部斷絕就係了…」	k2:121 merge override
-str2:0x07A	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:122
-str2:0x07B	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:123
-str2:0x07C	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:124
-str2:0x07D	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:125
-str2:0x07E	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:126
-str2:0x07F	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:127
-str2:0x080	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:128
-str2:0x081	{portrait:74}「你想把邊張卡牌\n　　換成點數呀？」{auto}	k2:129
-str2:0x082	{portrait:0A}「喲，好久唔見啦。\n其他人應該也嚟咗㗎。\n南方嗰邊也感覺得到\n強大嘅氣………！」	k2:130
-str2:0x083	{portrait:0A}「喲，好久唔見啦。\n其他人應該也嚟咗㗎。\n南方嗰邊也感覺得到\n強大嘅氣………！」	k2:131
-str2:0x084	{portrait:0C}「喲，大家。抱歉來晚咗。\n而家冇閒工夫\n慢慢玩了啦。走啦！」	k2:132
-str2:0x085	{portrait:0C}「喲，大家。抱歉來晚咗。\n而家冇閒工夫\n慢慢玩了啦。走啦！」	k2:133
-str2:0x086	{portrait:0B}「你哋也嚟咗啊……」	k2:134
-str2:0x086/p2	{portrait:0D}「我、我都係有\n　　　　修業過的。」	k2:134
-str2:0x087	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:135
-str2:0x088	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:136
-str2:0x089	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:137
-str2:0x08A	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:138
-str2:0x08B	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:139
-str2:0x08C	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:140
-str2:0x08D	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:141
-str2:0x08E	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:142
-str2:0x08F	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:143
-str2:0x090	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:144
-str2:0x091	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:145
-str2:0x092	{portrait:00}「得快啲開始修業。\n淨係有短短六天，就得\n超越嗰個比達才行。\n我要全力衝啦！」	k2:146
-str2:0x093	{portrait:18}「哎呀……還以為\n係咩呢，你哋竟然\n特地把我哋正在收集的\n龍珠送嚟咗啊……！」	k2:147
-str2:0x094	{portrait:18}「哎呀……還以為\n係咩呢，你哋竟然\n特地把我哋正在收集的\n龍珠送嚟咗啊……！」	k2:148
-str2:0x095	{portrait:09}「有、有誰在呀…」	k2:149
-str2:0x095/p2	{portrait:54}「拜、拜託，別殺我！」	k2:149
-str2:0x095/p3	{portrait:09}「冇事的，唔使擔心。」	k2:149
-str2:0x096	{portrait:09}「有、有誰在呀…」	k2:150
-str2:0x096/p2	{portrait:54}「拜、拜託，別殺我！」	k2:150
-str2:0x096/p3	{portrait:09}「冇事的，唔使擔心。」	k2:150
-str2:0x097	{portrait:09}「你是娜美星人啦？\n　你叫咩名字？」	k2:151
+str2:0x070/p3	{portrait:34}「喺嗰之前，\n不如先飲杯茶……」	k2:112 split
+str2:0x071	{portrait:34}「……喺娜美星，\n悟飯佢哋好似有\n危險喇……」	k2:113
+str2:0x071/p2	{portrait:34}「你要喺呢度盡量\n提升自己嘅力量呀！\n首先係重力特訓！」	k2:113
+str2:0x072	{portrait:34}「嗯，咁就由我\n親自指導你啦。\n　　　　　好，放馬過嚟！」	k2:114
+str2:0x073	{portrait:34}「好，你終於克服到\n呢種重力喇。\n……但對手係菲利，\n仲差得遠呀………」	k2:115
+str2:0x074	{portrait:34}「所以，跟住嘅特訓，\n就等你嚟一場實戰啦。」	k2:116
+str2:0x074/p2	{portrait:34}「問閻王借呢班友\n花咗唔少功夫……。\n準備好未？上啦！」	k2:116
+str2:0x075	{portrait:34}「嗯，做得好！\n不過，仲有排呀！\n艱苦嘅特訓仲未完㗎！\n做好心理準備呀！！」	k2:117
+str2:0x076	{portrait:0F}「唔……估、估唔到我\n居然要撤退……」	k2:118
+str2:0x077	{portrait:0F}「廢物，記住呀……。\n等我醫好呢啲傷，\n下次一定要將你哋\n全部殺晒……！」	k2:119
+str2:0x078	{portrait:0F}「你、你哋唔會再有\n奇蹟㗎喇，嘿嘿嘿……\n唔…唔好唔記得，混帳！\n哈哈哈………」	k2:120
+str2:0x079	{portrait:34}「呼……比達走咗呀。\n算啦，趕走到佢\n已經好犀利喇。」\n{portrait:34}「……不過，宇宙邪惡嘅\n根源仲未全部消滅就係喇…」	k2:121 merge override
+str2:0x07A	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:122
+str2:0x07B	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:123
+str2:0x07C	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:124
+str2:0x07D	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:125
+str2:0x07E	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:126
+str2:0x07F	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:127
+str2:0x080	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:128
+str2:0x081	{portrait:74}「你想將邊張卡\n　　換成點數呀？」{auto}	k2:129
+str2:0x082	{portrait:0A}「喲，好耐冇見喇。\n其他人應該都嚟咗。\n南方嗰邊都感覺到\n好強大嘅氣………！」	k2:130
+str2:0x083	{portrait:0A}「喲，好耐冇見喇。\n其他人應該都嚟咗。\n南方嗰邊都感覺到\n好強大嘅氣………！」	k2:131
+str2:0x084	{portrait:0C}「喲，大家。對唔住嚟遲咗。\n而家冇時間\n慢慢玩啦。出發！」	k2:132
+str2:0x085	{portrait:0C}「喲，大家。對唔住嚟遲咗。\n而家冇時間\n慢慢玩啦。出發！」	k2:133
+str2:0x086	{portrait:0B}「你哋都嚟咗呀……」	k2:134
+str2:0x086/p2	{portrait:0D}「我、我都係有\n　　　　特訓過㗎。」	k2:134
+str2:0x087	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:135
+str2:0x088	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:136
+str2:0x089	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:137
+str2:0x08A	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:138
+str2:0x08B	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:139
+str2:0x08C	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:140
+str2:0x08D	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:141
+str2:0x08E	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:142
+str2:0x08F	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:143
+str2:0x090	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:144
+str2:0x091	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:145
+str2:0x092	{portrait:00}「要快啲開始特訓。\n得嗰短短六日，就要\n超越嗰個比達先得。\n我要全力搏喇！」	k2:146
+str2:0x093	{portrait:18}「哎呀……仲以為\n係咩呢，你哋居然\n特登將我哋收集緊嘅\n龍珠送嚟喎……！」	k2:147
+str2:0x094	{portrait:18}「哎呀……仲以為\n係咩呢，你哋居然\n特登將我哋收集緊嘅\n龍珠送嚟喎……！」	k2:148
+str2:0x095	{portrait:09}「有、有人喺度嗎…」	k2:149
+str2:0x095/p2	{portrait:54}「拜、拜託你，唔好殺我！」	k2:149
+str2:0x095/p3	{portrait:09}「冇事㗎，唔使擔心。」	k2:149
+str2:0x096	{portrait:09}「有、有人喺度嗎…」	k2:150
+str2:0x096/p2	{portrait:54}「拜、拜託你，唔好殺我！」	k2:150
+str2:0x096/p3	{portrait:09}「冇事㗎，唔使擔心。」	k2:150
+str2:0x097	{portrait:09}「你係娜美星人吖？\n　你叫咩名呀？」	k2:151
 str2:0x097/p2	{portrait:54}「………卡…卡爾克」	k2:151
-str2:0x097/p3	{portrait:09}「我哋是……」\n悟飯說明了經過。	k2:151
-str2:0x098	{portrait:54}「那、咁，我把龍珠\n畀你哋當作交換，請\n救救星球上嘅大家。」	k2:152
-str2:0x098/p2	{portrait:09}「你知龍珠\n喺邊度呀？」	k2:152
-str2:0x099	{portrait:54}「係的，我把它藏在\n附近嘅洞窟裡咗。」\n{portrait:09}悟飯：「好，先搵龍珠，\n再去其他村子啦。」\n{portrait:54}卡爾克：「在南方洞窟裡。」	k2:153 merge override
-str2:0x09A	{portrait:23}「你哋係咩人？」	k2:154
-str2:0x09A/p2	{portrait:09}「我哋唔係可疑嘅人。\n能唔可以把你哋嘅龍珠\n借畀我哋呀？」	k2:154
-str2:0x09A/p3	{portrait:24}「咩？你講龍珠！」	k2:154
-str2:0x09B	{portrait:23}「原來如此，襲擊村子\n搶奪龍珠的，\n就係你哋呢班友！」	k2:155
-str2:0x09C	{portrait:23}「又不死心地跑嚟咗呀。\n無論來幾次，龍珠\n都唔會交畀你哋！」	k2:156
-str2:0x09D	{portrait:61}「茲、茲姆利先生，\n麥伊瑪先生！不好了，\n得快啲治療才行，\n不然會死咗的！」	k2:157
-str2:0x09E	{portrait:23}「天迪、\n卡爾克！\n你哋平安無事呀？」	k2:158 override
-str2:0x09E/p2	{portrait:61}「係的，係呢啲人\n救了我哋。」	k2:158
-str2:0x09F	{portrait:24}「你哋是？睇嚟\n唔係嗰個叫菲利的\n傢伙嘅同伴……？」	k2:159
-str2:0x09F/p2	{portrait:09}「其實……」\n　Ｚ戰士們說明原委。	k2:159
-str2:0x09F/p3	{portrait:24}「原來如此……咁\n我哋也一齊戰鬥啦。\n為了那美克！」	k2:159
-str2:0x0A0	{portrait:24}「仲有……\n　　請你哋保管呢個。」	k2:160
-str2:0x0A0/p2	{portrait:09}「那是龍珠！\n　　幸好平安無事…」	k2:160
-str2:0x0A0/p3	{portrait:24}「嗰啲惡人好像\n唔知龍珠\n藏喺邊度……。」	k2:160
-str2:0x0A1	{portrait:35}「我是正在收集你哋\n所謂龍珠的，名叫菲利。」\n{portrait:35}「龍珠喺邊度呀？我想\n呢度應該也有一粒\n才對……」	k2:161 merge override
-str2:0x0A2	{portrait:91}「不…唔知。嗰種嘢\n我哋冇…。」	k2:162
-str2:0x0A2/p2	{portrait:35}「呢個星球嘅人\n怎麼都咁頑固，\n真係傷腦筋呢…」	k2:162
-str2:0x0A3	{portrait:35}「杜利安，\n請讓呢啲人也變得\n坦率少少吧…」	k2:163
-str2:0x0A3/p2	{portrait:1B}「是，菲利大人。」	k2:163
-str2:0x0A4	{portrait:35}「點樣？有冇\n稍為坦率少少喇？」	k2:164
-str2:0x0A4/p2	{portrait:91}「絕對不交畀你哋。」	k2:164
-str2:0x0A4/p3	{portrait:35}「原來如此…咁，\n就請嗰個孩子\n也去死吧…」	k2:164
-str2:0x0A5	{portrait:91}「唔…冇辦法…但你要\n答應我，絕對唔會\n對孩子出手…。」	k2:165
-str2:0x0A5/p2	{portrait:35}「冇錯冇錯，一開始\n咁做不就好咗未。」	k2:165
-str2:0x0A5/p3	{portrait:91}「攞住它，速速離去。」	k2:165
-str2:0x0A6	{portrait:35}「咁，剩下龍珠的\n下落也請話畀我啦。」	k2:166
-str2:0x0A6/p2	{portrait:91}「別開玩笑咗！\n死也不話畀你！」	k2:166
-str2:0x0A6/p3	{portrait:35}「咁，就如你所願，\n請你去死啦。」	k2:166
+str2:0x097/p3	{portrait:09}「我哋係……」\n悟飯講出事情經過。	k2:151
+str2:0x098	{portrait:54}「咁、咁我畀龍珠\n你哋做交換，請你哋\n救吓星球上嘅大家。」	k2:152
+str2:0x098/p2	{portrait:09}「你知唔知龍珠\n喺邊度呀？」	k2:152
+str2:0x099	{portrait:54}「係，我將佢收藏喺\n附近嘅洞窟入面。」\n{portrait:09}悟飯：「好，先搵龍珠，\n再去其他村啦。」\n{portrait:54}卡爾克：「喺南方洞窟。」	k2:153 merge override
+str2:0x09A	{portrait:23}「你哋係咩人呀？」	k2:154
+str2:0x09A/p2	{portrait:09}「我哋唔係可疑嘅人。\n可唔可以借你哋嘅\n龍珠畀我哋呀？」	k2:154
+str2:0x09A/p3	{portrait:24}「咩話？你話龍珠！」	k2:154
+str2:0x09B	{portrait:23}「原來係咁，襲擊村落\n搶奪龍珠嘅，\n就係你哋呢班友！」	k2:155
+str2:0x09C	{portrait:23}「又唔死心咁走嚟喇。\n無論嚟幾多次，龍珠\n都唔會交畀你哋！」	k2:156
+str2:0x09D	{portrait:61}「茲、茲姆利先生，\n麥伊瑪先生！大件事，\n要快啲醫好佢哋，\n唔係就會死㗎！」	k2:157
+str2:0x09E	{portrait:23}「天迪、\n卡爾克！\n你哋冇事吖嘛？」	k2:158 override
+str2:0x09E/p2	{portrait:61}「係呀，係呢班人\n救咗我哋。」	k2:158
+str2:0x09F	{portrait:24}「你哋係？睇嚟\n唔係嗰個叫菲利嘅\n人嘅同伴……？」	k2:159
+str2:0x09F/p2	{portrait:09}「其實……」\n　Ｚ戰士講出事情經過。	k2:159
+str2:0x09F/p3	{portrait:24}「原來係咁……咁\n我哋都一齊戰鬥啦。\n為咗娜美星！」	k2:159
+str2:0x0A0	{portrait:24}「仲有……\n　　呢樣嘢麻煩你哋保管。」	k2:160
+str2:0x0A0/p2	{portrait:09}「嗰個係龍珠！\n　　好彩冇事…」	k2:160
+str2:0x0A0/p3	{portrait:24}「嗰班惡人好似\n唔知龍珠\n收埋喺邊度……」	k2:160
+str2:0x0A1	{portrait:35}「我叫菲利，而家收集緊\n你哋所講嘅龍珠。」\n{portrait:35}「龍珠喺邊度呢？我諗\n呢度應該都有一粒\n先啱……」	k2:161 merge override
+str2:0x0A2	{portrait:91}「唔…唔知。嗰種嘢\n我哋冇…。」	k2:162
+str2:0x0A2/p2	{portrait:35}「呢個星球嘅人\n點解個個都咁固執，\n真係麻煩呢…」	k2:162
+str2:0x0A3	{portrait:35}「杜利安，\n麻煩你令呢班人\n坦白少少啦…」	k2:163
+str2:0x0A3/p2	{portrait:1B}「係，菲利大人。」	k2:163
+str2:0x0A4	{portrait:35}「點呀？有冇\n坦白少少呀？」	k2:164
+str2:0x0A4/p2	{portrait:91}「絕對唔會交畀你哋。」	k2:164
+str2:0x0A4/p3	{portrait:35}「原來係咁…咁，\n就請嗰個細路\n都去死啦…」	k2:164
+str2:0x0A5	{portrait:91}「唔…冇辦法…但你要\n答應我，絕對唔會\n向個細路出手…。」	k2:165
+str2:0x0A5/p2	{portrait:35}「啱喇啱喇，一早\n咁做咪好囉。」	k2:165
+str2:0x0A5/p3	{portrait:91}「攞住佢，快啲走。」	k2:165
+str2:0x0A6	{portrait:35}「咁，其他龍珠嘅\n下落都請你話我知啦。」	k2:166
+str2:0x0A6/p2	{portrait:91}「咪講笑啦！\n死都唔會話你知！」	k2:166
+str2:0x0A6/p3	{portrait:35}「咁就如你所願，\n請你去死啦。」	k2:166
 str2:0x0A7	{portrait:91}「呃呀。」	k2:167
-str2:0x0A7/p2	{portrait:1B}「那小孩點算？」	k2:167
-str2:0x0A7/p3	{portrait:35}「交畀你了，\n杜利安。」	k2:167
-str2:0x0A7/p4	{portrait:1B}「嘿嘿嘿…呢種小鬼\n捏死咗也沒意思啦。」	k2:167
+str2:0x0A7/p2	{portrait:1B}「嗰個細路點算呀？」	k2:167
+str2:0x0A7/p3	{portrait:35}「交畀你喇，\n杜利安。」	k2:167
+str2:0x0A7/p4	{portrait:1B}「嘿嘿嘿…呢種細路\n捏死咗都冇意思啦。」	k2:167
 str2:0x0A8	{portrait:1B}「可…可惡…！」	k2:168
-str2:0x0A8/p2	{portrait:35}「杜利安，快追！\n把他抓返嚟！」	k2:168
+str2:0x0A8/p2	{portrait:35}「杜利安，快啲追！\n捉佢返嚟！」	k2:168
 str2:0x0A8/p3	{portrait:1B}「唔㗎㗎㗎——！」	k2:168
-str2:0x0A9	{portrait:09}「太…太殘忍了…村子\n全滅了…究竟係誰…\n嗯？感覺到微弱嘅氣…\n呀。」\n{portrait:61}天迪：「咿！」	k2:169 merge override
-str2:0x0AA	{portrait:09}「唔使擔心，我唔係敵人。\n你是娜美星人啦。」\n{portrait:61}天迪：「是。」\n{portrait:09}悟飯：「待在呢度好危險…\n跟我哋一齊嚟啦…」	k2:170 merge override
-str2:0x0AB	{portrait:92}「返去吧…龍珠唔可以\n交畀你哋…從你身上\n感覺得到邪惡之氣…」\n{portrait:35}菲利：「都係坦率點比較\n好㗎。你應該仲唔想死啦。」	k2:171 merge override
-str2:0x0AC	{portrait:92}「就算死也唔會交畀\n你哋呢班友！」\n{portrait:35}菲利：「冇辦法，費點事，\n就由我哋嚟搵吧…薩波。」\n{portrait:1E}薩波：「是！」	k2:172 merge override
-str2:0x0AD	{portrait:35}「把妨礙我哋搵龍珠的\n娜美星人們\n全部殺光啦。」\n{portrait:1E}薩波：「是！」	k2:173 merge override
-str2:0x0AE	{portrait:0C}「哇呀！莊子——！！」	k2:174
-str2:0x0AF	{portrait:09}「莊子阿姨…\n我替妳報仇了…」	k2:175
-str2:0x0AF/p2	{portrait:6B}「喂！唔好隨便\n把人家當成死人啦！」	k2:175
-str2:0x0B0	{portrait:6C}「悟飯嘅力量爆發，\n就能幫忙打低撒亞人。\n悟空，笛子魔童，加油。」\n{portrait:6C}「笛子魔童死，天神也會死。\n絕對唔可以死。」	k2:176 merge
-str2:0x0B1	{portrait:0F}「喲，好久唔見咗啊，\n薩波先生…」	k2:177
+str2:0x0A9	{portrait:09}「太…太殘忍喇…條村\n全滅咗…究竟係邊個…\n嗯？感覺到微弱嘅氣…\n呀。」\n{portrait:61}天迪：「咿！」	k2:169 merge override
+str2:0x0AA	{portrait:09}「唔使驚，我唔係敵人。\n你係娜美星人吖。」\n{portrait:61}天迪：「係。」\n{portrait:09}悟飯：「留喺呢度好危險…\n跟我哋一齊嚟啦…」	k2:170 merge override
+str2:0x0AB	{portrait:92}「返去啦…龍珠唔可以\n交畀你哋…喺你身上\n感覺到邪惡嘅氣…」\n{portrait:35}菲利：「坦白啲會\n好啲喎。你仲未想死吖。」	k2:171 merge override
+str2:0x0AC	{portrait:92}「就算死都唔會交畀\n你哋呢班友！」\n{portrait:35}菲利：「冇辦法，麻煩啲，\n就由我哋自己搵啦…薩波。」\n{portrait:1E}薩波：「係！」	k2:172 merge override
+str2:0x0AD	{portrait:35}「阻住我哋搵龍珠嘅\n娜美星人\n全部殺晒啦。」\n{portrait:1E}薩波：「係！」	k2:173 merge override
+str2:0x0AE	{portrait:0C}「嘩啊！莊子——！！」	k2:174
+str2:0x0AF	{portrait:09}「莊子阿姨…\n我幫你報咗仇喇…」	k2:175
+str2:0x0AF/p2	{portrait:6B}「喂！唔好隨便\n當人哋死咗啦！」	k2:175
+str2:0x0B0	{portrait:6C}「悟飯嘅力量爆發，\n就可以幫手打低撒亞人。\n悟空，笛子魔童，加油。」\n{portrait:6C}「笛子魔童死，天神都會死。\n絕對唔可以死。」	k2:176 merge
+str2:0x0B1	{portrait:0F}「喲，好耐冇見呀，\n薩波先生…」	k2:177
 str2:0x0B1/p2	{portrait:1E}「比達！」	k2:177
-str2:0x0B1/p3	{portrait:0F}「你哋在搵龍珠呀？\n但我唔會交畀你哋呢啲\n傢伙的！」	k2:177
-str2:0x0B2	{portrait:1E}「咩！比達，你呢條友\n手上有龍珠呀…」	k2:178
-str2:0x0B2/p2	{portrait:0F}「只要得到永恆嘅生命，\n就有機會贏菲利。」	k2:178
-str2:0x0B2/p3	{portrait:1E}「愚蠢！」	k2:178
-str2:0x0B3	{portrait:09}「娜美星人嘅氣，\n已經感覺不到了…」\n{portrait:61}「拜託你哋，請帶我\n到大長老嗰度去。」	k2:179 merge
+str2:0x0B1/p3	{portrait:0F}「你哋搵緊龍珠呀？\n不過我唔會交畀\n你哋呢班友！」	k2:177
+str2:0x0B2	{portrait:1E}「咩話！比達，你呢條友\n手上有龍珠呀…」	k2:178
+str2:0x0B2/p2	{portrait:0F}「只要得到永恆生命，\n就有機會打贏菲利。」	k2:178
+str2:0x0B2/p3	{portrait:1E}「蠢材！」	k2:178
+str2:0x0B3	{portrait:09}「娜美星人嘅氣，\n已經感覺唔到喇…」\n{portrait:61}「拜託你哋，請帶我\n去大長老嗰度。」	k2:179 merge
 str2:0x0B4	{portrait:09}「大長老…？」	k2:180
-str2:0x0B4/p2	{portrait:61}「是。大長老一直\n住在西北方，係所有\n那美克人嘅父親，\n都係龍珠嘅創造者！」	k2:180
-str2:0x0B5	{portrait:6B}「什、咩嘛！要把我\n一個人丟在呢度呀？」	k2:181
-str2:0x0B5/p2	{portrait:09}「冇問題，待在呢度\n唔會被發現的。\n走啦，天迪。」	k2:181
-str2:0x0B5/p3	{portrait:61}「是。」	k2:181
-str2:0x0B6	{portrait:23}「……抱歉，我哋唔可以\n再跟你哋一齊走咗。\n也擔心其他同伴…」	k2:182
-str2:0x0B6/p2	{portrait:23}「都係得重建村子\n才行……抱歉。……」	k2:182
-str2:0x0B7	{portrait:0F}「！咩？好大嘅戰鬥力\n一、二、三、四、五！\n難、難道……？」	k2:183
-str2:0x0B7/p2	{portrait:0F}「飛、菲利那混蛋——\n居然把傑紐特戰隊\n　　　　　　叫嚟咗——！」	k2:183
-str2:0x0B8	{portrait:09}「莊子阿姨，我把龍珠\n帶走咗！」	k2:184
-str2:0x0B8/p2	{portrait:0F}「快啲，混帳嘢！\n　　今次是嗰邊——！」	k2:184
-str2:0x0B8/p3	{portrait:6B}「咦？咩？比達？？」	k2:184
-str2:0x0B9	{portrait:09}「好…好快…。快得\n連他靠近都沒發覺」	k2:185
-str2:0x0B9/p2	{portrait:31}「哦？難道嗰個就係\n叫龍珠嘅嘢呀？…\n我記得收集七粒\n就行了係咪？」	k2:185
-str2:0x0BA	{portrait:28}「好啦，差不多該陪\n你哋玩玩咗。」	k2:186
-str2:0x0BA/p2	{portrait:25}「唉唉，睇樣子\n一下就結束了…」	k2:186
-str2:0x0BB	{portrait:31}「唔係全湊齊咗未。」	k2:187
-str2:0x0BB/p2	{portrait:09}「才不畀你呢種人！」	k2:187
-str2:0x0BB/p3	{portrait:31}「那就唯有硬搶咗。」	k2:187
-str2:0x0BB/p4	{portrait:0F}「可、可惡！………\n畀我毀掉它——！」	k2:187
-str2:0x0BC	{portrait:0F}「喲，地球人……\n睇嚟我哋的\n目的相同啊……。」	k2:188
-str2:0x0BC/p2	{portrait:09}「達、比達。……呀。\n你、你手上嘅是…！」	k2:188
-str2:0x0BC/p3	{portrait:0F}「嘿嘿嘿……冇錯。\n係龍珠！呢粒加上\n你哋手上嘅龍珠，\n仲有我藏起來嘅龍珠，\n一共七粒……！」	k2:188
+str2:0x0B4/p2	{portrait:61}「係。大長老一直\n住喺西北方，係所有\n娜美星人嘅父親，\n亦係創造龍珠嘅人！」	k2:180
+str2:0x0B5	{portrait:6B}「咩、咩話！要將我\n一個人掉低喺呢度呀？」	k2:181
+str2:0x0B5/p2	{portrait:09}「冇問題，留喺呢度\n唔會畀人發現㗎。\n出發啦，天迪。」	k2:181
+str2:0x0B5/p3	{portrait:61}「係。」	k2:181
+str2:0x0B6	{portrait:23}「……對唔住，我哋唔可以\n再同你哋一齊走喇。\n都好擔心其他同伴…」	k2:182
+str2:0x0B6/p2	{portrait:23}「始終都要重建條村\n先得……對唔住。……」	k2:182
+str2:0x0B7	{portrait:0F}「！咩話？好大嘅戰鬥力\n一、二、三、四、五！\n唔、唔通……？」	k2:183
+str2:0x0B7/p2	{portrait:0F}「菲、菲利嗰個混蛋——\n居然叫咗傑紐特戰隊\n　　　　　　嚟——！」	k2:183
+str2:0x0B8	{portrait:09}「莊子阿姨，我攞走\n龍珠喇！」	k2:184
+str2:0x0B8/p2	{portrait:0F}「快啲，混帳！\n　　今次係嗰邊——！」	k2:184
+str2:0x0B8/p3	{portrait:6B}「咦？咩話？比達？？」	k2:184
+str2:0x0B9	{portrait:09}「好…好快…。快到\n連佢接近都冇察覺」	k2:185
+str2:0x0B9/p2	{portrait:31}「哦？唔通嗰樣就係\n叫龍珠嘅嘢？…\n我記得集齊七粒\n就得㗎喇係咪？」	k2:185
+str2:0x0BA	{portrait:28}「好啦，差唔多要陪\n你哋玩吓喇。」	k2:186
+str2:0x0BA/p2	{portrait:25}「唉唉，睇嚟\n好快就完喇…」	k2:186
+str2:0x0BB	{portrait:31}「唔係集齊晒喇咩？」	k2:187
+str2:0x0BB/p2	{portrait:09}「我先唔畀你呢種人！」	k2:187
+str2:0x0BB/p3	{portrait:31}「咁就唯有硬搶喇。」	k2:187
+str2:0x0BB/p4	{portrait:0F}「可、可惡！………\n同我毀咗佢——！」	k2:187
+str2:0x0BC	{portrait:0F}「喲，地球人……\n睇嚟我哋嘅\n目的一樣喎……」	k2:188
+str2:0x0BC/p2	{portrait:09}「比、比達。……呀。\n你、你手上嗰啲係…！」	k2:188
+str2:0x0BC/p3	{portrait:0F}「嘿嘿嘿……冇錯。\n係龍珠！呢粒加埋\n你哋手上嘅龍珠，\n同我收埋嘅龍珠，\n總共七粒……！」	k2:188
 str2:0x0BC/p4	{portrait:09}「唔……可、可惡…！」	k2:188
-str2:0x0BC/p5	{portrait:0F}「嚟啦……把那龍珠\n交畀我吧……！」	k2:188
-str2:0x0BD	{portrait:09}「咦？為…點解…？」	k2:189
-str2:0x0BD/p2	{portrait:31}「話畀你哋啦。我古杜\n可以稍為控制時間，\n讓時間停止。之後\n就趁嗰陣攞走了\n你哋嘅龍珠。」	k2:189
-str2:0x0BE	{portrait:31}「咁，我要把龍珠\n攞去給菲利大人。\n你哋把呢啲垃圾\n收拾掉。」	k2:190
-str2:0x0BE/p2	{portrait:09}「我、我哋究竟係為了\n咩才來到咁\n遠嘅地方啊…」	k2:190
-str2:0x0BF	{portrait:00}「被整得真慘啊…」	k2:191
-str2:0x0BF/p2	{portrait:09}「冇事的，爸爸…\n聽講快死嘅比達\n就係在呢度面\n被治好的…」	k2:191
-str2:0x0C0	{portrait:09}「爸爸，\n要快啲好起來㗎…」	k2:192
-str2:0x0C0/p2	{portrait:00}「呢個真舒服啊…」	k2:192
-str2:0x0C1	{portrait:6F}「歡迎……首先，我想\n答謝你哋救了\n我嘅孩子們……\n謝謝你，地球人……」	k2:193
-str2:0x0C1/p2	{portrait:09}「那、嗰個，大長老……」\n悟飯說明了經過……	k2:193
-str2:0x0C2	{portrait:6F}「什、咩……地球上\n也有龍珠……？\n曾有過那美克人呀？」	k2:194
-str2:0x0C2/p2	{portrait:6F}「……不好意思，\n地球人……\n請等我探查\n你嘅過去…」	k2:194
-str2:0x0C3	{portrait:6F}「原來係咁樣……\n我明白喇。你哋的\n願望與勇氣都很出色。\n呢粒龍珠就送畀\n你哋吧……。」	k2:195
-str2:0x0C4	{portrait:00}「得快啲搵到大家…\n點會咁樣…到處都係\n氣超大嘅傢伙…」	k2:196
-str2:0x0C4/p2	{portrait:00}「而家正是展現\n修業成果嗰陣！」	k2:196
-str2:0x0C5	{portrait:00}「大家，呢班友\n我一個人來收拾，\n你哋退後。」	k2:197
-str2:0x0C5/p2	{portrait:31}「傑紐特戰隊竟然被\n耍成咁樣…幸好\n菲利大人不在…」	k2:197
-str2:0x0C6	{portrait:09}「爸爸要多久\n才會好呢…在那之前\n得先搵到龍珠…」	k2:198
-str2:0x0C7	{portrait:09}「藏喺邊度了呀？」	k2:199
-str2:0x0C7/p2	{portrait:80}「就在這附近…\n係呢個方向呀…\n等我㗎，笛子魔童先生！」	k2:199
-str2:0x0C8	{portrait:31}「無論你是誰，\n絕不饒你——！\n見識我嘅真本事啦！\n{name:1}！聽好，\n不准多管閒事！」	k2:200
+str2:0x0BC/p5	{portrait:0F}「嚟啦……將啲龍珠\n交畀我啦……！」	k2:188
+str2:0x0BD	{portrait:09}「咦？點…點解…？」	k2:189
+str2:0x0BD/p2	{portrait:31}「話畀你哋知啦。我古杜\n可以稍為控制時間，\n令時間停頓。之後\n就趁嗰陣攞走咗\n你哋啲龍珠。」	k2:189
+str2:0x0BE	{portrait:31}「咁，我要將龍珠\n攞去畀菲利大人。\n你哋將呢班垃圾\n收拾掉。」	k2:190
+str2:0x0BE/p2	{portrait:09}「我、我哋究竟為咗\n咩先嚟到咁\n遠嘅地方呀…」	k2:190
+str2:0x0BF	{portrait:00}「畀佢哋整到好慘呀…」	k2:191
+str2:0x0BF/p2	{portrait:09}「冇事㗎，爸爸…\n聽講就快死嘅比達\n就係喺呢度入面\n醫返好㗎…」	k2:191
+str2:0x0C0	{portrait:09}「爸爸，\n快啲好返呀…」	k2:192
+str2:0x0C0/p2	{portrait:00}「呢樣嘢真係舒服呀…」	k2:192
+str2:0x0C1	{portrait:6F}「歡迎……首先，我想\n答謝你哋救咗\n我啲細路……\n多謝你，地球人……」	k2:193
+str2:0x0C1/p2	{portrait:09}「嗰、嗰個，大長老……」\n悟飯講出事情經過……	k2:193
+str2:0x0C2	{portrait:6F}「咩、咩話……地球上\n都有龍珠……？\n以前有娜美星人嗎？」	k2:194
+str2:0x0C2/p2	{portrait:6F}「……唔好意思，\n地球人……\n請畀我探查\n你嘅過去…」	k2:194
+str2:0x0C3	{portrait:6F}「原來係咁……\n我明白喇。你哋嘅\n願望同勇氣都好出色。\n呢粒龍珠就送畀\n你哋啦……」	k2:195
+str2:0x0C4	{portrait:00}「要快啲搵到大家…\n點會咁㗎…周圍都係\n有好強嘅氣嘅人…」	k2:196
+str2:0x0C4/p2	{portrait:00}「而家正係展示\n特訓成果嘅時候！」	k2:196
+str2:0x0C5	{portrait:00}「大家，呢班友\n我一個人收拾，\n你哋退後。」	k2:197
+str2:0x0C5/p2	{portrait:31}「傑紐特戰隊居然畀人\n玩到咁…好彩\n菲利大人唔喺度…」	k2:197
+str2:0x0C6	{portrait:09}「爸爸仲要幾耐\n先好返呢…喺嗰之前\n要先搵到龍珠…」	k2:198
+str2:0x0C7	{portrait:09}「收埋喺邊度呢？」	k2:199
+str2:0x0C7/p2	{portrait:80}「就喺呢度附近…\n係呢個方向嗎…\n等我呀，笛子魔童先生！」	k2:199
+str2:0x0C8	{portrait:31}「無論你係邊個，\n絕對唔會放過你——！\n見識我嘅真本事啦！\n{name:1}！聽住，\n唔准多管閒事！」	k2:200
 str2:0x0C9	{portrait:0A}「出嚟啦！神龍！\n　　實現我嘅願望啦！」	k2:201
 str2:0x0C9/p2	{portrait:0A}「………？？？」	k2:201
-str2:0x0CA	{portrait:0C}「咩？究竟做咩？」	k2:202
-str2:0x0CB	{portrait:22}「已經逼到眼前咗。\n　嗰個叫菲利的…」	k2:203
-str2:0x0CB/p2	{portrait:6F}「係先被殺呢，\n都係先因壽命\n　　　　　　而死呢……。」	k2:203
-str2:0x0CC	{portrait:6F}「拜託你了，尼路……\n盡量拖延時間……」	k2:204
-str2:0x0CC/p2	{portrait:22}「我明白喇……。」	k2:204
-str2:0x0CD	{portrait:35}「………原來如此。咁\n你不打算話畀我\n實現願望嘅方法呀？」	k2:205
-str2:0x0CD/p2	{portrait:22}「冇錯……我唔可以把它\n話畀邪惡嘅傢伙。」	k2:205
-str2:0x0CD/p3	{portrait:35}「哦……咁，\n唯有請你去死咗。」	k2:205
-str2:0x0CE	{portrait:22}「先講清楚，在呢度面的\n大長老如果死咗，\n龍珠也會消失唔見。」	k2:206
-str2:0x0CE/p2	{portrait:22}「嗰樣你也會很困擾啦。\n換個地方來打啦！」	k2:206
-str2:0x0CF	{portrait:61}「……原來係咁樣。其實\n唔使那美克語講嘅話，\n願望是唔會實現的。」	k2:207
-str2:0x0CF/p2	{portrait:09}「咁樣呀。好，天迪，\n即刻來許願………。」	k2:207
-str2:0x0D0	{portrait:0A}「等等……。就算\n{name:1}不在，\n在呢度叫神龍唔係好妙。\n好，天迪，我哋先\n離開呢度一下啦。」	k2:208
-str2:0x0D1	{portrait:01}「呢個就係故鄉……呀」	k2:209
-str2:0x0D1/p2	{portrait:01}「悟飯喺邊……？\n……！！遙遠嘅西方\n偏北有股巨大嘅氣。\n呢個就係菲利。\n旁邊是悟飯佢哋！」	k2:209
+str2:0x0CA	{portrait:0C}「咩話？究竟咩事呀？」	k2:202
+str2:0x0CB	{portrait:22}「已經逼到眼前喇。\n　嗰個叫菲利嘅…」	k2:203
+str2:0x0CB/p2	{portrait:6F}「係先畀人殺死呢，\n定係先因為壽命\n　　　　　　而死呢……」	k2:203
+str2:0x0CC	{portrait:6F}「拜託你喇，尼路……\n盡量拖延時間……」	k2:204
+str2:0x0CC/p2	{portrait:22}「我明白喇……」	k2:204
+str2:0x0CD	{portrait:35}「………原來係咁。咁\n你唔打算話畀我知\n實現願望嘅方法呀？」	k2:205
+str2:0x0CD/p2	{portrait:22}「冇錯……我唔可以將佢\n話畀邪惡嘅人知。」	k2:205
+str2:0x0CD/p3	{portrait:35}「哦……咁，\n唯有請你去死喇。」	k2:205
+str2:0x0CE	{portrait:22}「講清楚先，入面嘅\n大長老如果死咗，\n龍珠都會消失㗎。」	k2:206
+str2:0x0CE/p2	{portrait:22}「咁你都會好麻煩吖。\n換個地方打啦！」	k2:206
+str2:0x0CF	{portrait:61}「……原來係咁。其實\n唔用娜美星話講嘅話，\n願望係唔會實現㗎。」	k2:207
+str2:0x0CF/p2	{portrait:09}「係咁呀。好，天迪，\n即刻許願啦………」	k2:207
+str2:0x0D0	{portrait:0A}「等陣……。就算\n{name:1}唔喺度，\n喺呢度召喚神龍唔太好。\n好，天迪，我哋先\n離開呢度啦。」	k2:208
+str2:0x0D1	{portrait:01}「呢度就係故鄉……咩」	k2:209
+str2:0x0D1/p2	{portrait:01}「悟飯喺邊……？\n……！！遙遠嘅西方\n偏北有股強大嘅氣。\n呢個就係菲利。\n隔離係悟飯佢哋！」	k2:209
 str2:0x0D2	{portrait:09}「呀！笛子魔童先生——！」	k2:210
-str2:0x0D2/p2	{portrait:01}「久等了……原來如此，\n嗰條友就係菲利呀。\n　確實像個大件事的\n怪物啊…」	k2:210
-str2:0x0D3	{portrait:61}「到、究竟去邊度了呀？\n突然就消失咗。」	k2:211
-str2:0x0D4	{portrait:01}「嗯？這附近\n感覺得到微弱嘅氣。」	k2:212
-str2:0x0D5	{portrait:22}「別、別管我………。\n飛、菲利……\n去打低菲利！\n拜、拜託了……」	k2:213
-str2:0x0D6	{portrait:09}「爸爸有危險！\n得快啲去追菲利！」\n　　Ｚ戰士們急忙\n　　追趕菲利而去！	k2:214
-str2:0x0D7	{portrait:09}「又、又唔見咗啦。」	k2:215
-str2:0x0D8	{portrait:23}「去了也只會扯後腿啦。\n　　我留在呢度……」	k2:216
-str2:0x0D9	{portrait:01}「怎、點可能……\n這、呢種事情……\n這、呢個就係所謂的\n融合呀！」	k2:217
-str2:0x0D9/p2	{portrait:01}「贏得咗！無論對手\n係誰，我都冇可能輸！\n我而家得到咗\n終極嘅力量！」	k2:217
-str2:0x0DA	{portrait:61}「就係呢度。洞窟某處\n有條隱藏嘅通道…」\n{portrait:61}「路嘅盡頭有塊石板，\n長老是咁講的。」	k2:218 merge
-str2:0x0DB	{portrait:09}「這、咁就能\n打開通道咗未？」	k2:219
-str2:0x0DB/p2	{portrait:61}「不，長老講正確的\n嘢有三個，\n我想一定要按下三個\n咁樣嘅按鈕才行。」	k2:219
-str2:0x0DC	{portrait:0A}「好、好像有種\n不妙嘅聲音……」	k2:220
-str2:0x0DD	{portrait:61}「呀！！」\n{portrait:61}「在嗰度。右邊那面牆\n就係藏著通道嘅牆！」	k2:221 merge
-str2:0x0DE	{portrait:61}「啊，岩石開了\n少少。頭先嘅按鈕\n一定是按對咗！」	k2:222
-str2:0x0DF	{portrait:61}「咦？……岩石都係\n關著的……頭先按的\n按鈕，該唔會是\n按錯了吧………？」	k2:223
-str2:0x0E0	{portrait:09}「無論怎麼睇，都只係\n普通嘅岩石。」\n{portrait:61}天迪：「……這面牆一定藏著\n咩秘密。我哋把洞窟裡\n仔細搵一遍啦！」	k2:224 merge override
-str2:0x0E1	{portrait:09}「……咦？\n咩也沒發生耶？」	k2:225
-str2:0x0E1/p2	{portrait:61}「怎、咩事……\n好擔心㗎……」	k2:225
-str2:0x0E1/p3	{portrait:09}「算了，唔緊要啦。\n搵搵別嘅地方啦。」	k2:225
-str2:0x0E2	{portrait:09}「搵到喇！係石板！好耶！」\n{portrait:61}天迪：「等我睇吓………呃，\n上面寫著帕帕雷拉　普羅帕拉\n普皮利托　皮雷塔利拉\n波拉。」	k2:226 merge override
-str2:0x0E3	{portrait:09}「通、通關密語？\n天迪，你、你知呀？」	k2:227
-str2:0x0E3/p2	{portrait:61}「咦？不，我唔知。\n啊……不過，\n請等陣……。」	k2:227
-str2:0x0E3/p3	{portrait:61}「咁講嘅話，村子的\n長老講過……。要見\n大長老，需要\n某個訊息才行……。」	k2:227
-str2:0x0E3/p4	{portrait:09}「原來係咁樣。咁\n要去邊度才能知\n嗰個訊息呀？天迪？」	k2:227
-str2:0x0E4	{portrait:61}「我記得在遙遠南方\n海上嘅西邊島嶼，\n有一座岩山。聽講在\n嗰度嘅洞窟做某件事\n就可以咗。」	k2:228
-str2:0x0E4/p2	{portrait:09}「某件事是指咩？」	k2:228
-str2:0x0E4/p3	{portrait:61}「呃……我記得是\n只要搵出正確嘅按鈕，\n隱藏嘅通道就會出現，\n就能搵到石板。」	k2:228
-str2:0x0E4/p4	{portrait:09}「那塊石板上\n寫著訊息係咪？好！\n往南方出發啦。」	k2:228
-str2:0x0E5	{portrait:09}「天迪，通關密語！」\n{portrait:61}「好的！\n　帕帕雷拉　普羅帕拉\n　普皮利托　皮雷塔利拉\n　　　　　　波拉！」	k2:229 merge
-str2:0x0E6	{portrait:09}「天迪，係咩意思？」\n{portrait:61}天迪：「呃…意思是：我才是\n真正懂得勇氣與正義嘅人。」\n{portrait:09}悟飯：「嗯——，原來如此。\n那我哋得加油才行！」	k2:230 merge override
-str2:0x0E7	{portrait:09}「咦？嗰個係咩？石板\n上刻著字耶？\n我睇吓……」	k2:231
-str2:0x0E7/p2	{portrait:09}「啊，係那美克語。\n天迪，唸畀我聽吧」	k2:231
-str2:0x0E7/p3	{portrait:61}「好的。……呃……。」	k2:231
-str2:0x0E7/p4	{portrait:61}「接連做出洞窟中隱藏\n嘅三件正確嘅事。如此\n一來，就能得到精靈\n所求之物。\n上面是咁寫的。」	k2:231
-str2:0x0E8	{portrait:09}「什、咩？\n強大嘅力量嚟咗！」	k2:232
-str2:0x0E9	{portrait:36}「就連我也食不消頭先\n嗰一擊，得重新來過…\n不過，下次見面時，\n我會畀你哋嚐到\n恐懼與絕望。」	k2:233
-str2:0x0EA	{portrait:23}「㗎，係地球人呀。\n太好了，	k2:234 split
-str2:0x0EA/p2	你哋平安無事……。」	k2:234 split
-str2:0x0EB	{portrait:24}「果、果然………。\n畢竟連尼路都\n敵不過啊……」	k2:235
-str2:0x0EC	{portrait:01}「就係咁回事。唔想死\n就快啲滾！」	k2:236
+str2:0x0D2/p2	{portrait:01}「等咗好耐喇……原來係咁，\n嗰條友就係菲利咩。\n　的確似一個好恐怖嘅\n怪物呀…」	k2:210
+str2:0x0D3	{portrait:61}「究、究竟去咗邊度呢？\n突然就消失咗。」	k2:211
+str2:0x0D4	{portrait:01}「嗯？呢度附近\n感覺到微弱嘅氣。」	k2:212
+str2:0x0D5	{portrait:22}「唔、唔好理我………。\n菲、菲利……\n去打低菲利！\n拜、拜託你哋……」	k2:213
+str2:0x0D6	{portrait:09}「爸爸有危險！\n要快啲去追菲利！」\n　　Ｚ戰士急忙\n　　追住菲利而去！	k2:214
+str2:0x0D7	{portrait:09}「又、又唔見咗喇。」	k2:215
+str2:0x0D8	{portrait:23}「去咗都只會累事吖。\n　　我留喺呢度……」	k2:216
+str2:0x0D9	{portrait:01}「點、點可能……\n呢、呢種事……\n呢、呢個就係所謂嘅\n融合咩！」	k2:217
+str2:0x0D9/p2	{portrait:01}「贏得㗎！無論對手\n係邊個，我都冇可能輸！\n我而家得到咗\n終極嘅力量！」	k2:217
+str2:0x0DA	{portrait:61}「就係呢度。洞窟某處\n有條隱藏嘅通道…」\n{portrait:61}「條路盡頭有塊石板，\n長老係咁講嘅。」	k2:218 merge
+str2:0x0DB	{portrait:09}「咁、咁樣就可以\n打開通道喇咩？」	k2:219
+str2:0x0DB/p2	{portrait:61}「唔係，長老話正確嘅\n嘢有三個，\n我諗一定要撳低三個\n咁樣嘅掣先得。」	k2:219
+str2:0x0DC	{portrait:0A}「好、好似有種\n唔對路嘅聲……」	k2:220
+str2:0x0DD	{portrait:61}「呀！！」\n{portrait:61}「喺嗰度。右邊嗰幅牆\n就係收埋通道嘅牆！」	k2:221 merge
+str2:0x0DE	{portrait:61}「呀，塊石開咗\n少少。頭先個掣\n一定撳啱咗！」	k2:222
+str2:0x0DF	{portrait:61}「咦？……塊石仲係\n閂住……頭先撳嘅\n掣，唔通係\n撳錯咗………？」	k2:223
+str2:0x0E0	{portrait:09}「點睇都只係\n普通嘅石頭。」\n{portrait:61}天迪：「……呢幅牆一定有\n咩秘密。我哋喺洞窟入面\n仔細搵一次啦！」	k2:224 merge override
+str2:0x0E1	{portrait:09}「……咦？\n咩事都冇發生喎？」	k2:225
+str2:0x0E1/p2	{portrait:61}「點、點會咁……\n好擔心呀……」	k2:225
+str2:0x0E1/p3	{portrait:09}「算啦，唔緊要嘅。\n去其他地方搵吓啦。」	k2:225
+str2:0x0E2	{portrait:09}「搵到喇！係石板！好嘢！」\n{portrait:61}天迪：「等我睇睇………呃，\n上面寫住帕帕雷拉　普羅帕拉\n普皮利托　皮雷塔利拉\n波拉。」	k2:226 merge override
+str2:0x0E3	{portrait:09}「通、通關密語？\n天迪，你、你知唔知呀？」	k2:227
+str2:0x0E3/p2	{portrait:61}「咦？唔，我唔知。\n呀……不過，\n請等陣……」	k2:227
+str2:0x0E3/p3	{portrait:61}「咁講嘅話，村入面嘅\n長老講過……。要見\n大長老，需要\n某個訊息先得……」	k2:227
+str2:0x0E3/p4	{portrait:09}「原來係咁。咁\n要去邊度先知道\n嗰個訊息呢？天迪？」	k2:227
+str2:0x0E4	{portrait:61}「我記得喺遙遠南方\n海上嘅西邊島嶼，\n有座石山。聽講喺\n嗰度嘅洞窟做某件事\n就得喇。」	k2:228
+str2:0x0E4/p2	{portrait:09}「某件事即係咩呀？」	k2:228
+str2:0x0E4/p3	{portrait:61}「呃……我記得係\n只要搵出正確嘅掣，\n隱藏通道就會出現，\n就可以搵到石板。」	k2:228
+str2:0x0E4/p4	{portrait:09}「嗰塊石板上面\n寫住訊息吖嘛？好！\n向南方出發啦。」	k2:228
+str2:0x0E5	{portrait:09}「天迪，通關密語！」\n{portrait:61}「好嘅！\n　帕帕雷拉　普羅帕拉\n　普皮利托　皮雷塔利拉\n　　　　　　波拉！」	k2:229 merge
+str2:0x0E6	{portrait:09}「天迪，係咩意思？」\n{portrait:61}天迪：「呃…意思係：我先係\n真正懂得勇氣同正義嘅人。」\n{portrait:09}悟飯：「嗯——，原來係咁。\n咁我哋要加油先得！」	k2:230 merge override
+str2:0x0E7	{portrait:09}「咦？嗰個係咩？石板\n上面刻住啲字喎？\n等我睇睇……」	k2:231
+str2:0x0E7/p2	{portrait:09}「呀，係娜美星話。\n天迪，讀畀我聽啦。」	k2:231
+str2:0x0E7/p3	{portrait:61}「好嘅。……呃……」	k2:231
+str2:0x0E7/p4	{portrait:61}「連續做出洞窟入面\n隱藏嘅三件正確嘅事。\n咁樣就可以得到精靈\n所求嘅嘢。\n上面係咁寫㗎。」	k2:231
+str2:0x0E8	{portrait:09}「咩、咩話？\n好強大嘅力量嚟喇！」	k2:232
+str2:0x0E9	{portrait:36}「連我都頂唔順頭先\n嗰一下，要重新嚟過…\n不過，下次見面嗰陣，\n我會畀你哋嚐到\n恐懼同絕望。」	k2:233
+str2:0x0EA	{portrait:23}「哦，係地球人呀。\n太好喇，	k2:234 split
+str2:0x0EA/p2	你哋冇事……。」	k2:234 split
+str2:0x0EB	{portrait:24}「果、果然………。\n始終連尼路都\n打唔贏呀……」	k2:235
+str2:0x0EC	{portrait:01}「就係咁啦。唔想死\n就快啲滾！」	k2:236
 str2:0x0ED	{portrait:01}「…………好啦。\n你哋呢班友嘅力量，	k2:237 split
-str2:0x0ED/p2	就由我收下咗！」	k2:237 split
-str2:0x0EE	{portrait:61}「請、請也跟我融合啦。\n我也想為被殺嘅大家\n報仇，跟菲利戰鬥！」\n　　　　　　融合\n　　　　　　不融合{auto}	k2:238 override
-str2:0x0EF	{portrait:36}「我等你哋好耐咗。頭先\n係我大意了，今次可\n唔會嗰樣了…我要讓\n你哋嚐到絕望。」	k2:239
-str2:0x0EF/p2	{portrait:36}「你哋該感到榮幸。\n我嘅變身，你哋不過\n第一批睇到嘅人！」	k2:239
-str2:0x0F0	{portrait:36}「我等你哋好耐咗。頭先\n係我大意了，今次可\n唔會嗰樣了…我要讓\n你哋嚐到絕望。」	k2:240
-str2:0x0F0/p2	{portrait:36}「你哋該感到榮幸。\n我嘅變身，你哋不過\n第一批睇到嘅人！」	k2:240
-str2:0x0F1	{portrait:09}「對不起……我哋咩都\n做不到………嗚嗚。」\n{portrait:61}天迪：「這、這也冇辦法啊\n……錯、錯嘅是嗰個叫菲利\n嘅傢伙……嗚嗚…」	k2:241 merge override
+str2:0x0ED/p2	就由我收下喇！」	k2:237 split
+str2:0x0EE	{portrait:61}「請、請都同我融合啦。\n我都想幫畀人殺咗嘅大家\n報仇，同菲利戰鬥！」\n　　　　　　融合\n　　　　　　不融合{auto}	k2:238 override
+str2:0x0EF	{portrait:36}「我等咗你哋好耐喇。頭先\n係我大意，今次可\n唔會咁喇…我要畀\n你哋嚐到絕望。」	k2:239
+str2:0x0EF/p2	{portrait:36}「你哋應該覺得榮幸。\n我嘅變身，你哋係\n第一批見到嘅人！」	k2:239
+str2:0x0F0	{portrait:36}「我等咗你哋好耐喇。頭先\n係我大意，今次可\n唔會咁喇…我要畀\n你哋嚐到絕望。」	k2:240
+str2:0x0F0/p2	{portrait:36}「你哋應該覺得榮幸。\n我嘅變身，你哋係\n第一批見到嘅人！」	k2:240
+str2:0x0F1	{portrait:09}「對唔住……我哋咩都\n做唔到………嗚嗚。」\n{portrait:61}天迪：「呢、呢個都冇辦法呀\n……錯、錯嘅係嗰個叫菲利\n嘅人……嗚嗚…」	k2:241 merge override
 str2:0x0F2	{portrait:24}「唔……咦？咩事？」\n{portrait:23}茲姆利：「㗎，傷都好咗。」\n{portrait:61}天迪：「太好了，追得上咗。」\n{portrait:24}麥伊瑪：「原來係你哋……\n等我哋參戰！我哋想報仇！」	k2:242 merge override
 str2:0x0F3	{portrait:61}「啊，尼、尼路先生！\n有、有兩個……？」	k2:243
 str2:0x0F3/p2	{portrait:09}「跟笛子魔童先生\n長、長得一模一樣。」	k2:243
