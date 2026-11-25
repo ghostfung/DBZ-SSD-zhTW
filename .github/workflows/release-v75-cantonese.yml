@@ -1,0 +1,20 @@
+name: Validate Cantonese production release v75
+on:
+  push:
+    branches: [release-v75-cantonese-notice]
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate release notice, Cantonese glyphs and regressions
+        run: |
+          node --check web/app.mjs
+          node --check web/offline-installer.mjs
+          node --check web/service-worker.js
+          node --test tests/v74-cantonese.test.mjs tests/translation-catalogue-audit.test.mjs tests/audio.test.mjs tests/speed-control.test.mjs tests/v68-tablet-input.test.mjs tests/cloudflare-migration.test.mjs tests/v63-thumbnail-backup.test.mjs tests/v72-compact-import.test.mjs
