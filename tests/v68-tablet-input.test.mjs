@@ -29,10 +29,10 @@ test('tablet landscape has separate columns and offline input module; original c
  assert.ok(app.includes('const held=joypad.sample();'));
  assert.ok(app.includes("repeat=[0,1,8,9].includes(bit)"));
  assert.ok(app.includes("window.addEventListener('pagehide',resetControls)"));
- assert.ok(app.includes("dbz-hd-tw-pwa-v66"));
- assert.ok(html.includes("ui=v72"));
+ assert.ok(app.includes("dbz-hd-tw-pwa-v73"));
+ assert.ok(html.includes("ui=v73"));
  const manifest=JSON.parse(read('web/offline-release.json'));
- assert.equal(manifest.version,'v72');
+ assert.equal(manifest.version,'v73');
  assert.ok(manifest.files.includes('joypad-input.mjs'));
  assert.deepEqual(manifest.files,JSON.parse(installer.match(/OFFLINE_FILES=Object\.freeze\((\[[^\n]*\])\)/)[1]));
 });
