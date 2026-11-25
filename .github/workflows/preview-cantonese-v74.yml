@@ -1,0 +1,36 @@
+name: Validate and publish isolated Cantonese v74 preview
+on:
+  push:
+    branches: [preview-v74-cantonese]
+  workflow_dispatch:
+concurrency:
+  group: cantonese-v74-preview
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate every translation key, control token, and font glyph
+        run: |
+          node --check web/app.mjs
+          node --check web/offline-installer.mjs
+          node --test tests/v74-cantonese.test.mjs tests/translation-catalogue-audit.test.mjs tests/audio.test.mjs tests/speed-control.test.mjs tests/v68-tablet-input.test.mjs tests/cloudflare-migration.test.mjs tests/v63-thumbnail-backup.test.mjs tests/v72-compact-import.test.mjs
+      - name: Publish validated text-only update to preview, never production
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = preview-v74-cantonese
+          git fetch --no-tags origin preview-v74-cantonese preview
+          test "$GITHUB_SHA" = "$(git rev-parse origin/preview-v74-cantonese)"
+          test "$(git rev-parse origin/preview)" = "0c2f3b0594065a25044d9ff9f7b04a00424c835a"
+          git diff --exit-code origin/preview HEAD -- crates web/pkg web/zh-tw.tsv
+          git merge-base --is-ancestor origin/preview HEAD
+          git push origin HEAD:preview
