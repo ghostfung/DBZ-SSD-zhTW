@@ -3,7 +3,7 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v70';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v71';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v69';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -48,19 +48,32 @@ let savedRom=null,savedIps=null,currentRomKey='';
 let language='zh-tw';
 try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
 const translationCache=new Map();
+// The saved preference only takes effect while the device is in landscape.
+const wideLandscape=window.matchMedia('(orientation:landscape)');
 function syncWidescreen(){
-  const button=$('aspect-toggle');
-  button.hidden=!hdEnabled;
-  button.textContent=widescreen?'16:9':'原版比例';
-  button.setAttribute('aria-pressed',String(widescreen));
-  if(game)game.set_widescreen(hdEnabled&&widescreen);
+  const button=$('aspect-toggle'),eligible=hdEnabled&&wideLandscape.matches;
+  const active=eligible&&widescreen;
+  button.hidden=!eligible;
+  button.textContent=active?'16:9':'原版比例';
+  button.setAttribute('aria-pressed',String(active));
+  if(game){
+    game.set_widescreen(active);
+    const scene=$('game');
+    if(scene.classList.contains('widescreen')!==active){
+      resetControls();
+      scene.classList.toggle('widescreen',active);
+      scene.classList.remove('wide-frame');
+    }
+  }
 }
 $('aspect-toggle').addEventListener('click',()=>{
-  if(!game||!running||!hdEnabled)return;
+  if(!game||!running||!hdEnabled||!wideLandscape.matches)return;
   widescreen=!widescreen;
   try{localStorage.setItem('dbz-preview-widescreen',widescreen?'1':'0');}catch{}
   syncWidescreen();
 });
+wideLandscape.addEventListener?.('change',syncWidescreen);
+window.addEventListener('resize',syncWidescreen);
 function updateRenderModeButton(){
   syncWidescreen();
   const button=$('hd-toggle');
@@ -412,10 +425,12 @@ function refreshLaunchCover({edit=false}={}){
   // control still permits replacing locally stored ROM/IPS/HD files.
   const ready=Boolean(savedRom&&!$('rom').files?.length&&!edit);
   $('setup').classList.toggle('launch-ready',ready);
+  if(ready)$('setup').classList.remove('managing-files');
   $('setup-edit').hidden=!ready;
 }
 $('setup-edit').addEventListener('click',()=>{
   $('setup').classList.remove('launch-ready');
+  $('setup').classList.add('managing-files');
   $('setup-edit').hidden=true;
   $('game-files-details').open=true;
   $('setup-files').scrollIntoView?.({block:'start',behavior:'smooth'});
@@ -656,7 +671,7 @@ let frameBytes=null, frameImage=null;
 function drawFrame() {
   const w=game.width(), h=game.height();
   const canvas=$('screen');
-  $('game').classList.toggle('widescreen',hdEnabled&&w===744);
+  $('game').classList.toggle('wide-frame',hdEnabled&&wideLandscape.matches&&widescreen&&w===744);
   if (w===0 || h===0) return;
   if (canvas.width!==w || canvas.height!==h) {
     canvas.width=w; canvas.height=h;
