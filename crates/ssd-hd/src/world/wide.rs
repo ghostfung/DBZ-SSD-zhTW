@@ -1017,9 +1017,13 @@ impl WideRenderer {
         hidden: u128,
         only_rows: Option<(usize, usize)>,
     ) -> Result<WideFrame, WideError> {
+        // std::time::Instant is not supported by wasm32-unknown-unknown.
+        // The browser bridge profiles its rendering passes separately.
+        #[cfg(not(target_arch = "wasm32"))]
         let started = std::time::Instant::now();
         let frame = self.compose_frame(rom, state, log, options, scene, art, hidden, only_rows);
-        self.compose_time += started.elapsed();
+        #[cfg(not(target_arch = "wasm32"))]
+        { self.compose_time += started.elapsed(); }
         frame
     }
 
