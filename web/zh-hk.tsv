@@ -414,160 +414,160 @@ str2:0x002	{portrait:0A}「我去到可能都幫唔到\n悟空佢哋……」	k2
 str2:0x002/p2	{portrait:0A}「悟空，千祈唔好死呀！」	k2:2
 str2:0x003	{portrait:0A}「呃……嗰個……\n比…笛子魔童都唔好死呀？」\n{portrait:0A}「嗱，帶埋呢樣去啦。」	k2:3 merge
 str2:0x004	{portrait:01}「……………。」	k2:4
-str2:0x005	{portrait:00}「啊，波波！」	k2:5
-str2:0x005/p2	{portrait:6C}「孫悟空，笛子魔童，\n小心！」	k2:5
+str2:0x005	{portrait:00}「呀，波波！」	k2:5
+str2:0x005/p2	{portrait:6C}「孫悟空、笛子魔童，\n小心呀！」	k2:5
 str2:0x005/p3	{portrait:04}「嘰嘰　嘰嘰嘰……」	k2:5
-str2:0x005/p4	{portrait:01}「一群怪物……\n　　睇我把你哋撕爛！」	k2:5
-str2:0x006	{portrait:6C}「我來傳天神嘅話，\n卻被呢班友抓住。\n得救了，好開心。」\n{portrait:6C}「天神講，悟飯身上有\n非常巨大嘅力量。」	k2:6 merge
-str2:0x007	{portrait:6C}「那力量用得好，應該\n連撒亞人也打得贏。」\n{portrait:6C}「對了，天神給呢個。\n能幫忙打低撒亞人。」	k2:7 merge
-str2:0x008	{portrait:00}「好！修業就到此為止。\n剩下嘅一天好好唞吓！\n也得重新習慣原本的\n重力才行……」	k2:8
-str2:0x009	{portrait:00}「哇㗎！身體好輕呀！\n輕得好像我唔見咗！\n好！拚咗！我要拚咗！」	k2:9
-str2:0x00A	{portrait:34}「搞不好會趕不上決戰，\n同伴可能全軍覆沒……\n為了不讓呢種事發生，\n得快啲完成修業㗎。」	k2:10
-str2:0x00A/p2	{portrait:34}「好啦，首先是重力\n修業。畀我用心做！」	k2:10
-str2:0x00B	{portrait:00}「什、咩？\n超大嘅力量要嚟咗！」	k2:11
-str2:0x00B/p2	{portrait:01}「難…難道講\n　嗰啲撒亞人嚟咗？」	k2:11
-str2:0x00C	{portrait:00}「什、咩？\n超大嘅力量要嚟咗！」	k2:12
-str2:0x00C/p2	{portrait:01}「難…難道講\n　嗰啲撒亞人嚟咗？」	k2:12
-str2:0x00D	{portrait:61}「救、救命……」	k2:13
-str2:0x00D/p2	{portrait:09}「啊，你冇事呀！太好咗。\n跟我一齊走啦。\n在這遲早會被發現。」	k2:13
-str2:0x00E	{portrait:61}「救、救命……」	k2:14
-str2:0x00E/p2	{portrait:09}「啊，你冇事呀！太好咗。\n跟我一齊走啦。\n在這遲早會被發現。」	k2:14
-str2:0x00F	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:15
-str2:0x010	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:16
-str2:0x011	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:17
-str2:0x012	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:18
-str2:0x013	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:19
-str2:0x014	{portrait:00}「你、你是……\n你點會在呢度呀？」	k2:20
-str2:0x015	{portrait:00}「勝負呢種事啊，\n唔係光靠強就行的。」	k2:21
-str2:0x016	{portrait:00}「哇，呢條友變身咗！\n這、這是咩事？」	k2:22
-str2:0x017	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:23 merge
-str2:0x017/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:23 merge override
-str2:0x018	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:24 merge
-str2:0x018/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:24 merge override
-str2:0x019	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:25 merge
-str2:0x019/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:25 merge override
-str2:0x01A	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:26 merge
-str2:0x01A/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:26 merge override
-str2:0x01B	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:27 merge
-str2:0x01B/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:27 merge override
-str2:0x01C	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:28 merge
-str2:0x01C/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:28 merge override
-str2:0x01D	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:29 merge
-str2:0x01D/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:29 merge override
-str2:0x01E	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:30 merge
-str2:0x01E/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:30 merge override
-str2:0x01F	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:31 merge
-str2:0x01F/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:31 merge override
-str2:0x020	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:32 merge
-str2:0x020/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:32 merge override
-str2:0x021	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:33 merge
-str2:0x021/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:33 merge override
-str2:0x022	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:34 merge
-str2:0x022/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:34 merge override
-str2:0x023	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:35 merge
-str2:0x023/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:35 merge override
-str2:0x024	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:36 merge
-str2:0x024/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:36 merge override
-str2:0x025	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:37 merge
-str2:0x025/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:37 merge override
-str2:0x026	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:38 merge
-str2:0x026/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:38 merge override
-str2:0x027	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:39 merge
-str2:0x027/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:39 merge override
-str2:0x028	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:40 merge
-str2:0x028/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:40 merge override
-str2:0x029	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:41 merge
-str2:0x029/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:41 merge override
-str2:0x02A	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:42 merge
-str2:0x02A/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:42 merge override
-str2:0x02B	{portrait:6D}「敵人撒亞人好像\n非常強係咪？\n援助卡牌都係多準備\n啲比較好㗎。」	k2:43 merge
-str2:0x02B/p2	{portrait:6D}「推薦嘅有天神、波波、\n悟空嘅爺爺……仲有，\n最重要嘅就係芝芝咗！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最能幫上忙！」	k2:43 merge override
-str2:0x02C	{portrait:6D}「哇啊啊——嗚嗚嗚！\n阿樂大人他……\n阿樂大人他——！」	k2:44
-str2:0x02D	{portrait:76}「咦？急著逃過嚟，\n把蘭芝小姐嘅卡牌\n給弄丟咗。真糟糕，\n莊子和芝芝嘅卡牌\n明明都仲喺耶…。」	k2:45
-str2:0x02E	{portrait:76}「咦？彌太郎在催喇？\n真傷腦筋啊……。」\n{portrait:76}「啊，對咗。你哋如果把\n蘭芝小姐嘅援助卡牌畀我，\n我就畀你哋食嘅當交換。」	k2:46 merge override
-str2:0x02F	{portrait:76}「太好啦，係蘭芝小姐！\n嘿嘿……\n喏，呢個就係食的。\n攞去給彌太郎啦。」	k2:47
-str2:0x030	{portrait:01}「終於要嚟咗，悟飯。\n聽好，可別鬆懈！」	k2:48
-str2:0x030/p2	{portrait:09}「是！東南方向有兩股\n非常巨大嘅氣……！」	k2:48
-str2:0x031	{portrait:01}「終於要嚟咗，悟飯。\n聽好，可別鬆懈！」	k2:49
-str2:0x031/p2	{portrait:09}「是！東南方向有兩股\n非常巨大嘅氣……！」	k2:49
-str2:0x032	{portrait:01}「好像是……不過\n仲有強大嘅氣：\n一…二…三……四。\n哼，仲有湊熱鬧的。\n算了，走啦，悟飯！」	k2:50
-str2:0x033	{portrait:09}「呀！有股氣過嚟咗！\n雖然好勁，卻好懷念！\n果然趕嚟咗！」	k2:51
-str2:0x034	{portrait:01}「錯不了，係孫悟空！\n孫悟空要嚟咗——！」	k2:52
-str2:0x034/p2	{portrait:01}「我就知他一定會來！\n　可惡，讓人久等咗！」	k2:52
-str2:0x035	{portrait:0E}「居然打低咗培植人，\n還真有兩下子呀！」	k2:53
+str2:0x005/p4	{portrait:01}「成班怪物……\n　　睇我撕碎你哋！」	k2:5
+str2:0x006	{portrait:6C}「我嚟傳達天神嘅說話，\n點知畀呢班友捉住。\n好開心你救咗我。」\n{portrait:6C}「天神話悟飯身上有\n一股非常強大嘅力量。」	k2:6 merge
+str2:0x007	{portrait:6C}「如果用得好嗰股力量，\n連撒亞人都可能打得贏。」\n{portrait:6C}「係喎，天神畀咗呢樣嘢。\n可以幫手打低撒亞人。」	k2:7 merge
+str2:0x008	{portrait:00}「好！特訓到此為止。\n剩低一日好好唞吓！\n仲要重新適應原本嘅\n重力先得……」	k2:8
+str2:0x009	{portrait:00}「嘩！個身好輕呀！\n輕到好似冇咗咁！\n好！搏喇！我要搏喇！」	k2:9
+str2:0x00A	{portrait:34}「可能趕唔切決戰，\n同伴可能全軍覆沒……\n為咗避免呢種事發生，\n要快啲完成特訓呀。」	k2:10
+str2:0x00A/p2	{portrait:34}「好啦，首先係重力\n特訓。畀心機練！」	k2:10
+str2:0x00B	{portrait:00}「咩、咩話？\n有股好勁嘅力量嚟緊！」	k2:11
+str2:0x00B/p2	{portrait:01}「唔…唔通係\n　嗰班撒亞人嚟咗？」	k2:11
+str2:0x00C	{portrait:00}「咩、咩話？\n有股好勁嘅力量嚟緊！」	k2:12
+str2:0x00C/p2	{portrait:01}「唔…唔通係\n　嗰班撒亞人嚟咗？」	k2:12
+str2:0x00D	{portrait:61}「救、救命呀……」	k2:13
+str2:0x00D/p2	{portrait:09}「呀，你冇事！太好喇。\n跟我一齊走啦。\n留喺度遲早畀人發現。」	k2:13
+str2:0x00E	{portrait:61}「救、救命呀……」	k2:14
+str2:0x00E/p2	{portrait:09}「呀，你冇事！太好喇。\n跟我一齊走啦。\n留喺度遲早畀人發現。」	k2:14
+str2:0x00F	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:15
+str2:0x010	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:16
+str2:0x011	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:17
+str2:0x012	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:18
+str2:0x013	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:19
+str2:0x014	{portrait:00}「你、你係……\n點解你會喺呢度㗎？」	k2:20
+str2:0x015	{portrait:00}「輸贏呢啲嘢呀，\n唔係淨係靠夠勁就得。」	k2:21
+str2:0x016	{portrait:00}「嘩，呢條友變身咗！\n呢、呢個係咩事呀？」	k2:22
+str2:0x017	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:23 merge
+str2:0x017/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:23 merge override
+str2:0x018	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:24 merge
+str2:0x018/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:24 merge override
+str2:0x019	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:25 merge
+str2:0x019/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:25 merge override
+str2:0x01A	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:26 merge
+str2:0x01A/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:26 merge override
+str2:0x01B	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:27 merge
+str2:0x01B/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:27 merge override
+str2:0x01C	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:28 merge
+str2:0x01C/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:28 merge override
+str2:0x01D	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:29 merge
+str2:0x01D/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:29 merge override
+str2:0x01E	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:30 merge
+str2:0x01E/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:30 merge override
+str2:0x01F	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:31 merge
+str2:0x01F/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:31 merge override
+str2:0x020	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:32 merge
+str2:0x020/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:32 merge override
+str2:0x021	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:33 merge
+str2:0x021/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:33 merge override
+str2:0x022	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:34 merge
+str2:0x022/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:34 merge override
+str2:0x023	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:35 merge
+str2:0x023/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:35 merge override
+str2:0x024	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:36 merge
+str2:0x024/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:36 merge override
+str2:0x025	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:37 merge
+str2:0x025/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:37 merge override
+str2:0x026	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:38 merge
+str2:0x026/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:38 merge override
+str2:0x027	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:39 merge
+str2:0x027/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:39 merge override
+str2:0x028	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:40 merge
+str2:0x028/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:40 merge override
+str2:0x029	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:41 merge
+str2:0x029/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:41 merge override
+str2:0x02A	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:42 merge
+str2:0x02A/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:42 merge override
+str2:0x02B	{portrait:6D}「撒亞人好似\n好勁㗎係咪？\n援助卡最好準備\n多啲啦。」	k2:43 merge
+str2:0x02B/p2	{portrait:6D}「我推薦天神、波波、\n悟空嘅爺爺……仲有，\n最重要係芝芝！」\n{portrait:6D}「尤其對悟空嚟講，\n芝芝最幫得上手！」	k2:43 merge override
+str2:0x02C	{portrait:6D}「嘩啊啊——嗚嗚嗚！\n阿樂大人佢……\n阿樂大人佢——！」	k2:44
+str2:0x02D	{portrait:76}「咦？急住逃過嚟，\n唔見咗蘭芝小姐\n張卡。真係弊，\n莊子同芝芝嘅卡\n明明仲喺度……」	k2:45
+str2:0x02E	{portrait:76}「咦？彌太郎催緊呀？\n真係頭痛……」\n{portrait:76}「呀，係喎。你哋如果\n畀蘭芝小姐張援助卡我，\n我就畀嘢你哋食做交換。」	k2:46 merge override
+str2:0x02F	{portrait:76}「好嘢，係蘭芝小姐！\n嘿嘿……\n嗱，呢啲係食物。\n攞去畀彌太郎啦。」	k2:47
+str2:0x030	{portrait:01}「終於嚟喇，悟飯。\n聽住，千祈咪鬆懈！」	k2:48
+str2:0x030/p2	{portrait:09}「係！東南方向有兩股\n非常強大嘅氣……！」	k2:48
+str2:0x031	{portrait:01}「終於嚟喇，悟飯。\n聽住，千祈咪鬆懈！」	k2:49
+str2:0x031/p2	{portrait:09}「係！東南方向有兩股\n非常強大嘅氣……！」	k2:49
+str2:0x032	{portrait:01}「好似係……不過\n仲有幾股強大嘅氣：\n一…二…三……四。\n哼，仲有人嚟湊熱鬧。\n算啦，出發啦，悟飯！」	k2:50
+str2:0x033	{portrait:09}「呀！有股氣嚟緊！\n雖然好勁，但好懷念！\n果然趕嚟喇！」	k2:51
+str2:0x034	{portrait:01}「冇錯，係孫悟空！\n孫悟空嚟緊喇——！」	k2:52
+str2:0x034/p2	{portrait:01}「我就知佢一定會嚟！\n　可惡，等到頸都長！」	k2:52
+str2:0x035	{portrait:0E}「居然打低咗培植人，\n真係有兩下散手喎！」	k2:53
 str2:0x035/p2	{auto}	k2:53
-str2:0x036	{portrait:0E}「嘿嘿……輪到我上場咗。\n要乾脆宰了你哋？都係\n慢慢玩過再宰掉呀？」\n{portrait:0E}「好啦，上咗！\n你哋呢啲螻蟻！」	k2:54 merge override
-str2:0x037	{portrait:0F}「立巴呢個廢物……\n竟敗給呢種垃圾。」	k2:55
-str2:0x037/p2	{portrait:0F}「嘿嘿嘿……咁，就由\n菁英中嘅超級菁英——\n我來把你哋呢啲\n傢伙打個粉碎！」	k2:55
-str2:0x038	{portrait:0F}「哎呀呀……\n好隆重嘅歡迎……。」	k2:56
-str2:0x038/p2	{portrait:0E}「咁多睇嚟好勁的\n傢伙來迎接我哋呀？」	k2:56
-str2:0x039	{portrait:0E}「先拿呢班友當對手，\n見識你哋嘅本事……」	k2:57 split
-str2:0x039/p2	　\n立巴往地上撒種子。	k2:57 split
-str2:0x03A	{portrait:0F}「格古洛……？\n你真係復活咗呀。咁，\n傳聞中娜美星上\n嗰種神奇嘅球也…」\n{portrait:0F}「睇嚟不全是謊話。」	k2:58 merge
-str2:0x03B	{portrait:0F}「嘿嘿嘿……不過，\n格古洛，你該唔會\n係特地來講咩要打低	k2:59 split
-str2:0x03B/p2	宇宙超級菁英呢種\n無聊笑話嘅啦？」	k2:59 split
-str2:0x03C	{portrait:0F}「嘿嘿嘿……畀你見識\n一下我呢個超級菁英\n壓倒性嘅實力啦！」	k2:60
-str2:0x03D	{portrait:0F}「哦？格古洛，你的\n戰鬥力提升不少嘛！」	k2:61
-str2:0x03D/p2	{portrait:00}「同伴死咗一個……\n　　　　乖乖畀我返去！」	k2:61
-str2:0x03E	{portrait:0F}「那可唔得。我要親手\n把你呢個叛徒\n碎屍萬段！」	k2:62
-str2:0x03E/p2	{portrait:00}「咁樣啊………\n我要一個人打低你。\n跟我來！」	k2:62
-str2:0x03F	{portrait:09}「就、就算是爸爸，\n　一個人也太……。\n　得諗辦法幫爸爸！」	k2:63
-str2:0x040	{portrait:09}「爸爸，我也要打！」	k2:64
-str2:0x041	{portrait:0F}「我…堂堂宇宙菁英\n竟然會輸畀你哋呢種\n垃圾……畀我等著。\n等我把傷治好，\n一定要殺光你哋！」	k2:65
-str2:0x042	{portrait:7B}「哇？咩啊，係你哋㗎\n　　　竟然搵得到呢度。\n不過我可唔會幫忙。」	k2:66
-str2:0x043	{portrait:7B}「………話講肚子好餓。\n八戒明明講要畀我\n稀奇嘅食物的……。」\n{portrait:7B}「對了，你哋去搵八戒，\n　幫我催一下好唔好？」	k2:67 merge
-str2:0x044	{portrait:7B}「等食飽了，\n就稍為幫你哋一把！」	k2:68
-str2:0x045	{portrait:7B}「好耶！快快畀我食！」	k2:69
-str2:0x045/p2	{portrait:7B}「…………就呢個？\n算了，喏，呢個畀你。」	k2:69
-str2:0x046	{portrait:7B}「好耶！快快畀我食！」	k2:70
-str2:0x046/p2	{portrait:7B}「…………就呢個？\n算了，喏，呢個畀你。」	k2:70
-str2:0x047	{portrait:7B}「幹嘛啦，快啲攞嚟呀！\n我肚子餓了啦！」	k2:71
-str2:0x048	{portrait:74}「呢度是援助卡牌嘅店。\n我可以用點數跟你\n交易援助卡牌㗎。」　　買\n　　　　　　　　　　　賣{auto}	k2:72 override
-str2:0x049	{portrait:74}「咁，要邊張呀？」{auto}	k2:73
-str2:0x04A	{portrait:74}「嗰張嘅話，{num:1}點\n就能換畀你㗎。」	k2:74
-str2:0x04B	{portrait:74}「唔可以再多拿了㗎。\n做人別太貪心。」	k2:75
-str2:0x04C	{portrait:74}「點數是夠的。\n多謝惠顧啦。」	k2:76
-str2:0x04D	{portrait:74}「點數唔夠㗎！\n先把手上嘅卡牌\n換成點數再嚟啦。」	k2:77
-str2:0x04E	{portrait:74}「你好像冇卡牌呀。\n　　等攞到了再嚟啦。」	k2:78
-str2:0x04F	{portrait:74}「仲要再交換呀？」\n　\n　　　　　　　　是\n　　　　　　　　否{auto}	k2:79 override
-str2:0x050	{portrait:74}「咁，路上小心㗎。」	k2:80
-str2:0x051	{portrait:09}「呼……睇樣子總算\n逃掉了……太好咗。\n好，得再去搵\n龍珠才行！」	k2:81
-str2:0x052	{portrait:0E}「你哋應該比頭先嗰啲\n傢伙好玩少少啦？」	k2:82
-str2:0x052/p2	{portrait:09}「這……呢個惡魔！\n　　　　我要打低你！」	k2:82
-str2:0x053	{portrait:6B}「好了，大家！\n　　好好唞吓一下啦！」	k2:83
-str2:0x054	{portrait:6B}「好了，大家！\n　　好好唞吓一下啦！」	k2:84
-str2:0x055	{portrait:6B}「要加油㗎！\n　　　　我很期待呢！」	k2:85
-str2:0x056	{portrait:34}「怎麼？已經累垮喇？\n　真冇用啊………。\n　算了，唞吓啦。」	k2:86
-str2:0x057	{portrait:34}「好啦，快畀我出去，\n今天也要用心修業！」	k2:87
-str2:0x058	{portrait:01}「孫悟空嘅仔\n就由我帶走咗。」	k2:88
-str2:0x058/p2	{portrait:6B}「咦？不、唔得啦！\n　那怎麼可以！」	k2:88
-str2:0x059	{portrait:01}「那小子確實擁有\n驚人嘅巨大力量。\n加以鍛鍊嘅話，或者\n能對抗兩個撒亞人。」	k2:89
-str2:0x05A	{portrait:6A}「喂、喂！笛子魔童！\n等等，畀我等陣！」	k2:90
-str2:0x05A/p2	{portrait:01}「一年後我會帶這小子\n到你哋家去………\n　　　　　　　　再會！」	k2:90 override
-str2:0x05B	{portrait:6B}「啊啊……\n　啊、啊、啊………」	k2:91
-str2:0x05B/p2	{portrait:0A}「走…走掉了耶，\n　　　　武天師父……。」	k2:91
-str2:0x05B/p3	{portrait:6A}「……如果芝芝知道喇，\n　　　　可就慘了㗎…。」	k2:91
+str2:0x036	{portrait:0E}「嘿嘿……輪到我喇。\n不如殺晒你哋？定係\n慢慢玩完再殺呢？」\n{portrait:0E}「好喇，上啦！\n你哋呢班蟻民！」	k2:54 merge override
+str2:0x037	{portrait:0F}「立巴呢個廢物……\n居然輸畀呢啲垃圾。」	k2:55
+str2:0x037/p2	{portrait:0F}「嘿嘿嘿……咁就由\n精英中嘅超級精英——\n我嚟將你哋呢班\n友打到粉身碎骨！」	k2:55
+str2:0x038	{portrait:0F}「哎呀呀……\n好隆重嘅歡迎……」	k2:56
+str2:0x038/p2	{portrait:0E}「咁多睇落幾勁嘅\n人嚟迎接我哋呀？」	k2:56
+str2:0x039	{portrait:0E}「先同呢班友打吓，\n等我見識你哋嘅本事……」	k2:57 split
+str2:0x039/p2	　\n立巴喺地下撒種。	k2:57 split
+str2:0x03A	{portrait:0F}「格古洛……？\n你真係復活咗喎。咁，\n傳聞中娜美星\n嗰種神奇嘅珠都…」\n{portrait:0F}「睇嚟唔係全部流料。」	k2:58 merge
+str2:0x03B	{portrait:0F}「嘿嘿嘿……不過，\n格古洛，你唔係\n特登嚟講咩要打低	k2:59 split
+str2:0x03B/p2	宇宙超級精英呢啲\n無聊笑話吖嘛？」	k2:59 split
+str2:0x03C	{portrait:0F}「嘿嘿嘿……等你見識\n吓我呢個超級精英\n壓倒性嘅實力啦！」	k2:60
+str2:0x03D	{portrait:0F}「哦？格古洛，你嘅\n戰鬥力升咗唔少喎！」	k2:61
+str2:0x03D/p2	{portrait:00}「死咗一個同伴……\n　　　　乖乖畀我返去！」	k2:61
+str2:0x03E	{portrait:0F}「咁就唔得喇。我要親手\n將你呢個叛徒\n碎屍萬段！」	k2:62
+str2:0x03E/p2	{portrait:00}「係咁呀………\n我要一個人打低你。\n跟我嚟！」	k2:62
+str2:0x03F	{portrait:09}「就、就算係爸爸，\n　一個人都太……\n　要諗辦法幫爸爸！」	k2:63
+str2:0x040	{portrait:09}「爸爸，我都要打！」	k2:64
+str2:0x041	{portrait:0F}「我…堂堂宇宙精英\n居然會輸畀你哋呢啲\n垃圾……同我等住。\n等我醫好啲傷，\n一定殺晒你哋！」	k2:65
+str2:0x042	{portrait:7B}「嘩？咩呀，係你哋喎\n　　　居然搵到呢度。\n不過我唔會幫手㗎。」	k2:66
+str2:0x043	{portrait:7B}「………話說我好肚餓。\n八戒明明話畀\n啲特別嘢我食㗎……」\n{portrait:7B}「係喎，你哋去搵八戒，\n　幫我催吓佢得唔得？」	k2:67 merge
+str2:0x044	{portrait:7B}「等我食飽咗，\n就幫你哋一把啦！」	k2:68
+str2:0x045	{portrait:7B}「好嘢！快啲畀我食！」	k2:69
+str2:0x045/p2	{portrait:7B}「…………得呢樣？\n算啦，嗱，呢個畀你。」	k2:69
+str2:0x046	{portrait:7B}「好嘢！快啲畀我食！」	k2:70
+str2:0x046/p2	{portrait:7B}「…………得呢樣？\n算啦，嗱，呢個畀你。」	k2:70
+str2:0x047	{portrait:7B}「做咩啫，快啲攞嚟啦！\n我肚餓喇！」	k2:71
+str2:0x048	{portrait:74}「呢度係援助卡舖。\n我可以用點數同你\n交換援助卡。」　　　　買\n　　　　　　　　　　　賣{auto}	k2:72 override
+str2:0x049	{portrait:74}「咁，你想要邊張？」{auto}	k2:73
+str2:0x04A	{portrait:74}「嗰張呀，{num:1}點\n就可以換到㗎喇。」	k2:74
+str2:0x04B	{portrait:74}「唔可以再攞多啲喇。\n做人咪咁貪心。」	k2:75
+str2:0x04C	{portrait:74}「點數夠喎。\n多謝惠顧啦。」	k2:76
+str2:0x04D	{portrait:74}「點數唔夠呀！\n將手上啲卡\n換做點數再嚟啦。」	k2:77
+str2:0x04E	{portrait:74}「你好似冇卡喎。\n　　等攞到先再嚟啦。」	k2:78
+str2:0x04F	{portrait:74}「仲換唔換呀？」\n　\n　　　　　　　　是\n　　　　　　　　否{auto}	k2:79 override
+str2:0x050	{portrait:74}「咁，路上小心呀。」	k2:80
+str2:0x051	{portrait:09}「呼……睇嚟終於\n走甩咗……太好喇。\n好，要再去搵\n龍珠先得！」	k2:81
+str2:0x052	{portrait:0E}「你哋應該比頭先嗰班\n友好玩少少吖？」	k2:82
+str2:0x052/p2	{portrait:09}「呢……呢個惡魔！\n　　　　我要打低你！」	k2:82
+str2:0x053	{portrait:6B}「好喇，大家！\n　　好好唞吓啦！」	k2:83
+str2:0x054	{portrait:6B}「好喇，大家！\n　　好好唞吓啦！」	k2:84
+str2:0x055	{portrait:6B}「加油呀！\n　　　　我好期待㗎！」	k2:85
+str2:0x056	{portrait:34}「做咩？已經攰到癱？\n　真係冇用呀………\n　算啦，唞吓啦。」	k2:86
+str2:0x057	{portrait:34}「好啦，快啲出去，\n今日都要畀心機練！」	k2:87
+str2:0x058	{portrait:01}「孫悟空個仔\n就由我帶走。」	k2:88
+str2:0x058/p2	{portrait:6B}「咦？唔、唔得呀！\n　點可以咁㗎！」	k2:88
+str2:0x059	{portrait:01}「嗰個細路的確有\n一股驚人嘅力量。\n只要好好鍛鍊，或者\n可以對抗兩個撒亞人。」	k2:89
+str2:0x05A	{portrait:6A}「喂、喂！笛子魔童！\n等陣，等埋我呀！」	k2:90
+str2:0x05A/p2	{portrait:01}「一年後我會帶呢個細路\n去你哋屋企………\n　　　　　　　　再見！」	k2:90 override
+str2:0x05B	{portrait:6B}「呀呀……\n　呀、呀、呀………」	k2:91
+str2:0x05B/p2	{portrait:0A}「走…走咗喇，\n　　　　武天師父……」	k2:91
+str2:0x05B/p3	{portrait:6A}「……如果芝芝知咗，\n　　　　就大件事喇……」	k2:91
 str2:0x05C	{portrait:0E}「拿迪斯嗰條友……\n　死咗呀。」	k2:92
-str2:0x05C/p2	{portrait:0F}「真係丟臉……竟然被\n　嗰種廢物殺掉……」	k2:92
-str2:0x05C/p3	{portrait:0E}「點算？比達。」	k2:92
-str2:0x05D	{portrait:0F}「就咁樣直接去地球。\n……嗰個叫龍珠嘅嘢\n　　　　等我很在意。」	k2:93
-str2:0x05D/p2	{portrait:0E}「聽講無論咩願望\n　　　　都能實現係咪？」	k2:93
-str2:0x05E	{portrait:0F}「把那嘢搶來，等我哋\n得到永恆嘅生命啦。」	k2:94
-str2:0x05E/p2	{portrait:0E}「那可真唔錯，比達！」	k2:94
-str2:0x05E/p3	{portrait:0F}「嘿嘿嘿……等著吧，\n你哋呢啲地球的\n混帳嘢……！」	k2:94
-str2:0x05F	{portrait:0E}「哦，呢度仲唔賴嘛。」	k2:95
-str2:0x05F/p2	{portrait:0F}「先用探測器搵出\n打低拿迪斯嘅傢伙。\n最強嘅大概就係他。」	k2:95
-str2:0x060	{portrait:0E}「哦……在嗰邊呀。」	k2:96
-str2:0x060/p2	{portrait:0E}「把嗰條友修理一頓，\n問出龍珠嘅事係咪？」	k2:96
-str2:0x060/p3	{portrait:0F}「冇錯。走啦！」	k2:96
-str2:0x061	{portrait:83}「嗚嗚……把我帶到\n呢種地方要幹嘛？」	k2:97
-str2:0x061/p2	{portrait:01}「在呢度活過半年。\n呢個就係你嘅修業。\n活落嚟嘅話再教你。」	k2:97
-str2:0x062	{portrait:83}「咦？淨係有我一個？\n唔好啦！\n我會寂寞死咗嘅啦！」	k2:98
-str2:0x062/p2	{portrait:01}「嘿嘿嘿……\n在我來接你之前，\n可唔好死了……再會。」	k2:98
-str2:0x063	{portrait:83}「哇——哇——等我啦！\n　　別丟下我啦——！」	k2:99
-str2:0x064	{portrait:01}「聽好了，悟飯。你還\n唔可以好好控制氣。」\n{portrait:01}「就由我親自來鍛鍊你。\n在跟我嘅戰鬥中，\n學會控制你嘅氣！」	k2:100 merge
-str2:0x065	{portrait:01}「聽好了，悟飯。你還\n唔可以好好控制氣。」\n{portrait:01}「就由我親自來鍛鍊你。\n在跟我嘅戰鬥中，\n學會控制你嘅氣！」	k2:101 merge
-str2:0x066	{portrait:01}「嚟啦，放馬過嚟。\n　打低我睇吓，悟飯！」	k2:102
+str2:0x05C/p2	{portrait:0F}「真係丟架……居然畀\n　嗰種廢物殺咗……」	k2:92
+str2:0x05C/p3	{portrait:0E}「點算呀？比達。」	k2:92
+str2:0x05D	{portrait:0F}「就咁直接去地球。\n……嗰樣叫龍珠嘅嘢\n　　　　我好有興趣。」	k2:93
+str2:0x05D/p2	{portrait:0E}「聽講無論咩願望\n　　　　都可以實現吖？」	k2:93
+str2:0x05E	{portrait:0F}「搶嗰樣嘢返嚟，等我哋\n得到永恆嘅生命啦。」	k2:94
+str2:0x05E/p2	{portrait:0E}「咁就真係唔錯喎，比達！」	k2:94
+str2:0x05E/p3	{portrait:0F}「嘿嘿嘿……等住啦，\n你哋呢班地球嘅\n混帳……！」	k2:94
+str2:0x05F	{portrait:0E}「哦，呢度都唔錯喎。」	k2:95
+str2:0x05F/p2	{portrait:0F}「先用探測器搵出\n打低拿迪斯嗰條友。\n最勁嗰個應該就係佢。」	k2:95
+str2:0x060	{portrait:0E}「哦……喺嗰邊呀。」	k2:96
+str2:0x060/p2	{portrait:0E}「打嗰條友一鑊，\n問出龍珠嘅事吖嘛？」	k2:96
+str2:0x060/p3	{portrait:0F}「冇錯。出發啦！」	k2:96
+str2:0x061	{portrait:83}「嗚嗚……帶我嚟\n呢種地方做咩呀？」	k2:97
+str2:0x061/p2	{portrait:01}「喺呢度生存半年。\n呢個就係你嘅特訓。\n生存到先再教你。」	k2:97
+str2:0x062	{portrait:83}「咦？得我一個？\n唔好呀！\n我會悶死㗎！」	k2:98
+str2:0x062/p2	{portrait:01}「嘿嘿嘿……\n喺我嚟接你之前，\n千祈唔好死……再見。」	k2:98
+str2:0x063	{portrait:83}「嘩——嘩——等埋我呀！\n　　唔好掉低我呀——！」	k2:99
+str2:0x064	{portrait:01}「聽住，悟飯。你仲\n未識好好控制氣。」\n{portrait:01}「就由我親自鍛鍊你。\n喺同我戰鬥嗰陣，\n學識控制你嘅氣！」	k2:100 merge
+str2:0x065	{portrait:01}「聽住，悟飯。你仲\n未識好好控制氣。」\n{portrait:01}「就由我親自鍛鍊你。\n喺同我戰鬥嗰陣，\n學識控制你嘅氣！」	k2:101 merge
+str2:0x066	{portrait:01}「嚟啦，放馬過嚟。\n　試吓打低我啦，悟飯！」	k2:102
 str2:0x067	{portrait:01}「很好，做得唔錯，悟飯。\n你也算獨當一面咗！」	k2:103
 str2:0x067/p2	{portrait:09}「是！笛子魔童先生！」	k2:103
 str2:0x068	{portrait:01}「悟飯，撒亞人\n即刻就要嚟咗……。\n絕對不准死！」	k2:104
