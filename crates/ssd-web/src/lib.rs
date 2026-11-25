@@ -379,7 +379,7 @@ impl WebGame {
                         // Field map art is bound by the ROM map layout and
                         // independently checked against live PPU BG2 tilemap.
                         if self.hd_map_enabled && self.live_maps.has_entries() {
-                            self.live_maps.refresh(&self.rom,field_state,log);
+                            self.live_maps.refresh(&self.rom,field_state.clone(),log);
                             self.hd_map_pixels=self.live_maps.composite(
                                 log,self.hd_renderer.layer_ids(),&mut self.hd_pixels,
                                 self.hd_width as usize,self.hd_height as usize);
