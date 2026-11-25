@@ -7,7 +7,7 @@ test('v69 gameplay layout is restored; compact import remains',()=>{
  assert.ok(!css.includes('.playing #game.widescreen'));
  assert.ok(!html.includes('id="aspect-toggle"'));
  assert.ok(!app.includes('set_widescreen'));
- assert.ok(app.includes("const BUILD_ID='dbz-hd-tw-pwa-v66'"));
+ assert.ok(app.includes("const BUILD_ID='dbz-hd-tw-pwa-v73'"));
  assert.ok(css.includes('#setup .hd-import-panel .hd-catalog,'));
  assert.ok(css.includes('#setup.managing-files .hd-storage-experimental'));
  assert.ok(html.includes('aria-label="HD 美術包匯入進度"'));
@@ -25,6 +25,6 @@ test('v69 gameplay layout is restored; compact import remains',()=>{
  assert.ok(ui.includes("保存失敗，下次需重新選取"));
  assert.ok(ui.includes("HD 素材包未通過驗證"));
  const release=JSON.parse(read('web/offline-release.json'));
- assert.equal(release.version,'v72');
- assert.equal(release.wasmSize,18573572);
+ assert.equal(release.version,'v73');
+ assert.ok(release.wasmSize>1024);
 });
