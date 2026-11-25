@@ -3,7 +3,7 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v69';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v70';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v69';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
@@ -22,7 +22,7 @@ import {HdPresentationBudget} from './hd-presentation-budget.mjs';
 import {attachHdRuntimeSnapshot,HdSceneTrace} from './hd-coverage-runtime.mjs?build=v47';
 import {describeHdPhases} from './hd-phase-report.mjs';
 import {TransitionArtifactGate} from './transition-artifact-gate.mjs';
-const BUILD_ID='dbz-hd-tw-pwa-v66';
+const BUILD_ID='dbz-hd-tw-pwa-v70';
 const $ = id => document.getElementById(id);
 let moduleReady = null, game = null, running = false, raf = 0;
 const joypad=new JoypadInput(),pointerSets=[];
@@ -36,6 +36,8 @@ let averageTickMs = 0;
 let lastHdPoll = 0, lastDiagPoll = 0, translationKey = '';
 let currentDialogue = null, embedded = false, hdEnabled = false, classicZhEnabled = false;
 let hdPreference=null;
+let widescreen=false;
+try{widescreen=localStorage.getItem('dbz-preview-widescreen')==='1';}catch{}
 try {
   const pref=localStorage.getItem('dbz-hd-mode');
   if(pref==='hd'||pref==='classic'||pref==='classic-zh'){
@@ -46,7 +48,21 @@ let savedRom=null,savedIps=null,currentRomKey='';
 let language='zh-tw';
 try { language=localStorage.getItem('dbz-hd-language')==='zh-hk'?'zh-hk':'zh-tw'; }catch {}
 const translationCache=new Map();
+function syncWidescreen(){
+  const button=$('aspect-toggle');
+  button.hidden=!hdEnabled;
+  button.textContent=widescreen?'16:9':'原版比例';
+  button.setAttribute('aria-pressed',String(widescreen));
+  if(game)game.set_widescreen(hdEnabled&&widescreen);
+}
+$('aspect-toggle').addEventListener('click',()=>{
+  if(!game||!running||!hdEnabled)return;
+  widescreen=!widescreen;
+  try{localStorage.setItem('dbz-preview-widescreen',widescreen?'1':'0');}catch{}
+  syncWidescreen();
+});
 function updateRenderModeButton(){
+  syncWidescreen();
   const button=$('hd-toggle');
   button.textContent=hdEnabled?'HD 2x':classicZhEnabled?'中文 1x':'原版';
   button.setAttribute('aria-label',
@@ -478,12 +494,12 @@ async function ensureEngine(phase=async()=>{}) {
   if (moduleReady) return moduleReady;
   try {
     await phase('正在載入遊戲程式模組…');
-    const mod = await import('./pkg/ssd_web.js?build=v66');
+    const mod = await import('./pkg/ssd_web.js?build=v70');
     // Use the wasm-pack loader from the previously working v41 release.
     // Its versioned URL can stream normally, with no manually-created
     // Response passed across WebKit's Service Worker boundary.
     await phase('正在直接下載及編譯 WASM 遊戲核心（約 18 MB）…');
-    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v66',import.meta.url);
+    const wasmUrl=new URL('./pkg/ssd_web_bg.wasm?build=v70',import.meta.url);
     // Read verified, previously installed WASM bytes directly from
     // CacheStorage, never via an intercepting Service Worker Response.
     // Without an offline copy retain the exact v58 direct-network loader.
@@ -573,6 +589,7 @@ $('start').addEventListener('click', async () => {
     transitionArtifactGate.reset();
     game.set_hd_mode(hdEnabled);
     game.set_classic_zh_mode(classicZhEnabled);
+    syncWidescreen();
     game.set_fighter_hd_enabled($('fighter-hd-toggle').checked);
     game.set_special_hd_enabled?.($('special-hd-toggle').checked);
     game.set_map_hd_enabled?.($('map-hd-toggle').checked);
@@ -639,6 +656,7 @@ let frameBytes=null, frameImage=null;
 function drawFrame() {
   const w=game.width(), h=game.height();
   const canvas=$('screen');
+  $('game').classList.toggle('widescreen',hdEnabled&&w===744);
   if (w===0 || h===0) return;
   if (canvas.width!==w || canvas.height!==h) {
     canvas.width=w; canvas.height=h;
