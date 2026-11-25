@@ -4,6 +4,7 @@ use ssd_oracle::{joypad_from_bits, AudioSink, Machine, MemorySaveStore};
 use ssd_catalogue::engine::{on_screen, screen_names, story_pages_near, OnScreen, INTRO_TABLE};
 use ssd_catalogue::translation::{render, Slot, Translation};
 use ssd_hd::{Font as HdFont, HdOptions, Look, Renderer as HdRenderer};
+use ssd_hd::world::{WideRenderer, WideOptions, HudPlacement, Rom as WideRom, FieldState, Scene, WIDTH_16_9};
 use ssd_hd::translate::{ChineseFace, Overlay as TextOverlay};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -105,6 +106,66 @@ mod classic_zh_pixel_tests {
     }
 }
 
+// Copy original 2x HD pixels byte-for-byte, without scaling or re-running
+// the browser's 256px HD asset coordinate matching. Borders use the original
+// wide PPU world, at 2x nearest-neighbour, or opaque black for fixed scenes.
+fn compose_wide_pixels(out: &mut Vec<u8>, centre: &[u8], height: usize, left: usize,
+    view: Option<&ssd_hd::Frame>) {
+    let width = WIDTH_16_9 * 2;
+    let centre_width = 512;
+    if centre.len() != centre_width * height * 4 || left + centre_width > width {
+        out.clear(); return;
+    }
+    let view = view.filter(|frame| frame.width == WIDTH_16_9 && frame.height * 2 == height
+        && frame.pixels.len() == frame.width * frame.height);
+    out.resize(width * height * 4, 0);
+    for y in 0..height {
+        let row = &mut out[y * width * 4..(y + 1) * width * 4];
+        for x in (0..left).chain(left + centre_width..width) {
+            let pixel = &mut row[x * 4..x * 4 + 4];
+            if let Some(frame) = view {
+                let p = frame.pixels[y / 2 * frame.width + x / 2];
+                pixel.copy_from_slice(&[p.r, p.g, p.b, 255]);
+            } else {
+                pixel.copy_from_slice(&[0, 0, 0, 255]);
+            }
+        }
+        row[left * 4..(left + centre_width) * 4]
+            .copy_from_slice(&centre[y * centre_width * 4..(y + 1) * centre_width * 4]);
+    }
+}
+
+#[cfg(test)]
+mod widescreen_tests {
+    use super::*;
+    #[test]
+    fn widescreen_preserves_hd_centre_and_uses_opaque_black_margins() {
+        let centre = vec![91; 512 * 4 * 2];
+        let mut output = Vec::new();
+        for left in [0, 116, 232] {
+            compose_wide_pixels(&mut output, &centre, 2, left, None);
+            assert_eq!(output.len(), WIDTH_16_9 * 2 * 2 * 4);
+            for row in output.chunks_exact(WIDTH_16_9 * 2 * 4) {
+                assert_eq!(&row[left * 4..(left + 512) * 4], &centre[..512 * 4]);
+                for pixel in row[..left * 4].chunks_exact(4).chain(row[(left + 512) * 4..].chunks_exact(4)) {
+                    assert_eq!(pixel, &[0, 0, 0, 255]);
+                }
+            }
+        }
+    }
+    #[test]
+    fn widescreen_uses_real_side_pixels_without_touching_centre() {
+        let centre = vec![17; 512 * 4 * 2];
+        let source = ssd_hd::Frame { width: WIDTH_16_9, height: 1,
+            pixels: vec![ssd_oracle::Color::rgb(5, 10, 15); WIDTH_16_9], sources: Vec::new() };
+        let mut output = Vec::new();
+        compose_wide_pixels(&mut output, &centre, 2, 116, Some(&source));
+        assert_eq!(&output[..4], &[5, 10, 15, 255]);
+        assert_eq!(&output[116 * 4..116 * 4 + 4], &[17; 4]);
+        assert_eq!(&output[(116 + 512) * 4..(116 + 512) * 4 + 4], &[5, 10, 15, 255]);
+    }
+}
+
 #[wasm_bindgen]
 pub struct WebGame {
     machine: Machine,
@@ -134,6 +195,9 @@ pub struct WebGame {
     classic_zh_pixels: Vec<u8>,
     hd_renderer: HdRenderer,
     hd_pixels: Vec<u8>,
+    widescreen_enabled: bool,
+    wide_renderer: Option<Box<WideRenderer>>,
+    wide_pixels: Vec<u8>,
     hd_width: u32,
     hd_height: u32,
     hd_warning: String,
@@ -185,6 +249,7 @@ impl WebGame {
             text_font, menu_names: HashMap::new(), previous_page: None,
             hd_enabled: false, classic_zh_enabled: false,
             classic_zh_pixels: Vec::new(), hd_renderer, hd_pixels: Vec::new(),
+            widescreen_enabled: false, wide_renderer: None, wide_pixels: Vec::new(),
             hd_width: 0, hd_height: 0, hd_warning: String::new(),
             live_backgrounds: LiveBackgrounds::default(), hd_art_pixels: 0,
             live_fighters: LiveFighters::default(), hd_fighter_pixels: 0,
@@ -200,7 +265,7 @@ impl WebGame {
     }
 
     /// Detect stale Safari JS/WASM mixes; contains no user or ROM information.
-    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v66".into() }
+    pub fn browser_build_tag(&self) -> String { "dbz-hd-tw-pwa-v70".into() }
 
     /// AudioContext.sampleRate controls the emulator's PCM output rate.
     pub fn set_audio_rate(&mut self, hz: u32) -> Result<(), JsValue> {
@@ -234,7 +299,10 @@ impl WebGame {
         // NMI prepares the PPU frame from the field state at its start.
         // Do not read the next map/camera after run_frame(), which can already
         // be on another scene during transitions.
-        let field_state=if self.hd_enabled && self.hd_map_enabled && self.live_maps.has_entries() {
+        self.wide_pixels.clear();
+        let wide_mode = self.widescreen_enabled && self.hd_enabled;
+        let game_mode = self.machine.wram().get(0x24).copied().unwrap_or(0xFF);
+        let field_state=if self.hd_enabled && ((self.hd_map_enabled && self.live_maps.has_entries()) || wide_mode) {
             ssd_hd::world::FieldState::from_wram(self.machine.wram())
         } else {None};
         let mut started = None;
@@ -299,6 +367,8 @@ impl WebGame {
                         self.hd_width = picture.width;
                         self.hd_height = picture.height;
                         self.hd_pixels.clear();
+        self.wide_pixels.clear();
+        self.wide_renderer = None;
                         self.hd_pixels.extend_from_slice(&picture.rgba);
                         self.live_backgrounds.refresh(log);
                         self.hd_art_pixels = self.live_backgrounds.composite(
@@ -527,12 +597,16 @@ impl WebGame {
                     Err(error) => {
                         // Keep the game playable even when this frame cannot render in HD.
                         self.hd_pixels.clear();
+        self.wide_pixels.clear();
+        self.wide_renderer = None;
                         self.hd_art_pixels = 0;
                         self.hd_warning = error.to_string();
                     }
                 }
             } else {
                 self.hd_pixels.clear();
+        self.wide_pixels.clear();
+        self.wide_renderer = None;
                 self.hd_art_pixels = 0;
                 self.hd_warning = "等待完整 PPU 畫面紀錄".to_owned();
             }
@@ -592,6 +666,25 @@ impl WebGame {
             }
         }
         self.hd_profile.mark(hd_profile::TEXT,profile_on,&mut profile_clock);
+        // Experimental: preserve the entire existing 2x HD / Chinese centre
+        // and add only genuine upstream world/flight pixels at the sides.
+        if wide_mode && self.hd_width == 512 && !self.hd_pixels.is_empty() {
+            let mut wide = None;
+            if let Some(log) = self.machine.frame_log() {
+                if ssd_hd::world::is_field_mode(game_mode) || game_mode == 0x07 {
+                    let renderer = self.wide_renderer.get_or_insert_with(|| Box::new(WideRenderer::new()));
+                    wide = renderer.render_view(WideRom(&self.rom), game_mode, field_state.as_ref(), log,
+                        WideOptions { width: WIDTH_16_9, hud: HudPlacement::Window }).ok()
+                        .filter(|view| matches!(view.scene, Scene::Field | Scene::Flight));
+                }
+            }
+            let view = wide.as_ref().filter(|view|
+                view.frame.width == WIDTH_16_9 && view.frame.height * 2 == self.hd_height as usize
+                && (0..=(WIDTH_16_9 - 256) as i32).contains(&view.logical.x));
+            let left = view.map_or((WIDTH_16_9 - 256) / 2, |view| view.logical.x as usize) * 2;
+            compose_wide_pixels(&mut self.wide_pixels, &self.hd_pixels, self.hd_height as usize,
+                left, view.map(|view| &view.frame));
+        }
         self.hd_profile.finish(profile_on);
         Ok(())
     }
@@ -961,10 +1054,20 @@ impl WebGame {
         self.hd_mode7_pixels = 0;
         self.hd_portrait_pixels = 0;
         self.hd_pixels.clear();
+        self.wide_pixels.clear();
+        self.wide_renderer = None;
         self.classic_zh_pixels.clear();
         self.hd_width = 0;
         self.hd_height = 0;
         self.hd_warning.clear();
+    }
+
+    pub fn set_widescreen(&mut self, enabled: bool) {
+        if self.widescreen_enabled != enabled {
+            self.widescreen_enabled = enabled;
+            self.wide_pixels.clear();
+            self.wide_renderer = None;
+        }
     }
 
     pub fn hd_mode(&self) -> bool { self.hd_enabled }
@@ -974,7 +1077,7 @@ impl WebGame {
     pub fn hd_warning(&self) -> String { self.hd_warning.clone() }
 
     pub fn width(&self) -> u32 {
-        if self.hd_active() { return self.hd_width; }
+        if self.hd_active() { return if self.wide_pixels.is_empty() { self.hd_width } else { (WIDTH_16_9 * 2) as u32 }; }
         if self.classic_zh_enabled && !self.classic_zh_pixels.is_empty() {
             return self.machine.frame().size.width * 2;
         }
@@ -991,7 +1094,7 @@ impl WebGame {
 
     /// RGBA8 pixels, copied across the wasm-to-JS boundary.
     pub fn frame_rgba(&self) -> Vec<u8> {
-        if self.hd_active() { return self.hd_pixels.clone(); }
+        if self.hd_active() { return if self.wide_pixels.is_empty() { self.hd_pixels.clone() } else { self.wide_pixels.clone() }; }
         if self.classic_zh_enabled && !self.classic_zh_pixels.is_empty() {
             return self.classic_zh_pixels.clone();
         }
@@ -1010,6 +1113,8 @@ impl WebGame {
         self.audio.samples.clear();
         self.previous_page = None;
         self.hd_pixels.clear();
+        self.wide_pixels.clear();
+        self.wide_renderer = None;
         self.hd_renderer = tracked_renderer(self.text_font.clone(), self.native_overlay.clone());
         self.hd_renderer.set_portrait_tracking(self.live_portraits.has_entries()||self.live_cards.has_entries());
         self.native_painted = false;
