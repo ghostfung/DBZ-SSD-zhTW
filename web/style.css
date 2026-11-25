@@ -512,3 +512,18 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 #speed-update-description ul{margin:8px 0 0;padding-left:1.4em}
 #speed-update-description li{margin:0 0 .55em}
 #speed-update-close{font-size:.95rem;min-height:44px}
+
+/* v70 isolated preview: the actual expanded framebuffer, not CSS stretching of the original. */
+#preview-banner{padding:7px;text-align:center;background:#69491d;color:#fff;font-size:.8rem}
+.playing #preview-banner{display:none}
+.playing #game.widescreen .screen{aspect-ratio:16 / 9;height:auto;max-height:none}
+.playing #game.widescreen .screen canvas{object-fit:fill}
+@media (orientation:portrait){
+ .playing #game.widescreen .screen{width:min(100%,calc((100dvh - 455px)*16/9));max-height:calc(100dvh - 455px)}
+}
+@media (orientation:landscape) and (max-height:650px){
+ .playing #game.widescreen .screen{width:min(100%,calc((100dvh - 12px)*16/9));max-height:calc(100dvh - 12px)}
+}
+@media (orientation:landscape) and (min-height:651px){
+ .playing #game.widescreen .screen{width:100%;max-height:100%;place-self:center}
+}
