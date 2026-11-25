@@ -34,11 +34,11 @@ test('Cantonese opening, story, combat and prompts contain localized wording',()
  for(const [k,v] of localized.filter(([k])=>/^intro:/.test(k)))assert.ok([...v].length<=11,k+' '+v);
  assert.match(read('web/app.mjs'),/language==='zh-hk'\?'香港粵語':'台灣繁中'/);
  const release=JSON.parse(read('web/offline-release.json'));
- assert.equal(release.version,'v74');
+ assert.equal(release.version,'v75');
  assert.equal(release.wasmSize,18561947);
  assert.equal(release.wasmSize,statSync(new URL('web/pkg/ssd_web_bg.wasm',root)).size);
  assert.ok(release.files.includes('zh-hk.tsv'));
- assert.match(read('web/offline-installer.mjs'),/OFFLINE_RELEASE='v74'/);
+ assert.match(read('web/offline-installer.mjs'),/OFFLINE_RELEASE='v75'/);
 });
 // Read Unicode mappings from the exact TTF bundled inside WASM. No external packages.
 function cmapSupports(font){
