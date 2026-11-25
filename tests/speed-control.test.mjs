@@ -90,8 +90,8 @@ test('one physical button, portrait and landscape anchors, one-time release moda
   assert.doesNotMatch(switchHandler,/gameToast\(/,'speed switching must not paint a toast across the speed button');
   assert.match(css,/speed-toggle\[data-speed="3"\]/);
   assert.equal(SPEED_NOTICE_KEY,'dbz-ssd-update-2026-11-24-v69-seen');
-  assert.match(html,/app\.mjs\?build=v66&ui=v69/);
-  assert.match(html,/style\.css\?build=v50&ui=v69/);
+  assert.match(html,/app\.mjs\?build=v66&ui=v72/);
+  assert.match(html,/style\.css\?build=v50&ui=v72/);
   for(const bit of [0,1,2,3,4,5,6,7,8,9])
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
 });
