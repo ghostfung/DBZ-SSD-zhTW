@@ -512,3 +512,13 @@ canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:p
 #speed-update-description ul{margin:8px 0 0;padding-left:1.4em}
 #speed-update-description li{margin:0 0 .55em}
 #speed-update-close{font-size:.95rem;min-height:44px}
+
+/* v72: compact first import. Retain the diagnostic DOM for the loader,
+   but do not expose individual asset-index cards to players. */
+#setup .hd-import-panel .hd-catalog,
+#setup #hd-session-status{display:none!important}
+#setup .hd-storage-experimental{display:none}
+#setup.managing-files .hd-storage-experimental{display:block;margin:8px 0}
+#hd-progress{width:100%;height:12px;accent-color:#e1b86b}
+#hd-status{font-size:.85rem;line-height:1.45}
+
