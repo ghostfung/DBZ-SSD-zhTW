@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣與香港繁體中文。"/>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v69"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v72"/>
 </head>
 <body>
   <main>
@@ -47,7 +47,7 @@
         <label>選擇自己的官方 <code>hd-pack.zip</code> v0.3.9
           <input id="hd-zip" type="file" accept=".zip,application/zip,application/x-zip-compressed"/>
         </label>
-        <p class="hd-import-note">約 462 MiB。驗證成功後自動嘗試保存到這台 iPhone，下次開啟可自動重新驗證。若 iOS 拒絕保存，仍可在本次遊玩，但下次需要重新選取原始 ZIP。</p>
+        <p class="hd-import-note">驗證後會嘗試自動保存於本機，保存成功後下次可直接啟動。</p>
         <div class="hd-import-buttons">
           <button id="hd-verify" type="button" disabled>驗證 HD 美術包</button>
           <button id="hd-preview-btn" type="button" disabled>預覽一張 HD 素材</button>
@@ -95,6 +95,13 @@
           <strong>戰鬥人物 HD 精靈（第一階段）</strong>
           <p id="hd-fighter-count" class="hd-import-note">匯入後將讀取 class2/index.json。僅精確匹配的戰鬥人物會替換原始精靈像素；招式特效、人物輪廓擴大及場景物件仍待整合。</p>
         </div>
+
+        <progress id="hd-progress" max="100" value="0" aria-label="HD 美術包匯入進度" hidden></progress>
+        <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
+        <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
+        <p class="hd-import-note">遊戲檔案只在本機使用，不會上傳。</p>
+        <p class="hd-import-note"><a href="./credits.html" target="_blank" rel="noopener noreferrer">開源與譯文授權資料</a></p>
+      </div>
         <details class="hd-storage-experimental">
           <summary>HD 素材本機保存管理（自動保存）</summary>
           <p class="hd-import-note">驗證成功後將會自動分段保存。若失敗仍可直接使用本次已驗證的 ZIP；Safari 不能永久記住「檔案」App 的檔案路徑。請保留原檔備份。</p>
@@ -103,12 +110,6 @@
             <button id="hd-remove" type="button">清除 HD 本機快取</button>
           </div>
         </details>
-        <progress id="hd-progress" max="100" value="0" hidden></progress>
-        <output id="hd-status" aria-live="polite">尚未匯入 HD 美術包。</output>
-        <div id="hd-preview-panel" hidden><img id="hd-preview-image" alt="由玩家本機 HD ZIP 解壓的示範圖片"/><p id="hd-preview-name" class="hd-import-note"></p></div>
-        <p class="hd-import-note">ROM、IPS 及 HD 美術包只在 iPhone 本機使用，不會上傳。</p>
-        <p class="hd-import-note"><a href="./credits.html" target="_blank" rel="noopener noreferrer">開源與譯文授權資料</a></p>
-      </div>
       </div>
       <output id="status" aria-live="polite">等待載入。</output>
     </section>
@@ -300,8 +301,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v66&ui=v69"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v55"></script>
-  <script type="module" src="offline-installer.mjs?offline=v69"></script>
+  <script type="module" src="app.mjs?build=v66&ui=v72"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v72"></script>
+  <script type="module" src="offline-installer.mjs?offline=v72"></script>
 </body>
 </html>
