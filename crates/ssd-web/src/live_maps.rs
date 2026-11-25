@@ -3,7 +3,7 @@
 //! never from map appearance, world coordinates alone or a label.
 use serde::Deserialize;
 use ssd_hd::{mapart, world::{check_tiles, FieldState, Rom}};
-use ssd_oracle::FrameLog;
+use ssd_oracle::{FrameLog, LineRegs};
 use std::collections::{HashMap,HashSet};
 
 const SCREEN:usize=256;
@@ -46,6 +46,22 @@ fn signed(value:i32,modulus:i32)->i32 {
     let rest=value.rem_euclid(modulus);
     if rest>=modulus/2 {rest-modulus} else {rest}
 }
+// The field command window uses CGADSUB $82: subtract a fixed
+// colour from BG2, leaving menus and sprites alone. Permit only this
+// documented simple operation, never arbitrary colour math or fades.
+fn map_dimming(regs:&LineRegs)->Option<[u8;3]> {
+    if !regs.bg_color_math[1] || regs.color_math==0 {return Some([0;3]);}
+    if regs.color_math!=3 || regs.sub_screen_layers || !regs.color_math_subtract
+        || regs.color_math_divide || regs.force_main_black!=0 {return None;}
+    Some([0,5,10].map(|shift| {
+        let channel=u32::from((regs.fixed_color>>shift)&31);
+        ((channel*255+15)/31) as u8
+    }))
+}
+fn map_mode(game_mode:u8,map_id:u8)->bool {
+    ssd_hd::world::is_field_mode(game_mode) ||
+        game_mode&0x7f==3 || game_mode&0x7f==1 && map_id>=48
+}
 fn origin(log:&FrameLog,camera:(u16,u16))->Option<(i32,i32)> {
     let mut found=None;
     for entry in &log.entries {
@@ -54,7 +70,7 @@ fn origin(log:&FrameLog,camera:(u16,u16))->Option<(i32,i32)> {
         if regs.forced_blanking {continue;}
         if regs.bg_mode!=1 || !(regs.main_bg[1] || regs.sub_bg[1])
             || regs.bg_large_tiles[1] || regs.brightness!=15 ||
-            regs.bg_color_math[1] && regs.color_math!=0
+            map_dimming(regs).is_none()
         {return None;}
         let (camx,camy)=(i32::from(camera.0),i32::from(camera.1));
         let point=(camx+signed(i32::from(regs.bg_h_scroll[1])-camx,512),
@@ -105,8 +121,7 @@ impl LiveMaps {
         if !log.cgram_writes.is_empty(){self.reason="場景調色盤正在變化";return;}
         let Some(state)=state else {self.reason="沒有 WRAM 地圖狀態";return;};
         let state=state.in_room(Rom(rom));
-        if !(ssd_hd::world::is_field_mode(state.game_mode) ||
-            state.game_mode&0x7f==1 && state.map_id>=48) {
+        if !map_mode(state.game_mode,state.map_id) {
             self.reason="目前不是可驗證的探索地圖";return;
         }
         let Some(from)=origin(log,state.camera) else {
@@ -182,7 +197,15 @@ impl LiveMaps {
             layers.len()!=SCREEN*usize::from(log.height) ||
             rgba.len()!=width*height*4{return 0;}
         let mut changed=0;
+        let mut entries=log.entries.iter().peekable();
+        let mut dim=[0;3];
         for y in 0..usize::from(log.height) {
+            // PPU scanlines are 1-based for visible rows. Keep the same
+            // shade across each 2x row; unsupported math was rejected by origin().
+            while entries.peek().is_some_and(|entry|usize::from(entry.scanline)<=y+1) {
+                let entry=entries.next().unwrap();
+                dim=map_dimming(&entry.regs).unwrap_or([0;3]);
+            }
             let wy=active.origin.1+y as i32+1;
             if wy<0 || wy>=active.size.1 {continue;}
             let ty=wy as usize/GAME_TILE;
@@ -203,7 +226,7 @@ impl LiveMaps {
                         if alpha==0{continue;}
                         for ch in 0..3 {
                             let old=u32::from(rgba[dst+ch]);
-                            let next=((u32::from(img[src+ch])*alpha+
+                            let next=((u32::from(img[src+ch].saturating_sub(dim[ch]))*alpha+
                                 old*(255-alpha)+127)/255) as u8;
                             different|=next!=rgba[dst+ch];
                             rgba[dst+ch]=next;
@@ -215,5 +238,42 @@ impl LiveMaps {
             }
         }
         changed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_modes_allow_status_menu_but_not_battle_or_title() {
+        for mode in [0x00,0x05,0x06,0x03,0x83] {
+            assert!(map_mode(mode,0));
+        }
+        assert!(map_mode(0x01,48));
+        for mode in [0x02,0x04,0x07,0x87,0x0C] {
+            assert!(!map_mode(mode,0));
+        }
+        assert!(!map_mode(0x01,0));
+    }
+
+    #[test]
+    fn map_menu_fixed_subtraction_preserves_hd_and_rejects_other_math() {
+        let mut regs=LineRegs::default();
+        regs.bg_color_math[1]=true;
+        regs.color_math=3;
+        regs.color_math_subtract=true;
+        regs.fixed_color=1|(2<<5)|(31<<10);
+        assert_eq!(map_dimming(&regs),Some([8,16,255]));
+        regs.color_math_divide=true;
+        assert_eq!(map_dimming(&regs),None);
+        regs.color_math_divide=false;
+        regs.sub_screen_layers=true;
+        assert_eq!(map_dimming(&regs),None);
+        regs.sub_screen_layers=false;
+        regs.color_math_subtract=false;
+        assert_eq!(map_dimming(&regs),None);
+        regs.bg_color_math[1]=false;
+        assert_eq!(map_dimming(&regs),Some([0;3]));
     }
 }
