@@ -87,9 +87,9 @@ test('quota rejection keeps the previous slot and reports failure',async()=>{
     assert.deepEqual([...new Uint8Array(await old.state.arrayBuffer())],[1]);
   }finally{globalThis.indexedDB=prior;}
 });
-test('PWA preserves game modification button, legacy backup and no network save',()=>{
+test('PWA preserves game modification button, complete backup and no network save',()=>{
   const html=source('web/index.html'),app=source('web/app.mjs'),css=source('web/style.css');
-  for(const text of ['儲存遊戲','讀取遊戲','備份紀錄','遊戲修改','匯入進度（.sav）','匯出進度（.sav）'])
+  for(const text of ['儲存遊戲','讀取遊戲','備份紀錄','遊戲修改','一鍵備份全部存檔（.dbzbackup）','還原全部存檔（.dbzbackup）'])
     assert.ok(html.includes(text),text);
   for(const bit of [0,1,2,3,4,5,6,7,8,9])
     assert.equal([...html.matchAll(new RegExp('data-bit="'+bit+'"','g'))].length,1);
@@ -98,8 +98,9 @@ test('PWA preserves game modification button, legacy backup and no network save'
   assert.match(app,/captureSaveThumbnail/);
   assert.match(app,/game\.save_state\(\)/);
   assert.match(app,/restoreActiveCheats\(\)/);
-  assert.match(app,/window\.confirm\('Slot '/);
+  assert.match(app,/slotOverwrite!==slot/);
+  assert.doesNotMatch(app,/window\.confirm\('Slot '/);
   assert.match(css,/\.save-slots-list/);
   assert.doesNotMatch(source('web/save-slots.mjs'),/fetch\(|XMLHttpRequest|navigator\.sendBeacon/);
-  assert.match(html,/app\.mjs\?build=v53&ui=v65/);
+  assert.match(html,/app\.mjs\?build=v73&ui=v76/);
 });
