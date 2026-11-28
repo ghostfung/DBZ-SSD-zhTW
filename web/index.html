@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="七龍珠 HD"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="description" content="《七龍珠Z 超賽亞傳說》iPhone PWA：自備 ROM、IPS 與 HD 素材，支援台灣繁中及香港粵語。"/>
-  <link rel="stylesheet" href="style.css?build=v50&ui=v75"/>
+  <link rel="stylesheet" href="style.css?build=v50&ui=v76"/>
 </head>
 <body>
   <main>
@@ -202,6 +202,7 @@
       <div id="save-slots-list" class="save-slots-list" role="group" aria-label="存檔欄位"></div>
       <output id="save-slots-feedback" class="save-slots-feedback" role="status" aria-live="polite"></output>
       <div class="save-slots-actions">
+        <button id="save-slots-retry" type="button" hidden>重新讀取欄位</button>
         <button id="save-slots-cancel" type="button">取消</button>
         <button id="save-slots-confirm" type="button" disabled>儲存至所選欄位</button>
       </div>
@@ -298,8 +299,8 @@
   </section>
 
 
-  <script type="module" src="app.mjs?build=v73&ui=v75"></script>
-  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v75"></script>
-  <script type="module" src="offline-installer.mjs?offline=v75"></script>
+  <script type="module" src="app.mjs?build=v73&ui=v76"></script>
+  <script type="module" src="hd-import-ui.mjs?build=v50&ui=v76"></script>
+  <script type="module" src="offline-installer.mjs?offline=v76"></script>
 </body>
 </html>
