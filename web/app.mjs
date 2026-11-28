@@ -1,6 +1,6 @@
 import {inspectRom,crc32,crcHex} from './rom-check.mjs';
 import {JoypadInput} from './joypad-input.mjs';
-import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl} from './save-slots.mjs';
+import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl,optionalThumbnail} from './save-slots.mjs?ui=v76';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
 import {loadOfflineWasm} from './offline-installer.mjs?offline=v75';
@@ -1124,7 +1124,7 @@ document.addEventListener('visibilitychange',()=>{
     resetControls();sound.reset();
     offerManualSoundRecovery=Boolean(sound.enabled);
   }else if(!document.hidden&&game){
-    if(!running&&!cheatPanelOpen&&!speedNoticeOpen){
+    if(!running&&!cheatPanelOpen&&!speedNoticeOpen&&!slotMode&&!backupOpen){
       running=true;lastTick=0;accumulator=0;raf=requestAnimationFrame(requestFrame);
     }
     offerManualSoundRecovery=Boolean(sound.enabled);
@@ -1142,6 +1142,7 @@ window.addEventListener('pageshow',()=>{
 // v54: all ten slots are stored privately in IndexedDB. ROM, IPS, HD images
 // and save data are never sent to any server. The .sav format stays unchanged.
 let slotMode=null,slotSelection=null,slotBusy=false,backupOpen=false;
+let slotOverwrite=null,slotListReady=false;
 let currentSlotRecords=new Map(),slotPickerGeneration=0;
 
 function pauseForProgressMenu(){
@@ -1162,6 +1163,7 @@ function clearSlotThumbUrls(){
 }
 function slotButtonLabel(){
   if(slotMode==='load')return '讀取 Slot '+String(slotSelection??'--').padStart(2,'0');
+  if(slotOverwrite!==null&&slotOverwrite===slotSelection)return '確認覆蓋 Slot '+String(slotSelection).padStart(2,'0');
   return '儲存至 Slot '+String(slotSelection??'--').padStart(2,'0');
 }
 function slotAvailable(slot){
@@ -1171,11 +1173,14 @@ function slotAvailable(slot){
 function updateSlotChoice(){
   for(const button of $('save-slots-list').querySelectorAll('[data-slot]'))
     button.setAttribute('aria-pressed',String(Number(button.dataset.slot)===slotSelection));
-  $('save-slots-confirm').disabled=slotBusy||!slotSelection||!slotAvailable(slotSelection);
+  $('save-slots-confirm').disabled=slotBusy||!slotListReady||!slotSelection||!slotAvailable(slotSelection);
+  $('save-slots-close').disabled=slotBusy;
+  $('save-slots-cancel').disabled=slotBusy;
   $('save-slots-confirm').textContent=slotButtonLabel();
 }
 async function refreshSlotPicker(){
-  clearSlotThumbUrls();currentSlotRecords=new Map();
+  clearSlotThumbUrls();currentSlotRecords=new Map();slotListReady=false;slotSelection=null;slotOverwrite=null;
+  $('save-slots-retry').hidden=true;
   const generation=slotPickerGeneration;
   const list=$('save-slots-list');list.replaceChildren();
   $('save-slots-feedback').textContent='正在讀取本機存檔…';
@@ -1183,7 +1188,9 @@ async function refreshSlotPicker(){
   let records;
   try { records=await listSaveSlots(); }
   catch(error){
-    $('save-slots-feedback').textContent='本機存檔無法使用：'+(error?.message||error);
+    if(!slotMode||generation!==slotPickerGeneration)return;
+    $('save-slots-feedback').textContent='本機存檔無法使用：'+(error?.message||error)+'。請重試，不要清除網站資料。';
+    $('save-slots-retry').hidden=false;
     return;
   }
   if(!slotMode||generation!==slotPickerGeneration)return;
@@ -1226,30 +1233,37 @@ async function refreshSlotPicker(){
     meta.append(title,line);button.append(preview,meta);
     button.addEventListener('click',()=>{
       if(slotBusy||button.disabled)return;
-      slotSelection=slot;updateSlotChoice();
+      slotSelection=slot;slotOverwrite=null;
+      $('save-slots-feedback').textContent=slotMode==='load'?'請確認要讀取的欄位。':'請確認要儲存的欄位。';
+      updateSlotChoice();
     });
     list.append(button);
   }
+  slotListReady=true;
   $('save-slots-feedback').textContent=slotMode==='load'
     ?'請選擇要讀取的進度；不同 ROM／IPS 的欄位不能讀取。'
     :'請選擇儲存欄位。已有進度的欄位會要求確認覆蓋。';
   updateSlotChoice();
 }
 async function openSlotPicker(mode){
-  if(!game||slotMode||(!['save','load'].includes(mode)))return;
+  if(!game||cheatPanelOpen||speedNoticeOpen||(!['save','load'].includes(mode)))return;
+  if(slotMode){
+    $('save-slots-panel').hidden=false;
+    return;
+  }
   if(backupOpen){backupOpen=false;$('backup-panel').hidden=true;}
   pauseForProgressMenu();
-  slotMode=mode;slotSelection=null;slotBusy=false;
+  slotMode=mode;slotSelection=null;slotBusy=false;slotOverwrite=null;slotListReady=false;
   $('save-slots-title').textContent=
     mode==='save'?'儲存遊戲':'讀取遊戲';
   $('save-slots-hint').textContent='10 個本機進度欄位';
   $('save-slots-panel').hidden=false;
-  $('save-slots-close').focus({preventScroll:true});
+  try{$('save-slots-close').focus({preventScroll:true});}catch{}
   await refreshSlotPicker();
 }
 function closeSlotPicker(){
   if(!slotMode||slotBusy)return;
-  slotMode=null;slotSelection=null;
+  slotMode=null;slotSelection=null;slotOverwrite=null;slotListReady=false;
   $('save-slots-panel').hidden=true;clearSlotThumbUrls();
   $('save').focus({preventScroll:true});
   resumeFromProgressMenu();
@@ -1276,8 +1290,8 @@ async function captureSaveThumbnail(){
   if(!ctx2)return null;
   ctx2.imageSmoothingEnabled=Boolean(game?.hd_active?.());
   ctx2.drawImage(source,0,0,thumb.width,thumb.height);
-  const image=await new Promise(resolve=>thumb.toBlob(resolve,'image/webp',.72));
-  return image&&image.size<=512*1024?image:null;
+  if(typeof thumb.toBlob!=='function')return null;
+  return new Promise(resolve=>thumb.toBlob(resolve,'image/png'));
 }
 async function applyLoadedSave(bytes){
   validStateBytes(bytes);
@@ -1311,8 +1325,17 @@ async function applyLoadedSave(bytes){
   // A save restores emulation state, not the iPhone AudioContext's permissions.
   await restoreAudioAfterInterruption();
 }
-$('save').addEventListener('click',()=>{void openSlotPicker('save');});
-$('load').addEventListener('click',()=>{void openSlotPicker('load');});
+function slotPickerError(error){
+  if(slotMode){
+    slotListReady=false;slotBusy=false;slotOverwrite=null;
+    $('save-slots-panel').hidden=false;
+    $('save-slots-feedback').textContent='存檔選單錯誤：'+(error?.message||error)+'。請重試。';
+    $('save-slots-retry').hidden=false;updateSlotChoice();
+  }else gameToast('無法開啟存檔選單：'+(error?.message||error));
+}
+$('save').addEventListener('click',()=>{void openSlotPicker('save').catch(slotPickerError);});
+$('load').addEventListener('click',()=>{void openSlotPicker('load').catch(slotPickerError);});
+$('save-slots-retry').addEventListener('click',()=>{if(slotMode&&!slotBusy)void refreshSlotPicker().catch(slotPickerError);});
 $('backup-open').addEventListener('click',openBackupPanel);
 $('backup-close').addEventListener('click',closeBackupPanel);
 $('save-slots-close').addEventListener('click',closeSlotPicker);
@@ -1360,10 +1383,14 @@ $('backup-bundle-import').addEventListener('change',async event=>{
 
 $('save-slots-confirm').addEventListener('click',async()=>{
   const slot=slotSelection,mode=slotMode;
-  if(!game||!mode||!slot||slotBusy||!slotAvailable(slot))return;
+  if(!game||!mode||!slot||slotBusy||!slotListReady||!slotAvailable(slot))return;
   const previous=currentSlotRecords.get(slot);
-  if(mode!=='load'&&previous&&
-    !window.confirm('Slot '+String(slot).padStart(2,'0')+' 已有進度，確定要覆蓋？'))return;
+  if(mode!=='load'&&previous&&slotOverwrite!==slot){
+    slotOverwrite=slot;
+    $('save-slots-feedback').textContent='Slot '+String(slot).padStart(2,'0')+' 已有進度。再次點「確認覆蓋」才會寫入，或選擇其他欄位。';
+    updateSlotChoice();return;
+  }
+  slotOverwrite=null;
   slotBusy=true;updateSlotChoice();
   $('save-slots-feedback').textContent='正在'+(mode==='load'?'讀取':'儲存')+'進度…';
   try{
@@ -1374,13 +1401,16 @@ $('save-slots-confirm').addEventListener('click',async()=>{
       slotBusy=false;closeSlotPicker();gameToast('已讀取 Slot '+String(slot).padStart(2,'0'));
     }else{
       const state=validStateBytes(game.save_state());
-      const thumb=await captureSaveThumbnail();
+      $('save-slots-feedback').textContent='正在準備存檔縮圖…';
+      const thumb=await optionalThumbnail(captureSaveThumbnail);
+      $('save-slots-feedback').textContent='正在寫入本機存檔…';
       await writeSaveSlot(slot,state,{romKey:currentRomKey,thumbnail:thumb});
       slotBusy=false;closeSlotPicker();gameToast('已儲存至 Slot '+String(slot).padStart(2,'0'));
     }
   }catch(error){
-    $('save-slots-feedback').textContent='操作失敗：'+(error?.message||error)+
-      '。原有欄位未被清除。';
+    slotOverwrite=null;slotListReady=false;
+    $('save-slots-feedback').textContent='操作未完成：'+(error?.name&&error.name!=='Error'?error.name+'：':'')+(error?.message||error)+'。請重新讀取欄位核對；不要清除網站資料。';
+    $('save-slots-retry').hidden=false;
   }finally{
     slotBusy=false;
     if(slotMode)updateSlotChoice();
