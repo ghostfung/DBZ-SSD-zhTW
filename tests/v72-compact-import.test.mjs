@@ -25,6 +25,6 @@ test('v69 gameplay layout is restored; compact import remains',()=>{
  assert.ok(ui.includes("保存失敗，下次需重新選取"));
  assert.ok(ui.includes("HD 素材包未通過驗證"));
  const release=JSON.parse(read('web/offline-release.json'));
- assert.equal(release.version,'v75');
+ assert.equal(release.version,'v76');
  assert.ok(release.wasmSize>1024);
 });
