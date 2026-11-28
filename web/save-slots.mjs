@@ -27,35 +27,70 @@ function validMetadata(record){
     throw Error('存檔縮圖已損壞');
   return record;
 }
-export function openSlotDB(factory=globalThis.indexedDB){
+// Deadlines prevent stalled WebKit storage requests from locking the game's menu.
+export function openSlotDB(factory=globalThis.indexedDB,timeoutMs=8000){
   if(!factory) return Promise.reject(Error('此瀏覽器不支援本機存檔'));
   return new Promise((resolve,reject)=>{
     const req=factory.open(DB_NAME,1);
+    let done=false;
+    const finish=(error,db)=>{
+      if(done){if(db)db.close();return;}
+      done=true;clearTimeout(timer);
+      if(error)reject(error);else resolve(db);
+    };
+    const timer=setTimeout(()=>finish(Error('本機存檔資料庫開啟逾時，請稍後重試')),timeoutMs);
     req.onupgradeneeded=()=>{
+      if(done){try{req.transaction.abort();}catch{}return;}
       if(!req.result.objectStoreNames.contains(STORE))
         req.result.createObjectStore(STORE,{keyPath:'slot'});
     };
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error||Error('無法開啟本機存檔'));
-    req.onblocked=()=>reject(Error('本機存檔資料庫被其他視窗佔用，請關閉其他分頁'));
+    req.onsuccess=()=>finish(null,req.result);
+    req.onerror=()=>finish(req.error||Error('無法開啟本機存檔'));
+    req.onblocked=()=>finish(Error('本機存檔資料庫被其他視窗佔用，請關閉其他分頁'));
   });
 }
-async function transact(mode,requestFn){
-  const db=await openSlotDB();
+export async function transact(mode,requestFn,{factory=globalThis.indexedDB,openTimeoutMs=8000,timeoutMs=15000}={}){
+  const db=await openSlotDB(factory,openTimeoutMs);
   try{
     return await new Promise((resolve,reject)=>{
-      let result;
+      let result,done=false,requestError=null,timedOut=false;
       const tx=db.transaction(STORE,mode);
-      tx.oncomplete=()=>resolve(result);
-      tx.onabort=()=>reject(tx.error||Error('存檔交易已取消'));
-      tx.onerror=()=>reject(tx.error||Error('本機存檔讀寫失敗'));
+      const finish=(error)=>{
+        if(done)return;done=true;clearTimeout(timer);
+        if(error)reject(error);else resolve(result);
+      };
+      const timer=setTimeout(()=>{
+        timedOut=true;
+        // Abort the real transaction, not just its JS promise. If it is already
+        // committing, the result may be unknown; the UI must ask for a recheck.
+        try{tx.abort();}catch{}
+        finish(Error(mode==='readwrite'
+          ?'存檔寫入逾時，結果尚未確認，請重新開啟存檔欄位核對'
+          :'本機存檔讀取逾時，請重試'));
+      },timeoutMs);
+      tx.oncomplete=()=>finish(null);
+      tx.onabort=()=>finish(requestError||tx.error||Error(timedOut?'存檔交易逾時':'存檔交易已取消'));
+      tx.onerror=()=>{requestError=requestError||tx.error||Error('本機存檔讀寫失敗');};
       let request;
       try{request=requestFn(tx.objectStore(STORE));}
-      catch(error){try{tx.abort();}catch{} reject(error);return;}
+      catch(error){try{tx.abort();}catch{} finish(error);return;}
       request.onsuccess=()=>{result=request.result;};
-      request.onerror=()=>reject(request.error||Error('本機存檔讀寫失敗'));
+      request.onerror=()=>{requestError=request.error||Error('本機存檔讀寫失敗');};
     });
   }finally{db.close();}
+}
+// A thumbnail is optional. Even a missing callback or unsupported image encoder
+// must never prevent the actual emulator state from being persisted.
+export function optionalThumbnail(make,timeoutMs=1500){
+  return new Promise(resolve=>{
+    let done=false;
+    const finish=value=>{
+      if(done)return;done=true;clearTimeout(timer);
+      resolve(value instanceof Blob&&value.size>0&&value.size<=MAX_THUMB_BYTES?value:null);
+    };
+    const timer=setTimeout(()=>finish(null),timeoutMs);
+    Promise.resolve().then(make).then(finish,()=>finish(null));
+  });
 }
 export async function listSaveSlots(){
   const records=await transact('readonly',store=>store.getAll());
@@ -78,9 +113,11 @@ export async function writeSaveSlot(slot,bytes,{romKey,thumbnail=null,savedAt=Da
   // A single put transaction replaces the state, timestamp and thumbnail together.
   // The write is considered successful only when the whole transaction commits.
   await transact('readwrite',store=>store.put(record));
-  const check=await readSaveSlot(slot);
+  let check;
+  try{check=await readSaveSlot(slot);}
+  catch(error){throw Error('寫入已提交，但讀回驗證失敗，請重新開啟欄位核對：'+(error?.message||error));}
   if(!check||check.savedAt!==savedAt||check.state.size!==bytes.byteLength)
-    throw Error('存檔寫入後驗證失敗');
+    throw Error('寫入已提交，但讀回驗證未通過，請重新開啟欄位核對');
   return check;
 }
 
