@@ -3,7 +3,7 @@ import {JoypadInput} from './joypad-input.mjs';
 import {SLOT_COUNT,listSaveSlots,readSaveSlot,writeSaveSlot,validStateBytes,thumbnailDataUrl,optionalThumbnail} from './save-slots.mjs?ui=v76';
 import {createMigrationBundle,readMigrationBundle} from './migration-bundle.mjs';
 import {SnesAudio} from './audio.mjs?build=v65';
-import {loadOfflineWasm} from './offline-installer.mjs?offline=v75';
+import {loadOfflineWasm} from './offline-installer.mjs?offline=v76';
 import {nextSpeed,speedFramePlan,SPEED_NOTICE_KEY} from './speed-control.mjs?build=v75';
 import {saveCheatChoices,restoreCheatChoices} from './cheat-preferences.mjs?ui=v53';
 import {saveGameFile,readGameFile,deleteGameFile} from './local-game-files.mjs';
