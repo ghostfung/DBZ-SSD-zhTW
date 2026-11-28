@@ -1,0 +1,38 @@
+name: Validate and publish isolated save reliability v76 preview
+on:
+  push:
+    branches: [preview-v76-save-reliability]
+  workflow_dispatch:
+concurrency:
+  group: save-reliability-v76-preview
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate storage failure paths and regression tests
+        run: |
+          node --check web/app.mjs
+          node --check web/save-slots.mjs
+          node --check web/offline-installer.mjs
+          node --test tests/v76-save-reliability.test.mjs tests/save-slots.test.mjs tests/v74-cantonese.test.mjs tests/translation-catalogue-audit.test.mjs tests/audio.test.mjs tests/speed-control.test.mjs tests/v68-tablet-input.test.mjs tests/cloudflare-migration.test.mjs tests/v63-thumbnail-backup.test.mjs tests/v72-compact-import.test.mjs
+      - name: Publish only preview after successful validation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = preview-v76-save-reliability
+          git fetch --no-tags origin preview-v76-save-reliability preview cloudflare-pages-v62
+          test "$GITHUB_SHA" = "$(git rev-parse origin/preview-v76-save-reliability)"
+          test "$(git rev-parse origin/preview)" = "d730e57db53e41fc34a51017b641f16860c04b47"
+          test "$(git rev-parse origin/cloudflare-pages-v62)" = "256eab0f2b3e331b4f4d1f046f159ef0c56918fe"
+          git diff --exit-code origin/cloudflare-pages-v62 HEAD -- crates web/pkg web/zh-tw.tsv web/zh-hk.tsv web/migration-bundle.mjs web/manifest.webmanifest
+          git merge-base --is-ancestor origin/preview HEAD
+          git push origin HEAD:preview
